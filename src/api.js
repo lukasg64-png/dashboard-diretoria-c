@@ -1,7 +1,7 @@
 const BASE = window.location.port === '5173' ? 'http://localhost:3005/api' : '/api';
 
 async function req(path, params = {}) {
-  const url = new URL(`${BASE}${path}`);
+  const url = new URL(`${BASE}${path}`, window.location.origin);
   Object.entries(params).forEach(([k, v]) => {
     if (v && v !== 'all') url.searchParams.set(k, v);
   });
@@ -13,11 +13,11 @@ async function req(path, params = {}) {
 }
 
 export default {
-  getMetas:    (filters = {})         => req('/metas',    filters),
-  getDetalhes: (filters = {})         => req('/detalhes', filters),
-  getFiltros:  ()                     => req('/filtros'),
-  refresh:     ()                     => fetch(`${BASE}/refresh`, { method: 'POST' }).then(r => r.json()),
-  health:      ()                     => req('/health'),
+  getMetas: (filters = {}) => req('/metas', filters),
+  getDetalhes: (filters = {}) => req('/detalhes', filters),
+  getFiltros: () => req('/filtros'),
+  refresh: () => fetch(`${BASE}/refresh`, { method: 'POST' }).then(r => r.json()),
+  health: () => req('/health'),
   uploadExcel: async (file, token) => {
     const formData = new FormData();
     formData.append('file', file);
