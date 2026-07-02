@@ -421,6 +421,9 @@ export default function DrillPanel({ onUpload }) {
     `Crescimento\nYoY vs ${labelAtualAno}`,
     'MoM',
   ];
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f0f4f8', fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* ── Topbar ── */}
       <div style={{
         background: '#0f2050', color: '#fff', padding: '0 24px',
