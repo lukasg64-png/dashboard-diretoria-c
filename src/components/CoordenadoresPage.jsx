@@ -48,11 +48,11 @@ export default function CoordenadoresPage({ data, loading, onRowClick }) {
       render: v => <span style={{color: 'var(--accent)', fontWeight: 500}}>{v ? v.toFixed(1) + '%' : '0.0%'}</span>,
     },
     {
-      key: 'evol_yoy', label: 'YoY', align: 'right',
+      key: 'evol_yoy', label: 'Evolução YoY', align: 'right',
       valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : ''),
     },
     {
-      key: 'evol_mom', label: 'MoM', align: 'right',
+      key: 'evol_mom', label: 'Crescimento MoM', align: 'right',
       valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : ''),
     },
   ];

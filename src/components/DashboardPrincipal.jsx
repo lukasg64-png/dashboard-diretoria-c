@@ -96,8 +96,8 @@ export default function DashboardPrincipal({ data, loading, filters, onFilterCha
       { key: 'meta_total', label: 'Meta', align: 'right', render: v => formatK(v) },
       { key: 'pct_meta_total', label: '% Meta', align: 'right', width: '130px', type: 'progress' },
       { key: 'pct_ecomm_jul26', label: '% Part E-comm', align: 'right', render: v => <span className="part-ecomm-value">{v ? v.toFixed(1) + '%' : '0.0%'}</span> },
-      { key: 'evol_yoy', label: 'YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
-      { key: 'evol_mom', label: 'MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+      { key: 'evol_yoy', label: 'Evolução YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+      { key: 'evol_mom', label: 'Crescimento MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
     ];
     chartData = childTableRows.map(d => ({
       nome: d.nome,
@@ -117,8 +117,8 @@ export default function DashboardPrincipal({ data, loading, filters, onFilterCha
       { key: 'meta_total', label: 'Meta', align: 'right', render: v => formatK(v) },
       { key: 'pct_meta_total', label: '% Meta', align: 'right', width: '130px', type: 'progress' },
       { key: 'pct_ecomm_jul26', label: '% Part E-comm', align: 'right', render: v => <span className="part-ecomm-value">{v ? v.toFixed(1) + '%' : '0.0%'}</span> },
-      { key: 'evol_yoy', label: 'YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
-      { key: 'evol_mom', label: 'MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+      { key: 'evol_yoy', label: 'Evolução YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+      { key: 'evol_mom', label: 'Crescimento MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
     ];
     chartData = childTableRows.map(c => ({
       nome: c.nome,
@@ -138,8 +138,8 @@ export default function DashboardPrincipal({ data, loading, filters, onFilterCha
       { key: 'meta_total', label: 'Meta', align: 'right', render: v => formatK(v) },
       { key: 'pct_meta_total', label: '% Meta', align: 'right', width: '130px', type: 'progress' },
       { key: 'pct_ecomm_jul26', label: '% Part E-comm', align: 'right', render: v => <span className="part-ecomm-value">{v ? v.toFixed(1) + '%' : '0.0%'}</span> },
-      { key: 'evol_yoy', label: 'YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
-      { key: 'evol_mom', label: 'MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+      { key: 'evol_yoy', label: 'Evolução YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+      { key: 'evol_mom', label: 'Crescimento MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
     ];
     chartData = childTableRows.slice(0, 15).map(f => ({
       nome: f.nome.replace('FILIAL ', 'F.'),
@@ -157,7 +157,8 @@ export default function DashboardPrincipal({ data, loading, filters, onFilterCha
     { key: 'meta_total', label: 'Meta', align: 'right', render: v => formatK(v) },
     { key: 'pct_meta_total', label: '% Meta', align: 'right', width: '130px', type: 'progress' },
     { key: 'pct_ecomm_jul26', label: '% Part E-comm', align: 'right', render: v => <span className="part-ecomm-value">{v ? v.toFixed(1) + '%' : '0.0%'}</span> },
-    { key: 'evol_yoy', label: 'YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+    { key: 'evol_yoy', label: 'Evolução YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+    { key: 'evol_mom', label: 'Crescimento MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
   ];
 
   const lineCols = [
@@ -167,7 +168,8 @@ export default function DashboardPrincipal({ data, loading, filters, onFilterCha
     { key: 'meta_total', label: 'Meta', align: 'right', render: v => formatK(v) },
     { key: 'pct_meta_total', label: '% Meta', align: 'right', width: '130px', type: 'progress' },
     { key: 'pct_ecomm_jul26', label: '% Part E-comm', align: 'right', render: v => <span className="part-ecomm-value">{v ? v.toFixed(1) + '%' : '0.0%'}</span> },
-    { key: 'evol_yoy', label: 'YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+    { key: 'evol_yoy', label: 'Evolução YoY', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
+    { key: 'evol_mom', label: 'Crescimento MoM', align: 'right', valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : '') },
   ];
 
   const categoryRows = (data?.grupos || []).map((g, i) => ({ ...g, _key: g.nomeOriginal || g.nome + i }));

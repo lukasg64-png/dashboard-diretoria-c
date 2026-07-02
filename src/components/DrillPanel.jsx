@@ -189,7 +189,7 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
 }
 
 // ── Linha de Grupo/Linha (aba Categorias) ───────────────────────────────────
-function CatRow({ row, depth, expanded, hasChildren, onToggle }) {
+function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
   const bgRow = depth === 0 ? 'rgba(15,32,80,0.04)' : 'transparent';
   return (
     <tr
@@ -228,8 +228,9 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle }) {
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
       <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_total} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
-      <td style={{ ...td(), textAlign: 'center' }}>
-        <span style={{ color: '#94a3b8' }}>—</span>
+      <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
+      <td style={{ ...td(), minWidth: 110 }}>
+        <Part pct26={row.pct_ecomm_jul26} pct25={row.pct_ecomm_jul25} labelAno={labelAtualAno} />
       </td>
     </tr>
   );
@@ -284,7 +285,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno }) {
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, linhas }) {
+function CatTable({ grupos, linhas, labelAtualAno }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
   const tog = key =>
     setOpenGrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -310,14 +311,16 @@ function CatTable({ grupos, linhas }) {
 
     rows.push(
       <CatRow key={`g-${grupo.nome}`} row={grupo} depth={0} expanded={isOpen}
-        hasChildren={grupoLinhas.length > 0} onToggle={() => tog(grupo.nome)} />
+        hasChildren={grupoLinhas.length > 0} onToggle={() => tog(grupo.nome)}
+        labelAtualAno={labelAtualAno} />
     );
 
     if (isOpen) {
       grupoLinhas.forEach(linha =>
         rows.push(
           <CatRow key={`l-${grupo.nome}-${linha.nome}`} row={linha} depth={1}
-            expanded={false} hasChildren={false} onToggle={null} />
+            expanded={false} hasChildren={false} onToggle={null}
+            labelAtualAno={labelAtualAno} />
         )
       );
     }
@@ -338,16 +341,18 @@ export default function DrillPanel({ onUpload }) {
   const [fDist, setFDist] = useState('all');
   const [fCoord, setFCoord] = useState('all');
   const [fFilial, setFFilial] = useState('all');
+  const [fGrupo, setFGrupo] = useState('all');
+  const [fLinha, setFLinha] = useState('all');
 
-  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all';
+  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all';
 
-  const filters = { distrital: fDist, coordenador: fCoord, filial: fFilial };
+  const filters = { distrital: fDist, coordenador: fCoord, filial: fFilial, grupo: fGrupo, linha: fLinha };
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       // Sempre busca sem filtro para ter as opções de dropdown
-      const resAll = await API.getMetas({ distrital: 'all', coordenador: 'all', filial: 'all' });
+      const resAll = await API.getMetas({ distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all' });
       setRawFull(resAll.data);
 
       // Se tem filtro, busca com filtro
@@ -359,7 +364,7 @@ export default function DrillPanel({ onUpload }) {
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [fDist, fCoord, fFilial]);
+  }, [fDist, fCoord, fFilial, fGrupo, fLinha]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -387,6 +392,16 @@ export default function DrillPanel({ onUpload }) {
       .map(f => f.nome))].sort();
   }, [rawFull, fDist, fCoord]);
 
+  const grupoOptions = useMemo(() =>
+    [...new Set((rawFull?.grupos || []).map(g => g.nome))].sort(), [rawFull]);
+
+  const linhaOptions = useMemo(() => {
+    const allLinhas = rawFull?.linhas || [];
+    return [...new Set(allLinhas
+      .filter(l => fGrupo === 'all' || l.grupo === fGrupo)
+      .map(l => l.nome))].sort();
+  }, [rawFull, fGrupo]);
+
   const t = data?.filtered_total || data?.total || {};
   const labelAtual    = data?.label_mes_atual || 'Jul/26';
   const labelAtualAno = labelAtual.replace(/(\d{2})$/, m => String(Number(m) - 1).padStart(2, '0'));
@@ -407,8 +422,8 @@ export default function DrillPanel({ onUpload }) {
     'Meta',
     '% Meta',
     'Desvio da Meta',
-    `Crescimento\nYoY vs ${labelAtualAno}`,
-    `Evolução\nMoM vs ${labelAnt}`,
+    `Evolução\nYoY vs ${labelAtualAno}`,
+    `Crescimento\nMoM vs ${labelAnt}`,
     'Part. Digital',
   ];
 
@@ -418,8 +433,9 @@ export default function DrillPanel({ onUpload }) {
     'Meta',
     '% Meta',
     'Desvio da Meta',
-    `Crescimento\nYoY vs ${labelAtualAno}`,
-    'MoM',
+    `Evolução\nYoY vs ${labelAtualAno}`,
+    `Crescimento\nMoM vs ${labelAnt}`,
+    'Part. Digital',
   ];
 
   return (
@@ -486,9 +502,22 @@ export default function DrillPanel({ onUpload }) {
             disabled={coordOptions.length === 0 && distOptions.length === 0}
             onChange={v => setFFilial(v)}
           />
+          <FilterSelect
+            label="Grupo"
+            value={fGrupo}
+            options={grupoOptions}
+            onChange={v => { setFGrupo(v); setFLinha('all'); }}
+          />
+          <FilterSelect
+            label="Linha"
+            value={fLinha}
+            options={linhaOptions}
+            disabled={linhaOptions.length === 0}
+            onChange={v => setFLinha(v)}
+          />
           {hasFilter && (
             <button
-              onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); }}
+              onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 4,
                 background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
@@ -618,9 +647,9 @@ export default function DrillPanel({ onUpload }) {
                   )
                 ) : (
                   grupos.length === 0 ? (
-                    <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
+                    <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
                   ) : (
-                    <CatTable grupos={grupos} linhas={linhas} />
+                    <CatTable grupos={grupos} linhas={linhas} labelAtualAno={labelAtualAno} />
                   )
                 )}
               </tbody>
@@ -639,11 +668,9 @@ export default function DrillPanel({ onUpload }) {
                     <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_total} /></td>
                     <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
                     <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
-                    {activeTab === 'hierarquia' && (
-                      <td style={{ ...td(), minWidth: 110 }}>
-                        <Part pct26={t.pct_ecomm_jul26} pct25={t.pct_ecomm_jul25} />
-                      </td>
-                    )}
+                    <td style={{ ...td(), minWidth: 110 }}>
+                      <Part pct26={t.pct_ecomm_jul26} pct25={t.pct_ecomm_jul25} />
+                    </td>
                   </tr>
                 </tfoot>
               )}

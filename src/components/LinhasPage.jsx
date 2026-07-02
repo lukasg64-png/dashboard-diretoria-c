@@ -71,15 +71,46 @@ export default function LinhasPage({ filters }) {
       valueClass: v => (v >= 90 ? 'val-green' : v >= 60 ? 'val-yellow' : 'val-red'),
     },
     {
-      key: 'pct_ecomm_jul26', label: '% Part E-comm', align: 'right', width: '130px',
-      render: v => <span style={{color: 'var(--accent)', fontWeight: 500}}>{v ? v.toFixed(1) + '%' : '0.0%'}</span>,
+      key: 'desvio', label: 'Desvio da Meta', align: 'right',
+      render: (_, row) => {
+        const venda = row.venda_jul26;
+        const meta = row.meta_total;
+        if (venda == null || meta == null) return '—';
+        const abs = venda - meta;
+        const pctVal = meta !== 0 ? (abs / meta) * 100 : 0;
+        const color = abs >= 0 ? 'var(--success)' : 'var(--danger)';
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'right' }}>
+            <span style={{ fontWeight: 700, color }}>{abs >= 0 ? '+' : ''}{formatK(abs)}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{(pctVal >= 0 ? '+' : '') + pctVal.toFixed(1) + '%'}</span>
+          </div>
+        );
+      }
     },
     {
-      key: 'evol_yoy', label: 'YoY', align: 'right',
+      key: 'pct_ecomm_jul26', label: 'Part. Digital', align: 'right', width: '130px',
+      render: (_, row) => {
+        const pct26 = row.pct_ecomm_jul26;
+        const pct25 = row.pct_ecomm_jul25;
+        const evol = (pct26 != null && pct25 != null) ? pct26 - pct25 : null;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'right' }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{pct26 ? pct26.toFixed(1) + '%' : '0.0%'}</span>
+            {evol != null && (
+              <span style={{ fontSize: '10px', color: evol >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                {(evol >= 0 ? '+' : '') + evol.toFixed(1)} p.p.
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'evol_yoy', label: 'Evolução YoY', align: 'right',
       valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : ''),
     },
     {
-      key: 'evol_mom', label: 'MoM', align: 'right',
+      key: 'evol_mom', label: 'Crescimento MoM', align: 'right',
       valueClass: v => (v > 0 ? 'val-green' : v < 0 ? 'val-red' : ''),
     },
   ];

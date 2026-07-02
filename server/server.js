@@ -341,7 +341,7 @@ function clearCache() { cache = { data: null, ts: 0 }; }
 
 // ─── Filtro pós-cache ───────────────────────────────────────────────────────
 function applyFilters(full, filters) {
-  const { distrital, coordenador, filial } = filters;
+  const { distrital, coordenador, filial, grupo, linha } = filters;
 
   let records = full.records;
 
@@ -354,6 +354,12 @@ function applyFilters(full, filters) {
   }
   if (filial && filial !== 'all') {
     records = records.filter(r => r.filial === filial);
+  }
+  if (grupo && grupo !== 'all') {
+    records = records.filter(r => r.grupo === grupo);
+  }
+  if (linha && linha !== 'all') {
+    records = records.filter(r => r.linha === linha);
   }
 
   const globalAgg = aggregate(full.records);
@@ -477,6 +483,8 @@ app.get('/api/metas', async (req, res) => {
       distrital:   req.query.distrital   || 'all',
       coordenador: req.query.coordenador || 'all',
       filial:      req.query.filial      || 'all',
+      grupo:       req.query.grupo       || 'all',
+      linha:       req.query.linha       || 'all',
     };
     const data = applyFilters(full, filters);
 
@@ -485,7 +493,9 @@ app.get('/api/metas', async (req, res) => {
     const options = {
       distritoriais: globalAgg.distritoriais.map(d => ({ nome: d.nome })),
       coordenadores: globalAgg.coordenadores.map(c => ({ nome: c.nome, distrital: c.distrital })),
-      filiais: globalAgg.filiais.map(f => ({ nome: f.nome, coordenador: f.coordenador }))
+      filiais: globalAgg.filiais.map(f => ({ nome: f.nome, coordenador: f.coordenador })),
+      grupos: globalAgg.grupos.map(g => ({ nome: g.nomeOriginal || g.nome })),
+      linhas: globalAgg.linhas.map(l => ({ nome: l.nome, grupo: l.grupo }))
     };
 
     res.json({ status: 'ok', data, filters, options, cache_age_ms: Date.now() - cache.ts });
