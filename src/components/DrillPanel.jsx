@@ -28,12 +28,12 @@ const desvioAbs = (venda, meta) => (venda != null && meta != null) ? venda - met
 const desvioPct = (venda, meta) => (meta && meta !== 0) ? ((venda - meta) / meta) * 100 : null;
 
 // ── KPI Block ───────────────────────────────────────────────────────────────
-function KpiBlock({ label, value, evol, evolLabel, highlight }) {
+function KpiBlock({ label, value, evol, evolLabel, sub, highlight }) {
   const ec = cEvol(evol);
   return (
     <div style={{
-      flex: 1, minWidth: 140,
-      padding: '15px 18px',
+      flex: 1, minWidth: 160,
+      padding: '14px 18px',
       borderRight: '1px solid #e2e8f0',
       background: highlight ? '#0f2050' : '#fff',
       display: 'flex', flexDirection: 'column', gap: 4,
@@ -52,6 +52,11 @@ function KpiBlock({ label, value, evol, evolLabel, highlight }) {
           </span>
         )}
       </div>
+      {sub && (
+        <span style={{ fontSize: 10, color: highlight ? 'rgba(255,255,255,0.45)' : '#94a3b8', marginTop: 2 }}>
+          {sub}
+        </span>
+      )}
     </div>
   );
 }
@@ -550,20 +555,38 @@ export default function DrillPanel({ onUpload }) {
             &nbsp;·&nbsp; vs Mês Ant.: <strong>{labelAnt}</strong>
             {hasFilter && <span style={{ marginLeft: 12, color: '#7c3aed', fontWeight: 700 }}>• Dados filtrados</span>}
           </div>
-          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
-            <KpiBlock label={`Venda E-commerce — ${labelAtual}`} value={loading ? '...' : fmtR(t.venda_jul26)} evol={t.evol_yoy} evolLabel={`vs ${labelAtualAno}`} />
-            <KpiBlock label={`Venda Ano Anterior — ${labelAtualAno}`} value={loading ? '...' : fmtR(t.venda_jul25)} />
-            <KpiBlock label={`Mês Anterior — ${labelAnt}`} value={loading ? '...' : fmtR(t.venda_jun26)} evol={t.evol_mom} evolLabel="MoM" />
-            <KpiBlock label="% Participação Digital" value={loading ? '...' : fmtPct(t.pct_ecomm_jul26)} evol={tPartEvol} evolLabel={`p.p. vs ${labelAtualAno}`} />
-            <KpiBlock label="% Meta Total Atingida" value={loading ? '...' : fmtPct(t.pct_meta_total)} />
-            <KpiBlock label="% Meta Parcial Atingida" value={loading ? '...' : fmtPct(t.pct_meta_parcial)} highlight />
-          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            <KpiBlock label="Meta Total" value={loading ? '...' : fmtR(t.meta_total)} />
-            <KpiBlock label="Meta Parcial" value={loading ? '...' : fmtR(t.meta_parcial)} />
-            <KpiBlock label="Desvio da Meta Parcial (R$)" value={loading ? '...' : (tDesvio != null ? (tDesvio >= 0 ? '+' : '') + fmtR(tDesvio) : '—')} evol={desvioPct(t.venda_jul26, t.meta_parcial)} />
-            <KpiBlock label="Evolução YoY" value={loading ? '...' : fmtEvol(t.evol_yoy)} evol={t.evol_yoy} evolLabel={`vs ${labelAtualAno}`} />
-            <KpiBlock label="Crescimento MoM" value={loading ? '...' : fmtEvol(t.evol_mom)} evol={t.evol_mom} evolLabel={`vs ${labelAnt}`} />
+            <KpiBlock 
+              label={`Venda E-commerce`} 
+              value={loading ? '...' : fmtR(t.venda_jul26)} 
+              evol={t.evol_yoy} 
+              evolLabel="YoY"
+              sub={`Mês Ant.: ${fmtR(t.venda_jun26)} (${fmtEvol(t.evol_mom)} MoM)`}
+            />
+            <KpiBlock 
+              label="Meta Total" 
+              value={loading ? '...' : fmtR(t.meta_total)} 
+              sub={`Atingido: ${fmtPct(t.pct_meta_total)}`}
+            />
+            <KpiBlock 
+              label="Meta Parcial" 
+              value={loading ? '...' : fmtR(t.meta_parcial)} 
+              sub={`Atingido: ${fmtPct(t.pct_meta_parcial)}`}
+            />
+            <KpiBlock 
+              label="Desvio Meta Parcial" 
+              value={loading ? '...' : (tDesvio != null ? (tDesvio >= 0 ? '+' : '') + fmtR(tDesvio) : '—')} 
+              evol={desvioPct(t.venda_jul26, t.meta_parcial)} 
+              evolLabel="desvio"
+              highlight 
+            />
+            <KpiBlock 
+              label="Participação Digital" 
+              value={loading ? '...' : fmtPct(t.pct_ecomm_jul26)} 
+              evol={tPartEvol} 
+              evolLabel="p.p. YoY"
+              sub={`Ano Anterior: ${fmtPct(t.pct_ecomm_jul25)}`}
+            />
           </div>
         </div>
 
