@@ -84,53 +84,7 @@ async function downloadFromGCS(destPath, gcsFileName) {
   }
 }
 
-// ─── Conversão de Excel para CSV leve no Upload ─────────────────────────────
-function convertExcelToCSV(xlsxPath, csvPath) {
-  const wb = XLSX.readFile(xlsxPath, {
-    sheets: ['BASE DASHBOARD'],
-    dense: true,
-    cellDates: false,
-    cellNF: false,
-    cellText: false,
-    cellStyles: false
-  });
-  const ws = wb.Sheets['BASE DASHBOARD'];
-  if (!ws) throw new Error('Aba "BASE DASHBOARD" não encontrada.');
 
-  const stream = fs.createWriteStream(csvPath, 'utf8');
-
-  // Helper simples para escapar strings para CSV
-  function escapeCSV(val) {
-    if (val == null) return '';
-    const str = String(val).replace(/"/g, '""');
-    if (str.includes(';') || str.includes('\n') || str.includes('"')) {
-      return `"${str}"`;
-    }
-    return str;
-  }
-
-  const maxRow = ws.length || 0;
-  for (let r = 0; r < maxRow; r++) {
-    const row = ws[r];
-    if (!row) {
-      stream.write('\n');
-      continue;
-    }
-    const cells = [];
-    for (let c = 0; c < 13; c++) {
-      const cell = row[c];
-      cells.push(escapeCSV(cell && cell.v != null ? cell.v : ''));
-    }
-    stream.write(cells.join(';') + '\n');
-  }
-  stream.end();
-
-  // Forçar limpeza
-  delete wb.Sheets['BASE DASHBOARD'];
-  if (global.gc) {
-    try { global.gc(); } catch (_) {}
-  }
-}
 
 // ─── Leitura por Stream de CSV (Usa quase 0 de RAM e é 15x mais rápido) ────
 async function readCSVAsync(filePath) {
@@ -457,56 +411,59 @@ app.post('/api/upload', (req, res, next) => {
 
     const localTempPath = req.file.path;
 
-    // Validar se o arquivo é um Excel válido lendo APENAS a estrutura (bookSheets: true)
+    // O arquivo agora é enviado diretamente como CSV pré-processado pelo navegador!
+    // Isso evita completamente o estouro de memória (OOM / Erro 502) no backend.
+    // Vamos apenas validar se as colunas essenciais estão presentes no CSV.
     try {
-      const testWb = XLSX.readFile(localTempPath, { bookSheets: true });
-      if (!testWb.SheetNames || !testWb.SheetNames.includes('BASE DASHBOARD')) {
-        throw new Error('Aba "BASE DASHBOARD" não encontrada na planilha.');
+      const firstLine = await new Promise((resolve, reject) => {
+        const stream = fs.createReadStream(localTempPath, { encoding: 'utf8', start: 0, end: 1024 });
+        let buffer = '';
+        stream.on('data', chunk => {
+          buffer += chunk;
+          const lf = buffer.indexOf('\n');
+          if (lf >= 0) {
+            resolve(buffer.substring(0, lf));
+            stream.destroy();
+          }
+        });
+        stream.on('end', () => resolve(buffer));
+        stream.on('error', err => reject(err));
+      });
+
+      if (!firstLine || !firstLine.toLowerCase().includes('distrital')) {
+        throw new Error('O arquivo não parece conter um cabeçalho válido com a coluna "Distrital". Certifique-se de enviar a planilha correta.');
       }
     } catch (err) {
       try { fs.unlinkSync(localTempPath); } catch (_) {}
-      return res.status(400).json({ status: 'error', error: `Arquivo Excel inválido: ${err.message}` });
-    }
-
-    // Gerar CSV temporário a partir do XLSX carregado
-    const tempCSVPath = path.join(require('os').tmpdir(), `temp_dash_c_${Date.now()}.csv`);
-    try {
-      console.log(`♻️ Convertendo planilha Excel em CSV leve para salvar memória...`);
-      convertExcelToCSV(localTempPath, tempCSVPath);
-    } catch (csvErr) {
-      try { fs.unlinkSync(localTempPath); } catch (_) {}
-      try { fs.unlinkSync(tempCSVPath); } catch (_) {}
-      return res.status(500).json({ status: 'error', error: `Falha ao processar dados da planilha: ${csvErr.message}` });
+      return res.status(400).json({ status: 'error', error: `Validação do CSV falhou: ${err.message}` });
     }
 
     // Salvar no GCS se configurado, ou substituir arquivo local
     if (GCS_BUCKET && storageClient) {
       try {
-        console.log(`☁️ Enviando CSV convertido para o GCS gs://${GCS_BUCKET}/${FILE_NAME}...`);
+        console.log(`☁️ Enviando CSV para o GCS gs://${GCS_BUCKET}/${FILE_NAME}...`);
         const bucket = storageClient.bucket(GCS_BUCKET);
-        await bucket.upload(tempCSVPath, {
+        await bucket.upload(localTempPath, {
           destination: FILE_NAME,
           metadata: { cacheControl: 'no-cache' }
         });
         console.log(`☁️ CSV salvo no GCS.`);
       } catch (gcsErr) {
         try { fs.unlinkSync(localTempPath); } catch (_) {}
-        try { fs.unlinkSync(tempCSVPath); } catch (_) {}
         throw new Error(`Erro ao salvar no Google Cloud Storage: ${gcsErr.message}`);
       }
     } else {
       console.log(`💾 Salvando CSV localmente em ${CSV_PATH}...`);
-      fs.copyFileSync(tempCSVPath, CSV_PATH);
+      fs.copyFileSync(localTempPath, CSV_PATH);
     }
 
-    // Limpar arquivos temporários
+    // Limpar arquivo temporário
     try { fs.unlinkSync(localTempPath); } catch (_) {}
-    try { fs.unlinkSync(tempCSVPath); } catch (_) {}
     
     clearCache();
     if (global.gc) { try { global.gc(); } catch (_) {} }
 
-    res.json({ status: 'ok', msg: 'Planilha atualizada e convertida com sucesso!' });
+    res.json({ status: 'ok', msg: 'Planilha atualizada com sucesso!' });
   } catch (err) {
     console.error('[/api/upload] Erro:', err.message);
     res.status(500).json({ status: 'error', error: err.message });

@@ -21,7 +21,45 @@ function App() {
     setUploading(true);
     setUploadStatus(null);
     try {
-      await API.uploadExcel(uploadFile, uploadToken);
+      if (!window.XLSX) {
+        throw new Error('A biblioteca de processamento Excel ainda está carregando no seu navegador. Tente novamente em 2 segundos.');
+      }
+
+      setUploadStatus({ type: 'info', message: 'Lendo e convertendo planilha localmente no seu computador (isso evita lentidão)...' });
+
+      // Ler o arquivo binário local no navegador
+      const fileData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = (err) => reject(err);
+        reader.readAsArrayBuffer(uploadFile);
+      });
+
+      // Ler o workbook na aba correta com opções de alta performance
+      const wb = window.XLSX.read(fileData, {
+        type: 'array',
+        sheets: ['BASE DASHBOARD'],
+        dense: true,
+        cellDates: false,
+        cellNF: false,
+        cellText: false,
+        cellStyles: false
+      });
+
+      const ws = wb.Sheets['BASE DASHBOARD'];
+      if (!ws) {
+        throw new Error('Aba "BASE DASHBOARD" não encontrada no arquivo Excel enviado.');
+      }
+
+      // Converter aba para CSV usando delimitador ponto e vírgula
+      const csvContent = window.XLSX.utils.sheet_to_csv(ws, { FS: ';' });
+      
+      // Criar arquivo CSV virtual a ser enviado por HTTP
+      const csvFile = new File([csvContent], 'base_dashboard.csv', { type: 'text/csv' });
+
+      setUploadStatus({ type: 'info', message: 'Enviando dados compactados para o servidor na nuvem...' });
+
+      await API.uploadExcel(csvFile, uploadToken);
       setUploadStatus({ type: 'success', message: 'Planilha atualizada com sucesso! Recarregando...' });
       setUploadFile(null);
       setTimeout(() => {
@@ -30,7 +68,7 @@ function App() {
         setRefreshKey(k => k + 1);
       }, 2000);
     } catch (err) {
-      setUploadStatus({ type: 'error', message: err.message || 'Erro ao enviar o arquivo.' });
+      setUploadStatus({ type: 'error', message: err.message || 'Erro ao processar/enviar o arquivo.' });
     } finally {
       setUploading(false);
     }
