@@ -436,6 +436,7 @@ export default function DrillPanel({ onUpload }) {
   const [rawFull, setRawFull] = useState(null); // dados sem filtro para popular opções
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [noData, setNoData] = useState(false); // true quando servidor não tem planilha carregada
   const [activeTab, setActiveTab] = useState('hierarquia');
   const [showChart, setShowChart] = useState(true);
   const [chartMetric, setChartMetric] = useState('desvio');
@@ -453,10 +454,18 @@ export default function DrillPanel({ onUpload }) {
   const filters = { distrital: fDist, coordenador: fCoord, filial: fFilial, grupo: fGrupo, linha: fLinha };
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setNoData(false);
     try {
       // Sempre busca sem filtro para ter as opções de dropdown
       const resAll = await API.getMetas({ distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all' });
+      
+      // Checar se o servidor ainda não tem planilha
+      if (resAll.status === 'no_data') {
+        setNoData(true);
+        setLoading(false);
+        return;
+      }
+
       setRawFull(resAll.data);
 
       // Se tem filtro, busca com filtro
@@ -752,7 +761,42 @@ export default function DrillPanel({ onUpload }) {
           </div>
         )}
 
-        {/* ── Gráfico de Desvio da Meta Parcial (Opcional) ── */}
+        {/* ── Sem Dados — Aguardando Upload ── */}
+        {noData && !loading && (
+          <div style={{
+            background: '#fff', borderRadius: 12, border: '2px dashed #cbd5e1',
+            padding: '60px 32px', marginBottom: 16, textAlign: 'center',
+            animation: 'fadeIn 0.3s ease-out',
+          }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>📂</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f2050', margin: '0 0 8px' }}>
+              Nenhuma planilha carregada
+            </h2>
+            <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 24px', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+              O servidor ainda não possui dados reais. Faça o upload da planilha 
+              <strong> BASE DASHBOARD</strong> pelo botão abaixo para começar a usar o dashboard.
+            </p>
+            <button
+              onClick={onUpload}
+              style={{
+                background: '#e91e8c', color: '#fff', border: 'none',
+                borderRadius: 8, padding: '12px 28px', fontSize: 14, fontWeight: 700,
+                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8,
+                boxShadow: '0 4px 12px rgba(233,30,140,0.3)',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+              }}
+              onMouseOver={e => { e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 6px 16px rgba(233,30,140,0.4)'; }}
+              onMouseOut={e => { e.target.style.transform = 'none'; e.target.style.boxShadow = '0 4px 12px rgba(233,30,140,0.3)'; }}
+            >
+              <Upload size={16} /> Fazer Upload da Planilha
+            </button>
+            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 20 }}>
+              💡 Arquivo esperado: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>base Dashboard.xlsx</code> com aba <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>BASE DASHBOARD</code>
+            </p>
+          </div>
+        )}
+
+
         {showChart && !loading && chartItems.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>

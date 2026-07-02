@@ -323,7 +323,9 @@ async function getCached() {
 
   const csvFileToRead = loaded ? tmp : CSV_PATH;
   if (!fs.existsSync(csvFileToRead)) {
-    throw new Error(`Arquivo base_dashboard.csv não encontrado no servidor.`);
+    // Não há dados carregados — retornar null para que as rotas mostrem tela de upload
+    console.warn(`⚠️ [getCached] CSV não encontrado em: ${csvFileToRead}. Aguardando upload do usuário.`);
+    return null;
   }
 
   const data = await readCSVAsync(csvFileToRead);
@@ -479,6 +481,9 @@ app.post('/api/upload', (req, res, next) => {
 app.get('/api/metas', async (req, res) => {
   try {
     const full = await getCached();
+    if (!full) {
+      return res.json({ status: 'no_data', msg: 'Nenhuma planilha carregada. Faça o upload do arquivo base_dashboard.csv pelo portal.' });
+    }
     const filters = {
       distrital:   req.query.distrital   || 'all',
       coordenador: req.query.coordenador || 'all',
@@ -508,6 +513,9 @@ app.get('/api/metas', async (req, res) => {
 app.get('/api/detalhes', async (req, res) => {
   try {
     const full = await getCached();
+    if (!full) {
+      return res.json({ status: 'no_data', msg: 'Nenhuma planilha carregada.' });
+    }
     const filters = {
       distrital:   req.query.distrital   || 'all',
       coordenador: req.query.coordenador || 'all',
