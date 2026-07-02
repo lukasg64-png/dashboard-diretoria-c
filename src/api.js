@@ -27,13 +27,25 @@ export default {
       body: formData,
     });
     if (!res.ok) {
+      if (res.status === 502) {
+        throw new Error('Erro HTTP 502 (Bad Gateway): O servidor caiu ou esgotou a memória ao tentar processar a planilha. Tente novamente após o servidor reiniciar.');
+      }
+      if (res.status === 413) {
+        throw new Error('Erro HTTP 413: O arquivo da planilha excede o tamanho máximo permitido no servidor.');
+      }
+      if (res.status === 504) {
+        throw new Error('Erro HTTP 504: O envio do arquivo demorou muito e excedeu o tempo limite do servidor.');
+      }
       const text = await res.text();
-      let msg = text;
+      let msg = '';
       try {
         const json = JSON.parse(text);
         if (json.error) msg = json.error;
       } catch (_) {}
-      throw new Error(msg || `Erro HTTP ${res.status}`);
+      if (!msg) {
+        msg = text.length > 150 ? `Erro HTTP ${res.status}: Erro interno no servidor` : (text || `Erro HTTP ${res.status}`);
+      }
+      throw new Error(msg);
     }
     return res.json();
   }

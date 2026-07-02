@@ -357,13 +357,33 @@ function applyFilters(full, filters) {
 }
 
 // ─── Rotas ─────────────────────────────────────────────────────────────────
-const upload = multer({ dest: require('os').tmpdir() });
+const upload = multer({ 
+  dest: require('os').tmpdir(),
+  limits: { fileSize: 200 * 1024 * 1024 } // Limite de 200MB
+});
+const uploadSingle = upload.single('file');
 const UPLOAD_TOKEN = process.env.UPLOAD_TOKEN || 'sjcomercial';
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post('/api/upload', (req, res, next) => {
+  uploadSingle(req, res, (err) => {
+    if (err) {
+      console.error('[/api/upload] Erro no multer:', err.message || err);
+      return res.status(400).json({ status: 'error', error: `Erro no upload do arquivo: ${err.message || 'Falha na transferência'}` });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
+    // Limpar cache em memória ANTES de processar o upload para liberar RAM
+    // Isso evita pico de memória que derruba o processo Node.js (causando Erro HTTP 502 no proxy/load balancer)
+    clearCache();
+    if (global.gc) { try { global.gc(); } catch (_) {} }
+
     const token = req.body.token;
     if (token !== UPLOAD_TOKEN) {
+      if (req.file && req.file.path) {
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+      }
       return res.status(401).json({ status: 'error', error: 'Senha incorreta para upload.' });
     }
 
@@ -373,10 +393,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     const localTempPath = req.file.path;
 
-    // Validar se o arquivo é um Excel válido
+    // Validar se o arquivo é um Excel válido lendo APENAS a estrutura do workbook (bookSheets: true)
+    // Usar sheetRows: 1 ainda lia células, estilos e strings compartilhadas de um arquivo de 22MB,
+    // esgotando a memória RAM (OOM) em servidores cloud e gerando o Erro HTTP 502 Bad Gateway.
     try {
-      const testWb = XLSX.readFile(localTempPath, { sheetRows: 1 });
-      if (!testWb.SheetNames.includes('BASE DASHBOARD')) {
+      const testWb = XLSX.readFile(localTempPath, { bookSheets: true });
+      if (!testWb.SheetNames || !testWb.SheetNames.includes('BASE DASHBOARD')) {
         throw new Error('Aba "BASE DASHBOARD" não encontrada na planilha.');
       }
     } catch (err) {
