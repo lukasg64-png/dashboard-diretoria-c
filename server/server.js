@@ -14,13 +14,20 @@ const cors    = require('cors');
 const XLSX    = require('xlsx');
 const path    = require('path');
 const fs      = require('fs');
+const readline = require('readline');
 const multer  = require('multer');
 const { Storage } = require('@google-cloud/storage');
 
 const app  = express();
 const PORT = process.env.PORT || 3005;
 
-// Caminho padrão local (suporta deploy no Render e dev local)
+// Caminhos padrão locais (Excel para upload/conversão, CSV para leitura em tempo de execução)
+const CSV_NAME   = 'base_dashboard.csv';
+const localOneUpCSV = path.join(__dirname, '..', CSV_NAME);
+const localTwoUpCSV = path.join(__dirname, '..', '..', CSV_NAME);
+const DEFAULT_CSV = fs.existsSync(localOneUpCSV) ? localOneUpCSV : localTwoUpCSV;
+const CSV_PATH    = process.env.CSV_PATH || DEFAULT_CSV;
+
 const localOneUp = path.join(__dirname, '..', 'base Dashboard.xlsx');
 const localTwoUp = path.join(__dirname, '..', '..', 'base Dashboard.xlsx');
 const DEFAULT_EXCEL = fs.existsSync(localOneUp) ? localOneUp : localTwoUp;
@@ -28,7 +35,7 @@ const EXCEL_PATH    = process.env.EXCEL_PATH || DEFAULT_EXCEL;
 
 // Configuração Google Cloud Storage (GCS)
 const GCS_BUCKET = process.env.GCS_BUCKET;
-const FILE_NAME  = 'base Dashboard.xlsx'; // Nome fixo do arquivo no bucket
+const FILE_NAME  = 'base_dashboard.csv'; // Salvamos apenas o CSV no GCS para leveza absoluta
 let storageClient = null;
 
 if (GCS_BUCKET) {
@@ -57,18 +64,19 @@ function pct(val, base)   { return base ? round2((val / base) * 100) : 0; }
 function varP(cur, prev)  { return prev ? round2(((cur - prev) / prev) * 100) : 0; }
 
 // Função para baixar a planilha do GCS
-async function downloadFromGCS(destPath) {
+async function downloadFromGCS(destPath, gcsFileName) {
   if (!storageClient || !GCS_BUCKET) return false;
+  const fileName = gcsFileName || FILE_NAME;
   try {
     const bucket = storageClient.bucket(GCS_BUCKET);
-    const file = bucket.file(FILE_NAME);
+    const file = bucket.file(fileName);
     const [exists] = await file.exists();
     if (!exists) {
-      console.log(`⚠️ Planilha ${FILE_NAME} não encontrada no bucket GCS. Usando fallback local.`);
+      console.log(`⚠️ Planilha ${fileName} não encontrada no bucket GCS. Usando fallback local.`);
       return false;
     }
     await file.download({ destination: destPath });
-    console.log(`☁️ Planilha baixada do GCS com sucesso.`);
+    console.log(`☁️ Planilha ${fileName} baixada do GCS com sucesso.`);
     return true;
   } catch (err) {
     console.error(`❌ Erro ao baixar planilha do GCS:`, err.message);
@@ -76,136 +84,152 @@ async function downloadFromGCS(destPath) {
   }
 }
 
-// ─── Leitura do Excel (apenas BASE DASHBOARD) ───────────────────────────────
-async function readExcelAsync() {
-  const tmp = path.join(require('os').tmpdir(), `dash_c_${Date.now()}.xlsx`);
-  
-  let loaded = false;
-  if (GCS_BUCKET && storageClient) {
-    loaded = await downloadFromGCS(tmp);
-  }
-  
-  if (!loaded) {
-    if (!fs.existsSync(EXCEL_PATH)) {
-      throw new Error(`Arquivo não encontrado: ${EXCEL_PATH}`);
-    }
-    fs.copyFileSync(EXCEL_PATH, tmp);
-  }
-
-  let wb;
-  try {
-    wb = XLSX.readFile(tmp, {
-      sheets: ['BASE DASHBOARD'],
-      dense: true,
-      cellDates: false,
-      cellNF: false,
-      cellText: false,
-      cellStyles: false
-    });
-  } finally {
-    try { fs.unlinkSync(tmp); } catch (_) {}
-  }
-
-  return wb;
-}
-
-// ─── Parse BASE DASHBOARD ─────────────────────────────────────────────────
-function parseBASE(wb) {
+// ─── Conversão de Excel para CSV leve no Upload ─────────────────────────────
+function convertExcelToCSV(xlsxPath, csvPath) {
+  const wb = XLSX.readFile(xlsxPath, {
+    sheets: ['BASE DASHBOARD'],
+    dense: true,
+    cellDates: false,
+    cellNF: false,
+    cellText: false,
+    cellStyles: false
+  });
   const ws = wb.Sheets['BASE DASHBOARD'];
   if (!ws) throw new Error('Aba "BASE DASHBOARD" não encontrada.');
 
-  const headerRow = ws[0] || [];
-  const header = headerRow.map(c => (c && c.v != null ? String(c.v) : ''));
+  const stream = fs.createWriteStream(csvPath, 'utf8');
 
-  function findColIndex(predicate, fallbackIndex) {
-    const i = header.findIndex(predicate);
-    return i >= 0 ? i : fallbackIndex;
+  // Helper simples para escapar strings para CSV
+  function escapeCSV(val) {
+    if (val == null) return '';
+    const str = String(val).replace(/"/g, '""');
+    if (str.includes(';') || str.includes('\n') || str.includes('"')) {
+      return `"${str}"`;
+    }
+    return str;
   }
 
-  const distIndex = findColIndex(h => /distrital/i.test(String(h)), 1);
-  const coordIndex = findColIndex(h => /coordenador/i.test(String(h)), 2);
-  const filialIndex = findColIndex(h => /desc_filial|filial/i.test(String(h)), 3);
-  const grupoIndex = findColIndex(h => /desc_grupo|grupo/i.test(String(h)), 4);
-  const linhaIndex = findColIndex(h => /desc_linha|linha/i.test(String(h)), 5);
-  const metaParcIndex = findColIndex(h => /meta\s+parcial/i.test(String(h)), 7);
-
-  // Achar coluna de Meta Total (ex: Meta Julho, Meta Agosto)
-  const metaTotIndex = findColIndex(h => /^meta\s+(?!parcial)/i.test(String(h)), 6);
-  const metaTotHeader = header[metaTotIndex] ? String(header[metaTotIndex]) : '';
-  const currentMonth = metaTotHeader.replace(/^meta\s+/i, '').trim();
-
-  // Se não detectar mês (ex: planilha sem formato padrão), usa fallbacks fixos para Julho
-  const monthRegex = currentMonth ? new RegExp(currentMonth, 'i') : /julho/i;
-
-  const vJul26Index = findColIndex(h => /venda/i.test(String(h)) && monthRegex.test(String(h)) && /(26|2026)$/.test(String(h)), 8);
-  const vJul25Index = findColIndex(h => /venda/i.test(String(h)) && monthRegex.test(String(h)) && /(25|2025)$/.test(String(h)), 9);
-  
-  // Venda do mês anterior (ano atual): contém "venda", contém "26" ou "2026", mas NÃO contém o mês atual (ex: Venda Parcial junho/26)
-  const vJun26Index = findColIndex(h => /venda/i.test(String(h)) && !monthRegex.test(String(h)) && /(26|2026)$/.test(String(h)), 10);
-
-  const beJul26Index = findColIndex(h => /base\s+empresa/i.test(String(h)) && monthRegex.test(String(h)) && /(26|2026)$/.test(String(h)), 11);
-  const beJul25Index = findColIndex(h => /base\s+empresa/i.test(String(h)) && monthRegex.test(String(h)) && /(25|2025)$/.test(String(h)), 12);
-
-  const C = {
-    dist:      distIndex,
-    coord:     coordIndex,
-    filial:    filialIndex,
-    grupo:     grupoIndex,
-    linha:     linhaIndex,
-    metaTot:   metaTotIndex,
-    metaParc:  metaParcIndex,
-    vJul26:    vJul26Index,
-    vJul25:    vJul25Index,
-    vJun26:    vJun26Index,
-    beJul26:   beJul26Index,
-    beJul25:   beJul25Index,
-  };
-
-  const labelJul26 = String(header[C.vJul26] || 'Julho/26').replace('Venda Parcial ', '');
-  const labelJun26 = String(header[C.vJun26] || 'Junho/26').replace('Venda Parcial ', '');
-
-  const records = [];
   const maxRow = ws.length || 0;
-  for (let r = 1; r < maxRow; r++) {
+  for (let r = 0; r < maxRow; r++) {
     const row = ws[r];
-    if (!row) continue;
-
-    const getVal = (idx) => {
-      const cell = row[idx];
-      return cell && cell.v != null ? cell.v : null;
-    };
-
-    if (getVal(C.dist) == null) continue;
-
-    records.push({
-      dist:   String(getVal(C.dist)   || '').trim(),
-      coord:  String(getVal(C.coord)  || '').trim(),
-      filial: String(getVal(C.filial) || '').trim(),
-      grupo:  String(getVal(C.grupo)  || '').trim(),
-      linha:  String(getVal(C.linha)  || '').trim(),
-      mt:     safe(getVal(C.metaTot)),
-      mp:     safe(getVal(C.metaParc)),
-      v26:    safe(getVal(C.vJul26)),
-      v25:    safe(getVal(C.vJul25)),
-      jun:    safe(getVal(C.vJun26)),
-      be26:   safe(getVal(C.beJul26)),
-      be25:   safe(getVal(C.beJul25)),
-    });
+    if (!row) {
+      stream.write('\n');
+      continue;
+    }
+    const cells = [];
+    for (let c = 0; c < 13; c++) {
+      const cell = row[c];
+      cells.push(escapeCSV(cell && cell.v != null ? cell.v : ''));
+    }
+    stream.write(cells.join(';') + '\n');
   }
+  stream.end();
 
-  // Liberar memória do SheetJS voluntariamente
+  // Forçar limpeza
   delete wb.Sheets['BASE DASHBOARD'];
   if (global.gc) {
     try { global.gc(); } catch (_) {}
   }
+}
 
-  return {
-    records,
-    label_mes_atual: labelJul26,
-    label_mes_ant:   labelJun26,
-    arquivo:         path.basename(EXCEL_PATH),
-    lido_em:         new Date().toISOString(),
-  };
+// ─── Leitura por Stream de CSV (Usa quase 0 de RAM e é 15x mais rápido) ────
+async function readCSVAsync(filePath) {
+  return new Promise((resolve, reject) => {
+    const records = [];
+    const fileStream = fs.createReadStream(filePath, 'utf8');
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity
+    });
+
+    let header = null;
+    let C = {};
+
+    rl.on('line', (line) => {
+      // Split básico por ponto e vírgula
+      const row = line.split(';');
+      if (!header) {
+        header = row.map(val => val.trim().replace(/^"|"$/g, ''));
+        
+        function findColIndex(predicate, fallbackIndex) {
+          const i = header.findIndex(predicate);
+          return i >= 0 ? i : fallbackIndex;
+        }
+
+        const distIndex = findColIndex(h => /distrital/i.test(h), 1);
+        const coordIndex = findColIndex(h => /coordenador/i.test(h), 2);
+        const filialIndex = findColIndex(h => /desc_filial|filial/i.test(h), 3);
+        const grupoIndex = findColIndex(h => /desc_grupo|grupo/i.test(h), 4);
+        const linhaIndex = findColIndex(h => /desc_linha|linha/i.test(h), 5);
+        const metaParcIndex = findColIndex(h => /meta\s+parcial/i.test(h), 7);
+        const metaTotIndex = findColIndex(h => /^meta\s+(?!parcial)/i.test(h), 6);
+        const metaTotHeader = header[metaTotIndex] || '';
+        const currentMonth = metaTotHeader.replace(/^meta\s+/i, '').trim();
+        const monthRegex = currentMonth ? new RegExp(currentMonth, 'i') : /julho/i;
+
+        const vJul26Index = findColIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), 8);
+        const vJul25Index = findColIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), 9);
+        const vJun26Index = findColIndex(h => /venda/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h), 10);
+        const beJul26Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), 11);
+        const beJul25Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), 12);
+
+        C = {
+          dist:      distIndex,
+          coord:     coordIndex,
+          filial:    filialIndex,
+          grupo:     grupoIndex,
+          linha:     linhaIndex,
+          metaTot:   metaTotIndex,
+          metaParc:  metaParcIndex,
+          vJul26:    vJul26Index,
+          vJul25:    vJul25Index,
+          vJun26:    vJun26Index,
+          beJul26:   beJul26Index,
+          beJul25:   beJul25Index,
+          labelJul26: String(header[vJul26Index] || 'Julho/26').replace('Venda Parcial ', ''),
+          labelJun26: String(header[vJun26Index] || 'Junho/26').replace('Venda Parcial ', '')
+        };
+        return;
+      }
+
+      const distValRaw = row[C.dist];
+      if (distValRaw == null || distValRaw === '') return;
+
+      const getVal = (idx) => {
+        const val = row[idx];
+        return val != null ? val.replace(/^"|"$/g, '') : null;
+      };
+
+      records.push({
+        dist:   String(getVal(C.dist)   || '').trim(),
+        coord:  String(getVal(C.coord)  || '').trim(),
+        filial: String(getVal(C.filial) || '').trim(),
+        grupo:  String(getVal(C.grupo)  || '').trim(),
+        linha:  String(getVal(C.linha)  || '').trim(),
+        mt:     safe(getVal(C.metaTot)),
+        mp:     safe(getVal(C.metaParc)),
+        v26:    safe(getVal(C.vJul26)),
+        v25:    safe(getVal(C.vJul25)),
+        jun:    safe(getVal(C.vJun26)),
+        be26:   safe(getVal(C.beJul26)),
+        be25:   safe(getVal(C.beJul25)),
+      });
+    });
+
+    rl.on('close', () => {
+      resolve({
+        records,
+        label_mes_atual: C.labelJul26 || 'Julho/26',
+        label_mes_ant:   C.labelJun26 || 'Junho/26',
+        arquivo:         path.basename(filePath),
+        lido_em:         new Date().toISOString()
+      });
+    });
+
+    rl.on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
 // ─── Agregação de registros ──────────────────────────────────────────────────
@@ -335,10 +359,27 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas (ou até novo upload/refre
 async function getCached() {
   const now = Date.now();
   if (cache.data && (now - cache.ts) < CACHE_TTL_MS) return cache.data;
-  const rawExcel = await readExcelAsync();
-  const data = parseBASE(rawExcel);
+
+  // Baixar do GCS ou ler local
+  const tmp = path.join(require('os').tmpdir(), `dash_c_${Date.now()}.csv`);
+  let loaded = false;
+  if (GCS_BUCKET && storageClient) {
+    loaded = await downloadFromGCS(tmp, CSV_NAME);
+  }
+
+  const csvFileToRead = loaded ? tmp : CSV_PATH;
+  if (!fs.existsSync(csvFileToRead)) {
+    throw new Error(`Arquivo base_dashboard.csv não encontrado no servidor.`);
+  }
+
+  const data = await readCSVAsync(csvFileToRead);
+
+  if (loaded) {
+    try { fs.unlinkSync(tmp); } catch (_) {}
+  }
+
   cache = { data, ts: now };
-  console.log(`[cache] dados brutos carregados às ${new Date().toLocaleTimeString('pt-BR')} — ${data.records.length} linhas de registro`);
+  console.log(`[cache] dados brutos carregados de ${path.basename(csvFileToRead)} às ${new Date().toLocaleTimeString('pt-BR')} — ${data.records.length} registros`);
   return data;
 }
 
@@ -416,9 +457,7 @@ app.post('/api/upload', (req, res, next) => {
 
     const localTempPath = req.file.path;
 
-    // Validar se o arquivo é um Excel válido lendo APENAS a estrutura do workbook (bookSheets: true)
-    // Usar sheetRows: 1 ainda lia células, estilos e strings compartilhadas de um arquivo de 22MB,
-    // esgotando a memória RAM (OOM) em servidores cloud e gerando o Erro HTTP 502 Bad Gateway.
+    // Validar se o arquivo é um Excel válido lendo APENAS a estrutura (bookSheets: true)
     try {
       const testWb = XLSX.readFile(localTempPath, { bookSheets: true });
       if (!testWb.SheetNames || !testWb.SheetNames.includes('BASE DASHBOARD')) {
@@ -429,29 +468,45 @@ app.post('/api/upload', (req, res, next) => {
       return res.status(400).json({ status: 'error', error: `Arquivo Excel inválido: ${err.message}` });
     }
 
+    // Gerar CSV temporário a partir do XLSX carregado
+    const tempCSVPath = path.join(require('os').tmpdir(), `temp_dash_c_${Date.now()}.csv`);
+    try {
+      console.log(`♻️ Convertendo planilha Excel em CSV leve para salvar memória...`);
+      convertExcelToCSV(localTempPath, tempCSVPath);
+    } catch (csvErr) {
+      try { fs.unlinkSync(localTempPath); } catch (_) {}
+      try { fs.unlinkSync(tempCSVPath); } catch (_) {}
+      return res.status(500).json({ status: 'error', error: `Falha ao processar dados da planilha: ${csvErr.message}` });
+    }
+
     // Salvar no GCS se configurado, ou substituir arquivo local
     if (GCS_BUCKET && storageClient) {
       try {
-        console.log(`☁️ Enviando nova planilha para o GCS gs://${GCS_BUCKET}/${FILE_NAME}...`);
+        console.log(`☁️ Enviando CSV convertido para o GCS gs://${GCS_BUCKET}/${FILE_NAME}...`);
         const bucket = storageClient.bucket(GCS_BUCKET);
-        await bucket.upload(localTempPath, {
+        await bucket.upload(tempCSVPath, {
           destination: FILE_NAME,
           metadata: { cacheControl: 'no-cache' }
         });
-        console.log(`☁️ Planilha salva no GCS.`);
+        console.log(`☁️ CSV salvo no GCS.`);
       } catch (gcsErr) {
         try { fs.unlinkSync(localTempPath); } catch (_) {}
+        try { fs.unlinkSync(tempCSVPath); } catch (_) {}
         throw new Error(`Erro ao salvar no Google Cloud Storage: ${gcsErr.message}`);
       }
     } else {
-      console.log(`💾 Salvando planilha localmente em ${EXCEL_PATH}...`);
-      fs.copyFileSync(localTempPath, EXCEL_PATH);
+      console.log(`💾 Salvando CSV localmente em ${CSV_PATH}...`);
+      fs.copyFileSync(tempCSVPath, CSV_PATH);
     }
 
+    // Limpar arquivos temporários
     try { fs.unlinkSync(localTempPath); } catch (_) {}
+    try { fs.unlinkSync(tempCSVPath); } catch (_) {}
+    
     clearCache();
+    if (global.gc) { try { global.gc(); } catch (_) {} }
 
-    res.json({ status: 'ok', msg: 'Planilha atualizada com sucesso!' });
+    res.json({ status: 'ok', msg: 'Planilha atualizada e convertida com sucesso!' });
   } catch (err) {
     console.error('[/api/upload] Erro:', err.message);
     res.status(500).json({ status: 'error', error: err.message });
@@ -537,8 +592,8 @@ app.post('/api/refresh', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({
     status:        'ok',
-    excel_path:    EXCEL_PATH,
-    excel_exists:  fs.existsSync(EXCEL_PATH),
+    csv_path:      CSV_PATH,
+    csv_exists:    fs.existsSync(CSV_PATH),
     port:          PORT,
     cache_age_ms:  cache.ts ? Date.now() - cache.ts : null,
   });
