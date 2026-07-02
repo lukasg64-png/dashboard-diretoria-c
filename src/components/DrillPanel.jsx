@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
 
 // ── Formatadores ────────────────────────────────────────────────────────────
@@ -27,6 +27,24 @@ const cMeta = v => {
 };
 const desvioAbs = (venda, meta) => (venda != null && meta != null) ? venda - meta : null;
 const desvioPct = (venda, meta) => (meta && meta !== 0) ? ((venda - meta) / meta) * 100 : null;
+
+const renderCustomLabel = (props) => {
+  const { x, y, width, value } = props;
+  if (value === 0 || value == null) return null;
+  const yOffset = value >= 0 ? -6 : 12;
+  const color = value >= 0 ? '#059669' : '#dc2626';
+  return (
+    <text 
+      x={x + width / 2} 
+      y={y + yOffset} 
+      fill={color} 
+      textAnchor="middle" 
+      style={{ fontSize: 9, fontWeight: 700 }}
+    >
+      {value > 0 ? '+' : ''}{fmtR(value)}
+    </text>
+  );
+};
 
 // ── KPI Block ───────────────────────────────────────────────────────────────
 function KpiBlock({ label, value, evol, evolLabel, sub, highlight }) {
@@ -641,7 +659,7 @@ export default function DrillPanel({ onUpload }) {
             </div>
             <div style={{ width: '100%', height: 180 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartItems} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                <BarChart data={chartItems} margin={{ top: 22, right: 10, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
                   <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => fmtR(v)} tickLine={false} />
@@ -654,6 +672,7 @@ export default function DrillPanel({ onUpload }) {
                     {chartItems.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
                     ))}
+                    <LabelList content={renderCustomLabel} />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
