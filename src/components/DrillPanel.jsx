@@ -421,10 +421,6 @@ export default function DrillPanel({ onUpload }) {
     `Crescimento\nYoY vs ${labelAtualAno}`,
     'MoM',
   ];
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f0f4f8', fontFamily: "'Inter', system-ui, sans-serif" }}>
-
       {/* ── Topbar ── */}
       <div style={{
         background: '#0f2050', color: '#fff', padding: '0 24px',
@@ -432,7 +428,7 @@ export default function DrillPanel({ onUpload }) {
         boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
       }}>
         {/* Linha 1: título e botões */}
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 30, height: 30, borderRadius: 6, background: '#e91e8c',
