@@ -190,10 +190,11 @@ function aggregate(records) {
   const dists    = {};
   const coords   = {};
   const grupos   = {};
-  const linhas   = {};
+  const linhas   = {};  // key = "grupo||linha" para manter relação
   const filiais  = {};
   const cdDist   = {};  // coordenador → distrital
   const flCoord  = {};  // filial → coordenador
+  const lgMap    = {};  // linha → grupo (primeiro grupo encontrado)
   
   let gt = { 
     mt:0, mp:0, v26:0, v25:0, jun:0, be26:0, be25:0,
@@ -249,7 +250,12 @@ function aggregate(records) {
     if (coord)  { add(coords,  coord); cdDist[coord] = dist; }
     if (filial) { add(filiais, filial); flCoord[filial] = coord; }
     if (grupo)  { add(grupos,  grupo); }
-    if (linha)  { add(linhas,  linha); }
+    // Agrupa linhas por grupo: chave composta para manter relação
+    if (linha) {
+      const linhaKey = grupo ? `${grupo}||${linha}` : linha;
+      add(linhas, linhaKey);
+      if (!lgMap[linhaKey]) lgMap[linhaKey] = grupo || '';
+    }
   }
 
   function m(v) {
@@ -286,9 +292,16 @@ function aggregate(records) {
       nomeOriginal: nomeOrig,
       ...m(v),
     })),
-    linhas: Object.entries(linhas).map(([nome, v]) => ({
-      nome, ...m(v),
-    })),
+    linhas: Object.entries(linhas).map(([key, v]) => {
+      const sep = key.indexOf('||');
+      const grupoNome = sep >= 0 ? key.substring(0, sep).replace(/\(\d+\)$/, '').trim() : (lgMap[key] || '');
+      const linhaName = sep >= 0 ? key.substring(sep + 2) : key;
+      return {
+        nome: linhaName,
+        grupo: grupoNome,
+        ...m(v),
+      };
+    }),
   };
 }
 
