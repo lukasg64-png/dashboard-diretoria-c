@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import API from '../api';
 
 // ── Formatadores ────────────────────────────────────────────────────────────
@@ -341,6 +342,7 @@ export default function DrillPanel({ onUpload }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('hierarquia');
+  const [showChart, setShowChart] = useState(true);
 
   // Filtros
   const [fDist, setFDist] = useState('all');
@@ -417,6 +419,36 @@ export default function DrillPanel({ onUpload }) {
   const filiais       = data?.filiais || [];
   const grupos        = data?.grupos || [];
   const linhas        = data?.linhas || [];
+
+  const chartItems = useMemo(() => {
+    let rawList = [];
+    if (activeTab === 'hierarquia') {
+      if (fDist === 'all') {
+        rawList = distritais;
+      } else if (fCoord === 'all') {
+        rawList = coordenadores.filter(c => c.distrital === fDist);
+      } else {
+        rawList = filiais.filter(f => f.coordenador === fCoord);
+      }
+    } else {
+      if (fGrupo === 'all') {
+        rawList = grupos;
+      } else {
+        rawList = linhas.filter(l => l.grupo === fGrupo);
+      }
+    }
+    return [...rawList]
+      .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0))
+      .slice(0, 15)
+      .map(item => {
+        const venda = item.venda_jul26 || 0;
+        const meta = item.meta_parcial || 0;
+        return {
+          name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
+          desvio: desvioAbs(venda, meta) || 0,
+        };
+      });
+  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo]);
 
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
@@ -593,24 +625,75 @@ export default function DrillPanel({ onUpload }) {
           </div>
         )}
 
+        {/* ── Gráfico de Desvio da Meta Parcial (Opcional) ── */}
+        {showChart && !loading && chartItems.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                📊 Desvio vs Meta Parcial — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por Venda)
+              </h4>
+              <button 
+                onClick={() => setShowChart(false)} 
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}
+              >
+                <X size={12} /> Ocultar Gráfico
+              </button>
+            </div>
+            <div style={{ width: '100%', height: 180 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartItems} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => fmtR(v)} tickLine={false} />
+                  <Tooltip 
+                    formatter={(value, name) => [fmtR(value), 'Desvio da Meta Parcial']} 
+                    contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
+                    labelStyle={{ color: '#94a3b8', fontWeight: 700 }}
+                  />
+                  <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
+                    {chartItems.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
         {/* ── Tabs ── */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 0 }}>
-          {[
-            { key: 'hierarquia', label: 'Hierarquia — Distrital · Coord. · Filial' },
-            { key: 'categorias', label: 'Grupos / Categorias → Linhas' },
-          ].map(tab => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-              padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: activeTab === tab.key ? '#fff' : 'rgba(255,255,255,0.5)',
-              border: '1px solid #e2e8f0',
-              borderBottom: activeTab === tab.key ? '1px solid #fff' : '1px solid #e2e8f0',
-              borderRadius: '6px 6px 0 0',
-              color: activeTab === tab.key ? '#0f2050' : '#64748b',
-              position: 'relative', bottom: -1,
-            }}>
-              {tab.label}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 0 }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[
+              { key: 'hierarquia', label: 'Hierarquia — Distrital · Coord. · Filial' },
+              { key: 'categorias', label: 'Grupos / Categorias → Linhas' },
+            ].map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+                padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                background: activeTab === tab.key ? '#fff' : 'rgba(255,255,255,0.5)',
+                border: '1px solid #e2e8f0',
+                borderBottom: activeTab === tab.key ? '1px solid #fff' : '1px solid #e2e8f0',
+                borderRadius: '6px 6px 0 0',
+                color: activeTab === tab.key ? '#0f2050' : '#64748b',
+                position: 'relative', bottom: -1,
+              }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {!showChart && (
+            <button 
+              onClick={() => setShowChart(true)} 
+              style={{
+                background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px 6px 0 0',
+                padding: '6px 12px', fontSize: 11, fontWeight: 600, color: '#475569',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                position: 'relative', bottom: -1, borderBottom: 'none'
+              }}
+            >
+              📊 Mostrar Gráfico de Desvio
             </button>
-          ))}
+          )}
         </div>
 
         {/* ── Tabela ── */}
