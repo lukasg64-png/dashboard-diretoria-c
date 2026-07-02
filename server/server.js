@@ -20,8 +20,10 @@ const { Storage } = require('@google-cloud/storage');
 const app  = express();
 const PORT = process.env.PORT || 3005;
 
-// Caminho padrão local
-const DEFAULT_EXCEL = path.join(__dirname, '..', '..', 'base Dashboard.xlsx');
+// Caminho padrão local (suporta deploy no Render e dev local)
+const localOneUp = path.join(__dirname, '..', 'base Dashboard.xlsx');
+const localTwoUp = path.join(__dirname, '..', '..', 'base Dashboard.xlsx');
+const DEFAULT_EXCEL = fs.existsSync(localOneUp) ? localOneUp : localTwoUp;
 const EXCEL_PATH    = process.env.EXCEL_PATH || DEFAULT_EXCEL;
 
 // Configuração Google Cloud Storage (GCS)
@@ -92,7 +94,14 @@ async function readExcelAsync() {
 
   let wb;
   try {
-    wb = XLSX.readFile(tmp, { cellDates: true, dense: true });
+    wb = XLSX.readFile(tmp, {
+      sheets: ['BASE DASHBOARD'],
+      dense: true,
+      cellDates: false,
+      cellNF: false,
+      cellText: false,
+      cellStyles: false
+    });
   } finally {
     try { fs.unlinkSync(tmp); } catch (_) {}
   }
@@ -105,8 +114,8 @@ function parseBASE(wb) {
   const ws = wb.Sheets['BASE DASHBOARD'];
   if (!ws) throw new Error('Aba "BASE DASHBOARD" não encontrada.');
 
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-  const header = rows[0] || [];
+  const headerRow = ws[0] || [];
+  const header = headerRow.map(c => (c && c.v != null ? String(c.v) : ''));
 
   function findColIndex(predicate, fallbackIndex) {
     const i = header.findIndex(predicate);
@@ -156,24 +165,38 @@ function parseBASE(wb) {
   const labelJun26 = String(header[C.vJun26] || 'Junho/26').replace('Venda Parcial ', '');
 
   const records = [];
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-    if (!row || row[C.dist] == null) continue;
+  const maxRow = ws.length || 0;
+  for (let r = 1; r < maxRow; r++) {
+    const row = ws[r];
+    if (!row) continue;
+
+    const getVal = (idx) => {
+      const cell = row[idx];
+      return cell && cell.v != null ? cell.v : null;
+    };
+
+    if (getVal(C.dist) == null) continue;
 
     records.push({
-      dist:   String(row[C.dist]   || '').trim(),
-      coord:  String(row[C.coord]  || '').trim(),
-      filial: String(row[C.filial] || '').trim(),
-      grupo:  String(row[C.grupo]  || '').trim(),
-      linha:  String(row[C.linha]  || '').trim(),
-      mt:     safe(row[C.metaTot]),
-      mp:     safe(row[C.metaParc]),
-      v26:    safe(row[C.vJul26]),
-      v25:    safe(row[C.vJul25]),
-      jun:    safe(row[C.vJun26]),
-      be26:   safe(row[C.beJul26]),
-      be25:   safe(row[C.beJul25]),
+      dist:   String(getVal(C.dist)   || '').trim(),
+      coord:  String(getVal(C.coord)  || '').trim(),
+      filial: String(getVal(C.filial) || '').trim(),
+      grupo:  String(getVal(C.grupo)  || '').trim(),
+      linha:  String(getVal(C.linha)  || '').trim(),
+      mt:     safe(getVal(C.metaTot)),
+      mp:     safe(getVal(C.metaParc)),
+      v26:    safe(getVal(C.vJul26)),
+      v25:    safe(getVal(C.vJul25)),
+      jun:    safe(getVal(C.vJun26)),
+      be26:   safe(getVal(C.beJul26)),
+      be25:   safe(getVal(C.beJul25)),
     });
+  }
+
+  // Liberar memória do SheetJS voluntariamente
+  delete wb.Sheets['BASE DASHBOARD'];
+  if (global.gc) {
+    try { global.gc(); } catch (_) {}
   }
 
   return {
@@ -307,7 +330,7 @@ function aggregate(records) {
 
 // ─── Cache em memória ───────────────────────────────────────────────────────
 let cache = { data: null, ts: 0 };
-const CACHE_TTL_MS = 30_000; // 30 segundos
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas (ou até novo upload/refresh)
 
 async function getCached() {
   const now = Date.now();
