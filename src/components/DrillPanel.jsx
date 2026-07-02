@@ -569,15 +569,11 @@ export default function DrillPanel({ onUpload }) {
               sub={`Atingido: ${fmtPct(t.pct_meta_total)}`}
             />
             <KpiBlock 
-              label="Meta Parcial" 
-              value={loading ? '...' : fmtR(t.meta_parcial)} 
-              sub={`Atingido: ${fmtPct(t.pct_meta_parcial)}`}
-            />
-            <KpiBlock 
               label="Desvio Meta Parcial" 
               value={loading ? '...' : (tDesvio != null ? (tDesvio >= 0 ? '+' : '') + fmtR(tDesvio) : '—')} 
               evol={desvioPct(t.venda_jul26, t.meta_parcial)} 
               evolLabel="desvio"
+              sub={`Meta Parcial: ${fmtR(t.meta_parcial)}`}
               highlight 
             />
             <KpiBlock 
