@@ -583,4 +583,21 @@ app.listen(PORT, () => {
   console.log(`\n🚀 Dashboard Diretoria C — http://localhost:${PORT}`);
   console.log(`📊 Excel: ${EXCEL_PATH}`);
   console.log(`   Existe: ${fs.existsSync(EXCEL_PATH) ? '✅' : '❌'}\n`);
+
+  // ─── Keep-alive: pinga o próprio servidor a cada 10 min ─────────────────
+  // Evita que o Render Free Tier hiberne e perca os arquivos em disco.
+  const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+  if (RENDER_URL) {
+    const http = require('https');
+    const PING_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
+    setInterval(() => {
+      const url = `${RENDER_URL}/api/health`;
+      http.get(url, (res) => {
+        console.log(`💓 Keep-alive ping → ${url} [${res.statusCode}]`);
+      }).on('error', (err) => {
+        console.warn(`⚠️ Keep-alive falhou: ${err.message}`);
+      });
+    }, PING_INTERVAL_MS);
+    console.log(`💓 Keep-alive ativo: pingando ${RENDER_URL}/api/health a cada 10 min`);
+  }
 });

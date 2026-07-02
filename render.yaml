@@ -9,3 +9,5 @@ services:
         value: production
       - key: UPLOAD_TOKEN
         value: sjcomercial
+      - key: RENDER_EXTERNAL_URL
+        value: https://dashboard-diretoria-cdashboard-diretoria.onrender.com
