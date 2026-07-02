@@ -178,7 +178,7 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
       <td style={td()}>{fmtR(row.meta_total)}</td>
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_total} /></td>
+      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -226,7 +226,7 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
       <td style={td()}>{fmtR(row.meta_total)}</td>
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_total} /></td>
+      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -413,7 +413,7 @@ export default function DrillPanel({ onUpload }) {
   const grupos        = data?.grupos || [];
   const linhas        = data?.linhas || [];
 
-  const tDesvio   = desvioAbs(t.venda_jul26, t.meta_total);
+  const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
 
   const COLS_HIER = [
@@ -555,14 +555,15 @@ export default function DrillPanel({ onUpload }) {
             <KpiBlock label={`Venda Ano Anterior — ${labelAtualAno}`} value={loading ? '...' : fmtR(t.venda_jul25)} />
             <KpiBlock label={`Mês Anterior — ${labelAnt}`} value={loading ? '...' : fmtR(t.venda_jun26)} evol={t.evol_mom} evolLabel="MoM" />
             <KpiBlock label="% Participação Digital" value={loading ? '...' : fmtPct(t.pct_ecomm_jul26)} evol={tPartEvol} evolLabel={`p.p. vs ${labelAtualAno}`} />
-            <KpiBlock label="% Meta Atingida" value={loading ? '...' : fmtPct(t.pct_meta_total)} highlight />
+            <KpiBlock label="% Meta Total Atingida" value={loading ? '...' : fmtPct(t.pct_meta_total)} />
+            <KpiBlock label="% Meta Parcial Atingida" value={loading ? '...' : fmtPct(t.pct_meta_parcial)} highlight />
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             <KpiBlock label="Meta Total" value={loading ? '...' : fmtR(t.meta_total)} />
             <KpiBlock label="Meta Parcial" value={loading ? '...' : fmtR(t.meta_parcial)} />
-            <KpiBlock label="Desvio da Meta (R$)" value={loading ? '...' : (tDesvio != null ? (tDesvio >= 0 ? '+' : '') + fmtR(tDesvio) : '—')} evol={desvioPct(t.venda_jul26, t.meta_total)} />
-            <KpiBlock label="Crescimento YoY" value={loading ? '...' : fmtEvol(t.evol_yoy)} evol={t.evol_yoy} evolLabel={`vs ${labelAtualAno}`} />
-            <KpiBlock label="Evolução MoM" value={loading ? '...' : fmtEvol(t.evol_mom)} evol={t.evol_mom} evolLabel={`vs ${labelAnt}`} />
+            <KpiBlock label="Desvio da Meta Parcial (R$)" value={loading ? '...' : (tDesvio != null ? (tDesvio >= 0 ? '+' : '') + fmtR(tDesvio) : '—')} evol={desvioPct(t.venda_jul26, t.meta_parcial)} />
+            <KpiBlock label="Evolução YoY" value={loading ? '...' : fmtEvol(t.evol_yoy)} evol={t.evol_yoy} evolLabel={`vs ${labelAtualAno}`} />
+            <KpiBlock label="Crescimento MoM" value={loading ? '...' : fmtEvol(t.evol_mom)} evol={t.evol_mom} evolLabel={`vs ${labelAnt}`} />
           </div>
         </div>
 
@@ -665,7 +666,7 @@ export default function DrillPanel({ onUpload }) {
                     <td style={td()}>{fmtR(t.venda_jul25)}</td>
                     <td style={td()}>{fmtR(t.meta_total)}</td>
                     <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={t.pct_meta_total} /></td>
-                    <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_total} /></td>
+                    <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_parcial} /></td>
                     <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
                     <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
                     <td style={{ ...td(), minWidth: 110 }}>

@@ -356,7 +356,7 @@ function applyFilters(full, filters) {
     records = records.filter(r => r.filial === filial);
   }
   if (grupo && grupo !== 'all') {
-    records = records.filter(r => r.grupo === grupo);
+    records = records.filter(r => r.grupo.replace(/\(\d+\)$/, '').trim() === grupo);
   }
   if (linha && linha !== 'all') {
     records = records.filter(r => r.linha === linha);

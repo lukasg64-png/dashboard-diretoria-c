@@ -265,16 +265,25 @@ export default function DashboardPrincipal({ data, loading, filters, onFilterCha
             icon={ShoppingCart} 
           />
           <KPICard 
-            title="Meta Atingida (%)" 
-            value={`${(t.pct_meta_total || 0).toFixed(1)}%`}
+            title="Atingimento Meta Parcial" 
+            value={`${(t.pct_meta_parcial || 0).toFixed(1)}%`}
             sub={formatK(t.meta_parcial)} 
             subLabel="Meta Parcial:"
-            color={(t.pct_meta_total || 0) >= 90 ? SUCCESS : (t.pct_meta_total || 0) >= 60 ? WARNING : DANGER}
+            color={(t.pct_meta_parcial || 0) >= 90 ? SUCCESS : (t.pct_meta_parcial || 0) >= 60 ? WARNING : DANGER}
             loading={loading} 
             icon={Target} 
           />
           <KPICard 
-            title="Crescimento YoY" 
+            title="Desvio Meta Parcial" 
+            value={t.venda_jul26 != null && t.meta_parcial != null ? `${(t.venda_jul26 - t.meta_parcial) >= 0 ? '+' : ''}${formatK(t.venda_jul26 - t.meta_parcial)}` : '—'}
+            trend={t.meta_parcial ? ((t.venda_jul26 - t.meta_parcial) / t.meta_parcial) * 100 : undefined}
+            trendLabel="desvio"
+            color={t.venda_jul26 >= t.meta_parcial ? SUCCESS : DANGER}
+            loading={loading}
+            icon={t.venda_jul26 >= t.meta_parcial ? TrendingUp : TrendingDown}
+          />
+          <KPICard 
+            title="Evolução YoY" 
             value={`${t.evol_yoy >= 0 ? '+' : ''}${(t.evol_yoy || 0).toFixed(1)}%`}
             sub={`${labelMesAtualAnoAnt}: ${formatK(t.venda_jul25)}`} 
             subLabel={`Venda ${labelMesAtualAnoAnt}:`}

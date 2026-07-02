@@ -74,7 +74,7 @@ export default function LinhasPage({ filters }) {
       key: 'desvio', label: 'Desvio da Meta', align: 'right',
       render: (_, row) => {
         const venda = row.venda_jul26;
-        const meta = row.meta_total;
+        const meta = row.meta_parcial;
         if (venda == null || meta == null) return '—';
         const abs = venda - meta;
         const pctVal = meta !== 0 ? (abs / meta) * 100 : 0;
