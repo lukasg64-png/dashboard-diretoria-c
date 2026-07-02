@@ -106,15 +106,36 @@ function Evol({ v }) {
 }
 
 // ── Célula Desvio ───────────────────────────────────────────────────────────
-function Desvio({ venda, meta }) {
+function Desvio({ venda, meta, badge }) {
   const abs = desvioAbs(venda, meta);
   const pct = desvioPct(venda, meta);
   if (abs == null) return <span style={{ color: '#94a3b8' }}>—</span>;
-  const color = abs >= 0 ? '#059669' : '#dc2626';
+  const isPositive = abs >= 0;
+  const color = isPositive ? '#047857' : '#b91c1c';
+  const bg = isPositive ? '#ecfdf5' : '#fef2f2';
+  const border = isPositive ? '1px solid #d1fae5' : '1px solid #fee2e2';
+
+  if (badge) {
+    return (
+      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+        <div style={{
+          background: bg, border: border, color: color,
+          borderRadius: 12, padding: '3px 8px', fontSize: 11, fontWeight: 700,
+          display: 'inline-flex', alignItems: 'center', minWidth: 64, justifyContent: 'center'
+        }}>
+          {isPositive ? '+' : ''}{fmtR(abs)}
+        </div>
+        <span style={{ fontSize: 9, color: isPositive ? '#059669' : '#dc2626', marginTop: 2, marginRight: 4, fontWeight: 600 }}>
+          {fmtEvol(pct)}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <span style={{ fontWeight: 700, fontSize: 12, color }}>{abs >= 0 ? '+' : ''}{fmtR(abs)}</span>
-      <span style={{ fontSize: 10, color }}>{fmtEvol(pct)}</span>
+      <span style={{ fontWeight: 700, fontSize: 12, color: isPositive ? '#059669' : '#dc2626' }}>{isPositive ? '+' : ''}{fmtR(abs)}</span>
+      <span style={{ fontSize: 10, color: isPositive ? '#059669' : '#dc2626' }}>{fmtEvol(pct)}</span>
     </div>
   );
 }
@@ -202,7 +223,7 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
       <td style={td()}>{fmtR(row.meta_total)}</td>
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} /></td>
+      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -250,7 +271,7 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
       <td style={td()}>{fmtR(row.meta_total)}</td>
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} /></td>
+      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -261,18 +282,58 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
 }
 
 // ── Tabela Hierárquica ──────────────────────────────────────────────────────
-function HierTable({ distritais, coordenadores, filiais, labelAtualAno }) {
+function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTerm }) {
   const [openDist, setOpenDist] = useState(new Set());
   const [openCoord, setOpenCoord] = useState(new Set());
   const tog = (set, setSet, key) =>
     setSet(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
-  const sorted = [...distritais].sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+  const matches = (name) => !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase());
+
+  // Auto-expandir se houver termo de busca correspondente aos filhos
+  useEffect(() => {
+    if (searchTerm) {
+      const distsToOpen = new Set();
+      const coordsToOpen = new Set();
+      
+      distritais.forEach(d => {
+        const cs = coordenadores.filter(c => c.distrital === d.nome);
+        cs.forEach(c => {
+          const fs = filiais.filter(f => f.coordenador === c.nome);
+          const anyFilMatch = fs.some(f => matches(f.nome));
+          if (anyFilMatch || matches(c.nome)) {
+            distsToOpen.add(d.nome);
+          }
+          if (anyFilMatch) {
+            coordsToOpen.add(c.nome);
+          }
+        });
+      });
+      
+      setOpenDist(distsToOpen);
+      setOpenCoord(coordsToOpen);
+    }
+  }, [searchTerm, distritais, coordenadores, filiais]);
+
+  const sorted = [...distritais]
+    .filter(d => {
+      if (matches(d.nome)) return true;
+      const cs = coordenadores.filter(c => c.distrital === d.nome);
+      return cs.some(c => matches(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matches(f.nome)));
+    })
+    .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+
   const rows = [];
 
   sorted.forEach(dist => {
     const isDistOpen = openDist.has(dist.nome);
-    const coords = coordenadores.filter(c => c.distrital === dist.nome)
+    const coords = coordenadores
+      .filter(c => c.distrital === dist.nome)
+      .filter(c => {
+        if (matches(c.nome) || matches(dist.nome)) return true;
+        const fils = filiais.filter(f => f.coordenador === c.nome);
+        return fils.some(f => matches(f.nome));
+      })
       .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
 
     rows.push(
@@ -284,7 +345,9 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno }) {
     if (isDistOpen) {
       coords.forEach(coord => {
         const isCoordOpen = openCoord.has(coord.nome);
-        const fils = filiais.filter(f => f.coordenador === coord.nome)
+        const fils = filiais
+          .filter(f => f.coordenador === coord.nome)
+          .filter(f => matches(f.nome) || matches(coord.nome) || matches(dist.nome))
           .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
 
         rows.push(
@@ -309,28 +372,42 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno }) {
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, linhas, labelAtualAno }) {
+function CatTable({ grupos, linhas, labelAtualAno, searchTerm }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
   const tog = key =>
     setOpenGrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
-  // Mapear linhas por grupo
-  const linhasByGrupo = useMemo(() => {
-    const map = {};
-    (linhas || []).forEach(l => {
-      const g = l.grupo || '';
-      if (!map[g]) map[g] = [];
-      map[g].push(l);
-    });
-    return map;
-  }, [linhas]);
+  const matches = (name) => !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const sortedGrupos = [...grupos].sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+  // Auto-expandir se houver correspondência de busca nos filhos
+  useEffect(() => {
+    if (searchTerm) {
+      const gruposToOpen = new Set();
+      grupos.forEach(g => {
+        const ls = linhas.filter(l => l.grupo === g.nome);
+        if (ls.some(l => matches(l.nome))) {
+          gruposToOpen.add(g.nome);
+        }
+      });
+      setOpenGrupo(gruposToOpen);
+    }
+  }, [searchTerm, grupos, linhas]);
+
+  const sortedGrupos = [...grupos]
+    .filter(g => {
+      if (matches(g.nome)) return true;
+      const ls = linhas.filter(l => l.grupo === g.nome);
+      return ls.some(l => matches(l.nome));
+    })
+    .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+
   const rows = [];
 
   sortedGrupos.forEach(grupo => {
     const isOpen = openGrupo.has(grupo.nome);
-    const grupoLinhas = (linhasByGrupo[grupo.nomeOriginal] || linhasByGrupo[grupo.nome] || [])
+    const grupoLinhas = linhas
+      .filter(l => l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome)
+      .filter(l => matches(l.nome) || matches(grupo.nome))
       .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
 
     rows.push(
@@ -361,6 +438,8 @@ export default function DrillPanel({ onUpload }) {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('hierarquia');
   const [showChart, setShowChart] = useState(true);
+  const [chartMetric, setChartMetric] = useState('desvio');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Filtros
   const [fDist, setFDist] = useState('all');
@@ -463,10 +542,40 @@ export default function DrillPanel({ onUpload }) {
         const meta = item.meta_parcial || 0;
         return {
           name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
+          nomeOriginal: item.nome,
+          venda,
+          meta,
           desvio: desvioAbs(venda, meta) || 0,
+          participacao: item.pct_ecomm_jul26 || 0,
         };
       });
   }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo]);
+
+  const handleChartClick = useCallback((state) => {
+    if (!state || !state.activePayload || state.activePayload.length === 0) return;
+    const clickedItem = state.activePayload[0].payload;
+    const nome = clickedItem.nomeOriginal;
+
+    if (activeTab === 'hierarquia') {
+      if (fDist === 'all') {
+        setFDist(nome);
+        setFCoord('all');
+        setFFilial('all');
+      } else if (fCoord === 'all') {
+        setFCoord(nome);
+        setFFilial('all');
+      } else if (fFilial === 'all') {
+        setFFilial(nome);
+      }
+    } else {
+      if (fGrupo === 'all') {
+        setFGrupo(nome);
+        setFLinha('all');
+      } else if (fLinha === 'all') {
+        setFLinha(nome);
+      }
+    }
+  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fLinha]);
 
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
@@ -646,36 +755,95 @@ export default function DrillPanel({ onUpload }) {
         {/* ── Gráfico de Desvio da Meta Parcial (Opcional) ── */}
         {showChart && !loading && chartItems.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                📊 Desvio vs Meta Parcial — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por Venda)
+                📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por Venda)
               </h4>
-              <button 
-                onClick={() => setShowChart(false)} 
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}
-              >
-                <X size={12} /> Ocultar Gráfico
-              </button>
+              
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Seletor de Métrica */}
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
+                  {[
+                    { key: 'desvio', label: 'Desvio (R$)' },
+                    { key: 'venda_meta', label: 'Venda vs Meta' },
+                    { key: 'participacao', label: 'Part. Digital (%)' },
+                  ].map(m => (
+                    <button
+                      key={m.key}
+                      onClick={() => setChartMetric(m.key)}
+                      style={{
+                        background: chartMetric === m.key ? '#fff' : 'transparent',
+                        border: 'none',
+                        color: chartMetric === m.key ? '#0f2050' : '#64748b',
+                        borderRadius: 4,
+                        padding: '4px 10px',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: chartMetric === m.key ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => setShowChart(false)} 
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}
+                >
+                  <X size={12} /> Ocultar Gráfico
+                </button>
+              </div>
             </div>
             <div style={{ width: '100%', height: 180 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartItems} margin={{ top: 22, right: 10, left: 10, bottom: 5 }}>
+                <BarChart data={chartItems} margin={{ top: 22, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => fmtR(v)} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => chartMetric === 'participacao' ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
                   <Tooltip 
-                    formatter={(value, name) => [fmtR(value), 'Desvio da Meta Parcial']} 
+                    formatter={(value, name) => {
+                      if (chartMetric === 'participacao') return [`${value.toFixed(1)}%`, 'Participação Digital'];
+                      if (name === 'venda') return [fmtR(value), 'Venda E-commerce'];
+                      if (name === 'meta') return [fmtR(value), 'Meta Parcial'];
+                      return [fmtR(value), 'Desvio da Meta Parcial'];
+                    }}
                     contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
                     labelStyle={{ color: '#94a3b8', fontWeight: 700 }}
                   />
-                  <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
-                    {chartItems.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
-                    ))}
-                    <LabelList content={renderCustomLabel} />
-                  </Bar>
+                  
+                  {chartMetric === 'desvio' && (
+                    <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
+                      {chartItems.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
+                      ))}
+                      <LabelList content={renderCustomLabel} />
+                    </Bar>
+                  )}
+
+                  {chartMetric === 'venda_meta' && (
+                    <>
+                      <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                      </Bar>
+                      <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                      </Bar>
+                    </>
+                  )}
+
+                  {chartMetric === 'participacao' && (
+                    <Bar dataKey="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
+                      <LabelList dataKey="participacao" position="top" formatter={v => `${v.toFixed(1)}%`} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                    </Bar>
+                  )}
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4, fontWeight: 500 }}>
+              💡 Dica: clique em qualquer barra do gráfico para aplicar o filtro correspondente.
             </div>
           </div>
         )}
@@ -717,15 +885,28 @@ export default function DrillPanel({ onUpload }) {
 
         {/* ── Tabela ── */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
               {activeTab === 'hierarquia' ? 'Desempenho E-Commerce — Hierarquia Organizacional' : 'Desempenho E-Commerce — Grupos e Linhas de Produtos'}
             </span>
-            <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '2px 8px' }}>
-              {activeTab === 'hierarquia'
-                ? `${distritais.length} distritais · ${coordenadores.length} coords · ${filiais.length} filiais`
-                : `${grupos.length} grupos`}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  padding: '4px 10px', fontSize: 11, border: '1px solid #cbd5e1', borderRadius: 6,
+                  outline: 'none', width: 140, background: '#fff', color: '#1e293b',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)', transition: 'border-color 0.15s'
+                }}
+              />
+              <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>
+                {activeTab === 'hierarquia'
+                  ? `${distritais.length} distritais`
+                  : `${grupos.length} grupos`}
+              </span>
+            </div>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -765,13 +946,14 @@ export default function DrillPanel({ onUpload }) {
                       coordenadores={coordenadores}
                       filiais={filiais}
                       labelAtualAno={labelAtualAno}
+                      searchTerm={searchTerm}
                     />
                   )
                 ) : (
                   grupos.length === 0 ? (
                     <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
                   ) : (
-                    <CatTable grupos={grupos} linhas={linhas} labelAtualAno={labelAtualAno} />
+                    <CatTable grupos={grupos} linhas={linhas} labelAtualAno={labelAtualAno} searchTerm={searchTerm} />
                   )
                 )}
               </tbody>
