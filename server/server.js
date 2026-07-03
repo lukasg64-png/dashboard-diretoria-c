@@ -344,6 +344,7 @@ async function getCached() {
     try { fs.unlinkSync(tmp); } catch (_) {}
   }
 
+  data.globalAgg = aggregate(data.records);
   cache = { data, ts: now };
   console.log(`[cache] dados brutos carregados de ${path.basename(csvFileToRead)} às ${new Date().toLocaleTimeString('pt-BR')} — ${data.records.length} registros`);
   return data;
@@ -354,6 +355,30 @@ function clearCache() { cache = { data: null, ts: 0 }; }
 // ─── Filtro pós-cache ───────────────────────────────────────────────────────
 function applyFilters(full, filters) {
   const { diretoria, distrital, coordenador, filial, grupo, linha } = filters;
+
+  const isAll = (!diretoria || diretoria === 'all') &&
+                (!distrital || distrital === 'all') &&
+                (!coordenador || coordenador === 'all') &&
+                (!filial || filial === 'all') &&
+                (!grupo || grupo === 'all') &&
+                (!linha || linha === 'all');
+
+  if (isAll && full.globalAgg) {
+    return {
+      total:          full.globalAgg.total,
+      filtered_total: full.globalAgg.total,
+      diretorias:     full.globalAgg.diretorias,
+      distritoriais:  full.globalAgg.distritoriais,
+      coordenadores:  full.globalAgg.coordenadores,
+      filiais:        full.globalAgg.filiais,
+      grupos:         full.globalAgg.grupos,
+      linhas:         full.globalAgg.linhas,
+      label_mes_atual: full.label_mes_atual,
+      label_mes_ant:   full.label_mes_ant,
+      arquivo:         full.arquivo,
+      lido_em:         full.lido_em,
+    };
+  }
 
   let records = full.records;
 
@@ -377,7 +402,7 @@ function applyFilters(full, filters) {
     records = records.filter(r => r.linha === linha);
   }
 
-  const globalAgg = aggregate(full.records);
+  const globalAgg = full.globalAgg || aggregate(full.records);
   const filteredAgg = aggregate(records);
 
   return {
@@ -509,7 +534,7 @@ app.get('/api/metas', async (req, res) => {
     const data = applyFilters(full, filters);
 
     // Calcular as opções globais de filtros e seus relacionamentos
-    const globalAgg = aggregate(full.records);
+    const globalAgg = full.globalAgg || aggregate(full.records);
     const options = {
       diretorias: globalAgg.diretorias.map(d => ({ nome: d.nome })),
       distritoriais: globalAgg.distritoriais.map(d => ({ nome: d.nome, diretoria: d.diretoria })),
@@ -557,7 +582,7 @@ app.get('/api/detalhes', async (req, res) => {
 app.get('/api/filtros', async (req, res) => {
   try {
     const full = await getCached();
-    const globalAgg = aggregate(full.records);
+    const globalAgg = full.globalAgg || aggregate(full.records);
     res.json({
       status:         'ok',
       diretorias:     globalAgg.diretorias.map(d => d.nome).sort(),
