@@ -46,6 +46,40 @@ const renderCustomLabel = (props) => {
   );
 };
 
+const renderCustomPartLabel = (props) => {
+  const { x, y, width, value } = props;
+  if (value == null) return null;
+  const payload = props.payload;
+  const diff = payload ? payload.diff_pp : null;
+  const diffStr = diff != null ? `${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp` : '';
+  const diffColor = diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#64748b';
+
+  return (
+    <g>
+      <text 
+        x={x + width / 2} 
+        y={y - 12} 
+        fill="#0f2050" 
+        textAnchor="middle" 
+        style={{ fontSize: 8, fontWeight: 700 }}
+      >
+        {Number(value).toFixed(1).replace('.', ',')}%
+      </text>
+      {diff != null && (
+        <text 
+          x={x + width / 2} 
+          y={y - 2} 
+          fill={diffColor} 
+          textAnchor="middle" 
+          style={{ fontSize: 8, fontWeight: 700 }}
+        >
+          {diffStr}
+        </text>
+      )}
+    </g>
+  );
+};
+
 // ── KPI Block ───────────────────────────────────────────────────────────────
 function KpiBlock({ label, value, evol, evolLabel, sub, highlight }) {
   const ec = cEvol(evol);
@@ -561,13 +595,18 @@ export default function DrillPanel({ onUpload }) {
       .map(item => {
         const venda = item.venda_jul26 || 0;
         const meta = item.meta_parcial || 0;
+        const part26 = item.pct_ecomm_jul26 != null ? item.pct_ecomm_jul26 : 0;
+        const part25 = item.pct_ecomm_jul25 != null ? item.pct_ecomm_jul25 : 0;
+        const diffPP = (item.pct_ecomm_jul26 != null && item.pct_ecomm_jul25 != null) ? (item.pct_ecomm_jul26 - item.pct_ecomm_jul25) : 0;
         return {
           name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
           nomeOriginal: item.nome,
           venda,
           meta,
           desvio: desvioAbs(venda, meta) || 0,
-          participacao: item.pct_ecomm_jul26 || 0,
+          participacao: part26,
+          participacao_ant: part25,
+          diff_pp: diffPP,
         };
       });
   }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo]);
@@ -855,17 +894,44 @@ export default function DrillPanel({ onUpload }) {
                 </button>
               </div>
             </div>
-            <div style={{ width: '100%', height: 180 }}>
+            {chartMetric === 'venda_meta' && (
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#7c3aed', display: 'inline-block' }} /> Venda E-comm ({labelAtual})
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#94a3b8', display: 'inline-block' }} /> Meta Parcial
+                </span>
+              </div>
+            )}
+            {chartMetric === 'participacao' && (
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#0ea5e9', display: 'inline-block' }} /> Part. Digital ({labelAtual})
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#94a3b8', display: 'inline-block' }} /> Part. Digital Ano Ant. ({labelAtualAno})
+                </span>
+              </div>
+            )}
+            <div style={{ width: '100%', height: 195 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartItems} margin={{ top: 22, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
+                <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
                   <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => chartMetric === 'participacao' ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
                   <Tooltip 
-                    formatter={(value, name) => {
-                      if (chartMetric === 'participacao') return [`${value.toFixed(1)}%`, 'Participação Digital'];
-                      if (name === 'venda') return [fmtR(value), 'Venda E-commerce'];
-                      if (name === 'meta') return [fmtR(value), 'Meta Parcial'];
+                    formatter={(value, name, props) => {
+                      if (name === 'participacao' || name === 'Part. Digital Atual') {
+                        const diff = props?.payload?.diff_pp;
+                        const diffTxt = diff != null ? ` (${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp vs ano ant.)` : '';
+                        return [`${Number(value).toFixed(1).replace('.', ',')}%${diffTxt}`, `Part. Digital (${labelAtual})`];
+                      }
+                      if (name === 'participacao_ant' || name === 'Part. Digital Ano Ant.') {
+                        return [`${Number(value).toFixed(1).replace('.', ',')}%`, `Part. Digital Ano Ant. (${labelAtualAno})`];
+                      }
+                      if (name === 'venda' || name === 'Venda E-commerce') return [fmtR(value), `Venda E-comm (${labelAtual})`];
+                      if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
                       return [fmtR(value), 'Desvio da Meta Parcial'];
                     }}
                     contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
@@ -882,19 +948,24 @@ export default function DrillPanel({ onUpload }) {
                   )}
 
                   {chartMetric === 'venda_meta' && (
-                    <>
-                      <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                      </Bar>
-                      <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                      </Bar>
-                    </>
+                    <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                      <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                    </Bar>
+                  )}
+                  {chartMetric === 'venda_meta' && (
+                    <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                      <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                    </Bar>
                   )}
 
                   {chartMetric === 'participacao' && (
-                    <Bar dataKey="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
-                      <LabelList dataKey="participacao" position="top" formatter={v => `${v.toFixed(1)}%`} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                    <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
+                      <LabelList content={renderCustomPartLabel} />
+                    </Bar>
+                  )}
+                  {chartMetric === 'participacao' && (
+                    <Bar dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                      <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                     </Bar>
                   )}
                 </BarChart>
