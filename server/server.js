@@ -110,6 +110,7 @@ async function readCSVAsync(filePath) {
           return i >= 0 ? i : fallbackIndex;
         }
 
+        const diretoriaIndex = findColIndex(h => /diretoria|deretoria/i.test(h), -1);
         const distIndex = findColIndex(h => /distrital/i.test(h), 1);
         const coordIndex = findColIndex(h => /coordenador/i.test(h), 2);
         const filialIndex = findColIndex(h => /desc_filial|filial/i.test(h), 3);
@@ -128,6 +129,7 @@ async function readCSVAsync(filePath) {
         const beJul25Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), 12);
 
         C = {
+          diretoria: diretoriaIndex,
           dist:      distIndex,
           coord:     coordIndex,
           filial:    filialIndex,
@@ -154,7 +156,9 @@ async function readCSVAsync(filePath) {
         return val != null ? val.replace(/^"|"$/g, '') : null;
       };
 
+      const valDir = C.diretoria >= 0 ? getVal(C.diretoria) : null;
       records.push({
+        dir:    valDir ? String(valDir).trim() || 'Sem Diretoria' : 'Sem Diretoria',
         dist:   String(getVal(C.dist)   || '').trim(),
         coord:  String(getVal(C.coord)  || '').trim(),
         filial: String(getVal(C.filial) || '').trim(),
@@ -188,11 +192,13 @@ async function readCSVAsync(filePath) {
 
 // ─── Agregação de registros ──────────────────────────────────────────────────
 function aggregate(records) {
+  const dirs     = {};
   const dists    = {};
   const coords   = {};
   const grupos   = {};
   const linhas   = {};  // key = "grupo||linha" para manter relação
   const filiais  = {};
+  const dtDir    = {};  // distrital → diretoria
   const cdDist   = {};  // coordenador → distrital
   const flCoord  = {};  // filial → coordenador
   const lgMap    = {};  // linha → grupo (primeiro grupo encontrado)
@@ -203,7 +209,7 @@ function aggregate(records) {
   };
 
   for (const r of records) {
-    const { dist, coord, filial, grupo, linha, mt, mp, v26, v25, jun, be26, be25 } = r;
+    const { dir, dist, coord, filial, grupo, linha, mt, mp, v26, v25, jun, be26, be25 } = r;
 
     function add(map, key) {
       if (!map[key]) {
@@ -247,7 +253,8 @@ function aggregate(records) {
       gt.be25_eb += be25;
     }
 
-    if (dist)   { add(dists,   dist); }
+    if (dir)    { add(dirs,    dir); }
+    if (dist)   { add(dists,   dist); if (dir) dtDir[dist] = dir; }
     if (coord)  { add(coords,  coord); cdDist[coord] = dist; }
     if (filial) { add(filiais, filial); flCoord[filial] = coord; }
     if (grupo)  { add(grupos,  grupo); }
@@ -279,8 +286,11 @@ function aggregate(records) {
 
   return {
     total: m(gt),
-    distritoriais: Object.entries(dists).map(([nome, v]) => ({
+    diretorias: Object.entries(dirs).map(([nome, v]) => ({
       nome, ...m(v),
+    })),
+    distritoriais: Object.entries(dists).map(([nome, v]) => ({
+      nome, diretoria: dtDir[nome] || '', ...m(v),
     })),
     coordenadores: Object.entries(coords).map(([nome, v]) => ({
       nome, distrital: cdDist[nome] || '', ...m(v),
@@ -343,11 +353,14 @@ function clearCache() { cache = { data: null, ts: 0 }; }
 
 // ─── Filtro pós-cache ───────────────────────────────────────────────────────
 function applyFilters(full, filters) {
-  const { distrital, coordenador, filial, grupo, linha } = filters;
+  const { diretoria, distrital, coordenador, filial, grupo, linha } = filters;
 
   let records = full.records;
 
   // Filtragem sequencial
+  if (diretoria && diretoria !== 'all') {
+    records = records.filter(r => r.dir === diretoria);
+  }
   if (distrital && distrital !== 'all') {
     records = records.filter(r => r.dist === distrital);
   }
@@ -370,6 +383,7 @@ function applyFilters(full, filters) {
   return {
     total:          globalAgg.total,
     filtered_total: filteredAgg.total,
+    diretorias:     filteredAgg.diretorias,
     distritoriais:  filteredAgg.distritoriais,
     coordenadores:  filteredAgg.coordenadores,
     filiais:        filteredAgg.filiais,
@@ -438,8 +452,8 @@ app.post('/api/upload', (req, res, next) => {
         stream.on('error', err => reject(err));
       });
 
-      if (!firstLine || !firstLine.toLowerCase().includes('distrital')) {
-        throw new Error('O arquivo não parece conter um cabeçalho válido com a coluna "Distrital". Certifique-se de enviar a planilha correta.');
+      if (!firstLine || (!firstLine.toLowerCase().includes('distrital') && !firstLine.toLowerCase().includes('diretoria') && !firstLine.toLowerCase().includes('deretoria'))) {
+        throw new Error('O arquivo não parece conter um cabeçalho válido com a coluna "Distrital" ou "Diretoria". Certifique-se de enviar a planilha correta.');
       }
     } catch (err) {
       try { fs.unlinkSync(localTempPath); } catch (_) {}
@@ -485,6 +499,7 @@ app.get('/api/metas', async (req, res) => {
       return res.json({ status: 'no_data', msg: 'Nenhuma planilha carregada. Faça o upload do arquivo base_dashboard.csv pelo portal.' });
     }
     const filters = {
+      diretoria:   req.query.diretoria   || 'all',
       distrital:   req.query.distrital   || 'all',
       coordenador: req.query.coordenador || 'all',
       filial:      req.query.filial      || 'all',
@@ -496,7 +511,8 @@ app.get('/api/metas', async (req, res) => {
     // Calcular as opções globais de filtros e seus relacionamentos
     const globalAgg = aggregate(full.records);
     const options = {
-      distritoriais: globalAgg.distritoriais.map(d => ({ nome: d.nome })),
+      diretorias: globalAgg.diretorias.map(d => ({ nome: d.nome })),
+      distritoriais: globalAgg.distritoriais.map(d => ({ nome: d.nome, diretoria: d.diretoria })),
       coordenadores: globalAgg.coordenadores.map(c => ({ nome: c.nome, distrital: c.distrital })),
       filiais: globalAgg.filiais.map(f => ({ nome: f.nome, coordenador: f.coordenador })),
       grupos: globalAgg.grupos.map(g => ({ nome: g.nomeOriginal || g.nome })),
@@ -517,6 +533,7 @@ app.get('/api/detalhes', async (req, res) => {
       return res.json({ status: 'no_data', msg: 'Nenhuma planilha carregada.' });
     }
     const filters = {
+      diretoria:   req.query.diretoria   || 'all',
       distrital:   req.query.distrital   || 'all',
       coordenador: req.query.coordenador || 'all',
       filial:      req.query.filial      || 'all',
@@ -542,7 +559,8 @@ app.get('/api/filtros', async (req, res) => {
     const full = await getCached();
     const globalAgg = aggregate(full.records);
     res.json({
-      status:        'ok',
+      status:         'ok',
+      diretorias:     globalAgg.diretorias.map(d => d.nome).sort(),
       distritoriais:  globalAgg.distritoriais.map(d => d.nome).sort(),
       coordenadores:  globalAgg.coordenadores.map(c => c.nome).sort(),
       filiais:        globalAgg.filiais.map(f => f.nome).sort(),
