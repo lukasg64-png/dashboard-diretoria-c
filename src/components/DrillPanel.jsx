@@ -220,10 +220,16 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
         </div>
       </td>
       <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
+      <td style={td()}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(row.meta_parcial)}</span>
+          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+        </div>
+      </td>
+      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
       <td style={td()}>{fmtR(row.meta_total)}</td>
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -268,10 +274,16 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
         </div>
       </td>
       <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
+      <td style={td()}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(row.meta_parcial)}</span>
+          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+        </div>
+      </td>
+      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
       <td style={td()}>{fmtR(row.meta_total)}</td>
       <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -591,10 +603,11 @@ export default function DrillPanel({ onUpload }) {
 
   const COLS_HIER = [
     `Venda E-comm\n${labelAtual}`,
-    `Venda\n${labelAtualAno}`,
-    'Meta',
-    '% Meta',
+    `Meta Parcial\n${labelAtual}`,
     'Desvio da Meta',
+    `Venda\n${labelAtualAno}`,
+    'Meta Total',
+    '% Meta Total',
     `Evolução\nYoY vs ${labelAtualAno}`,
     `Crescimento\nMoM vs ${labelAnt}`,
     'Part. Digital',
@@ -602,10 +615,11 @@ export default function DrillPanel({ onUpload }) {
 
   const COLS_CAT = [
     `Venda E-comm\n${labelAtual}`,
-    `Venda\n${labelAtualAno}`,
-    'Meta',
-    '% Meta',
+    `Meta Parcial\n${labelAtual}`,
     'Desvio da Meta',
+    `Venda\n${labelAtualAno}`,
+    'Meta Total',
+    '% Meta Total',
     `Evolução\nYoY vs ${labelAtualAno}`,
     `Crescimento\nMoM vs ${labelAnt}`,
     'Part. Digital',
