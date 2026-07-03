@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
 
@@ -487,6 +487,7 @@ export default function DrillPanel({ onUpload }) {
   const [showChart, setShowChart] = useState(true);
   const [chartMetric, setChartMetric] = useState('desvio');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(true);
 
   // Filtros
   const [fDist, setFDist] = useState('all');
@@ -496,6 +497,7 @@ export default function DrillPanel({ onUpload }) {
   const [fLinha, setFLinha] = useState('all');
 
   const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all';
+  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fLinha].filter(f => f !== 'all').length;
 
   const filters = { distrital: fDist, coordenador: fCoord, filial: fFilial, grupo: fGrupo, linha: fLinha };
 
@@ -688,6 +690,18 @@ export default function DrillPanel({ onUpload }) {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              title={showFilters ? "Esconder Filtros" : "Mostrar Filtros"} 
+              style={{ 
+                ...btnS, 
+                background: showFilters ? 'rgba(123,97,255,0.25)' : 'rgba(255,255,255,0.1)', 
+                borderColor: showFilters ? 'rgba(123,97,255,0.5)' : 'rgba(255,255,255,0.2)',
+                color: showFilters ? '#c4b5fd' : '#fff'
+              }}
+            >
+              <Filter size={13} /> {showFilters ? 'Esconder Filtros' : 'Filtros'} {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
+            </button>
             {onUpload && (
               <button onClick={onUpload} style={btnS}>
                 <Upload size={13} /> Atualizar Excel
@@ -700,70 +714,72 @@ export default function DrillPanel({ onUpload }) {
         </div>
 
         {/* Linha 2: Filtros */}
-        <div style={{
-          display: 'flex', alignItems: 'flex-end', gap: 16,
-          paddingBottom: 10, paddingTop: 4, flexWrap: 'wrap',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(255,255,255,0.4)', marginRight: 4 }}>
-            Filtros:
-          </span>
-          <FilterSelect
-            label="Distrital"
-            value={fDist}
-            options={distOptions}
-            onChange={v => { setFDist(v); setFCoord('all'); setFFilial('all'); }}
-          />
-          <FilterSelect
-            label="Coordenação"
-            value={fCoord}
-            options={coordOptions}
-            disabled={distOptions.length === 0}
-            onChange={v => { setFCoord(v); setFFilial('all'); }}
-          />
-          <FilterSelect
-            label="Filial"
-            value={fFilial}
-            options={filialOptions}
-            disabled={coordOptions.length === 0 && distOptions.length === 0}
-            onChange={v => setFFilial(v)}
-          />
-          <FilterSelect
-            label="Grupo"
-            value={fGrupo}
-            options={grupoOptions}
-            onChange={v => { setFGrupo(v); setFLinha('all'); }}
-          />
-          <FilterSelect
-            label="Linha"
-            value={fLinha}
-            options={linhaOptions}
-            disabled={linhaOptions.length === 0}
-            onChange={v => setFLinha(v)}
-          />
-          {hasFilter && (
-            <button
-              onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
-                color: '#fca5a5', borderRadius: 6, padding: '5px 10px',
-                fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 0, alignSelf: 'flex-end',
-              }}
-            >
-              <X size={11} /> Limpar filtros
-            </button>
-          )}
+        {showFilters && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-end', gap: 16,
+            paddingBottom: 10, paddingTop: 4, flexWrap: 'wrap',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(255,255,255,0.4)', marginRight: 4 }}>
+              Filtros:
+            </span>
+            <FilterSelect
+              label="Distrital"
+              value={fDist}
+              options={distOptions}
+              onChange={v => { setFDist(v); setFCoord('all'); setFFilial('all'); }}
+            />
+            <FilterSelect
+              label="Coordenação"
+              value={fCoord}
+              options={coordOptions}
+              disabled={distOptions.length === 0}
+              onChange={v => { setFCoord(v); setFFilial('all'); }}
+            />
+            <FilterSelect
+              label="Filial"
+              value={fFilial}
+              options={filialOptions}
+              disabled={coordOptions.length === 0 && distOptions.length === 0}
+              onChange={v => setFFilial(v)}
+            />
+            <FilterSelect
+              label="Grupo"
+              value={fGrupo}
+              options={grupoOptions}
+              onChange={v => { setFGrupo(v); setFLinha('all'); }}
+            />
+            <FilterSelect
+              label="Linha"
+              value={fLinha}
+              options={linhaOptions}
+              disabled={linhaOptions.length === 0}
+              onChange={v => setFLinha(v)}
+            />
+            {hasFilter && (
+              <button
+                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
+                  color: '#fca5a5', borderRadius: 6, padding: '5px 10px',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 0, alignSelf: 'flex-end',
+                }}
+              >
+                <X size={11} /> Limpar filtros
+              </button>
+            )}
 
-          {/* Chips de filtro ativo */}
-          {hasFilter && (
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 4 }}>
-              {fDist !== 'all' && <span style={chip}>{fDist}</span>}
-              {fCoord !== 'all' && <span style={chip}>{fCoord}</span>}
-              {fFilial !== 'all' && <span style={chip}>{fFilial}</span>}
-            </div>
-          )}
-        </div>
+            {/* Chips de filtro ativo */}
+            {hasFilter && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 4 }}>
+                {fDist !== 'all' && <span style={chip}>{fDist}</span>}
+                {fCoord !== 'all' && <span style={chip}>{fCoord}</span>}
+                {fFilial !== 'all' && <span style={chip}>{fFilial}</span>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '16px 24px', maxWidth: 1700, margin: '0 auto' }}>
