@@ -673,7 +673,7 @@ export default function DrillPanel({ onUpload }) {
         boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
       }}>
         {/* Linha 1: título e botões */}
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '6px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 30, height: 30, borderRadius: 6, background: '#e91e8c',
@@ -914,62 +914,64 @@ export default function DrillPanel({ onUpload }) {
                 </span>
               </div>
             )}
-            <div style={{ width: '100%', height: 195 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => chartMetric === 'participacao' ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
-                  <Tooltip 
-                    formatter={(value, name, props) => {
-                      if (name === 'participacao' || name === 'Part. Digital Atual') {
-                        const diff = props?.payload?.diff_pp;
-                        const diffTxt = diff != null ? ` (${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp vs ano ant.)` : '';
-                        return [`${Number(value).toFixed(1).replace('.', ',')}%${diffTxt}`, `Part. Digital (${labelAtual})`];
-                      }
-                      if (name === 'participacao_ant' || name === 'Part. Digital Ano Ant.') {
-                        return [`${Number(value).toFixed(1).replace('.', ',')}%`, `Part. Digital Ano Ant. (${labelAtualAno})`];
-                      }
-                      if (name === 'venda' || name === 'Venda E-commerce') return [fmtR(value), `Venda E-comm (${labelAtual})`];
-                      if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
-                      return [fmtR(value), 'Desvio da Meta Parcial'];
-                    }}
-                    contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
-                    labelStyle={{ color: '#94a3b8', fontWeight: 700 }}
-                  />
-                  
-                  {chartMetric === 'desvio' && (
-                    <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
-                      {chartItems.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
-                      ))}
-                      <LabelList content={renderCustomLabel} />
-                    </Bar>
-                  )}
+            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ width: '100%', minWidth: 640, height: 210 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => chartMetric === 'participacao' ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
+                    <Tooltip 
+                      formatter={(value, name, props) => {
+                        if (name === 'participacao' || name === 'Part. Digital Atual') {
+                          const diff = props?.payload?.diff_pp;
+                          const diffTxt = diff != null ? ` (${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp vs ano ant.)` : '';
+                          return [`${Number(value).toFixed(1).replace('.', ',')}%${diffTxt}`, `Part. Digital (${labelAtual})`];
+                        }
+                        if (name === 'participacao_ant' || name === 'Part. Digital Ano Ant.') {
+                          return [`${Number(value).toFixed(1).replace('.', ',')}%`, `Part. Digital Ano Ant. (${labelAtualAno})`];
+                        }
+                        if (name === 'venda' || name === 'Venda E-commerce') return [fmtR(value), `Venda E-comm (${labelAtual})`];
+                        if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
+                        return [fmtR(value), 'Desvio da Meta Parcial'];
+                      }}
+                      contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
+                      labelStyle={{ color: '#94a3b8', fontWeight: 700 }}
+                    />
+                    
+                    {chartMetric === 'desvio' && (
+                      <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
+                        {chartItems.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
+                        ))}
+                        <LabelList content={renderCustomLabel} />
+                      </Bar>
+                    )}
 
-                  {chartMetric === 'venda_meta' && (
-                    <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                      <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                    </Bar>
-                  )}
-                  {chartMetric === 'venda_meta' && (
-                    <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
-                      <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                    </Bar>
-                  )}
+                    {chartMetric === 'venda_meta' && (
+                      <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                      </Bar>
+                    )}
+                    {chartMetric === 'venda_meta' && (
+                      <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                      </Bar>
+                    )}
 
-                  {chartMetric === 'participacao' && (
-                    <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
-                      <LabelList content={renderCustomPartLabel} />
-                    </Bar>
-                  )}
-                  {chartMetric === 'participacao' && (
-                    <Bar dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
-                      <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
-                    </Bar>
-                  )}
-                </BarChart>
-              </ResponsiveContainer>
+                    {chartMetric === 'participacao' && (
+                      <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
+                        <LabelList content={renderCustomPartLabel} />
+                      </Bar>
+                    )}
+                    {chartMetric === 'participacao' && (
+                      <Bar dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
+                      </Bar>
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
             <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4, fontWeight: 500 }}>
               💡 Dica: clique em qualquer barra do gráfico para aplicar o filtro correspondente.
