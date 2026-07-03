@@ -221,7 +221,7 @@ function FilterSelect({ label, value, options, onChange, disabled }) {
 
 // ── Linha da hierarquia principal ───────────────────────────────────────────
 function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
-  const bgRow = depth === 0 ? 'rgba(15,32,80,0.06)' : depth === 1 ? 'rgba(15,32,80,0.03)' : depth === 2 ? 'rgba(15,32,80,0.015)' : 'transparent';
+  const bgRow = depth === 0 ? 'rgba(15,32,80,0.04)' : depth === 1 ? 'rgba(15,32,80,0.015)' : 'transparent';
   return (
     <tr
       style={{ borderBottom: '1px solid #e9eef4', background: bgRow, transition: 'background 0.1s' }}
@@ -233,9 +233,9 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
           {hasChildren ? (
             <button onClick={onToggle} style={{
               width: 18, height: 18, borderRadius: 3,
-              border: `1px solid ${depth === 0 ? '#0f2050' : depth === 1 ? '#1e3a8a' : '#94a3b8'}`,
-              background: expanded ? (depth === 0 ? '#0f2050' : '#1e3a8a') : '#fff',
-              color: expanded ? '#fff' : (depth === 0 ? '#0f2050' : '#1e3a8a'),
+              border: `1px solid ${depth === 0 ? '#1e3a8a' : '#94a3b8'}`,
+              background: expanded ? '#1e3a8a' : '#fff',
+              color: expanded ? '#fff' : '#1e3a8a',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 13, fontWeight: 700, lineHeight: 1, flexShrink: 0,
             }}>
@@ -246,8 +246,8 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
           )}
           <span style={{
             fontSize: depth === 0 ? 13 : 12,
-            fontWeight: depth === 0 ? 800 : depth === 1 ? 700 : depth === 2 ? 600 : 400,
-            color: depth === 0 ? '#0f2050' : depth === 1 ? '#1e3a8a' : depth === 2 ? '#334155' : '#475569',
+            fontWeight: depth === 0 ? 700 : depth === 1 ? 600 : 400,
+            color: depth === 0 ? '#0f2050' : depth === 1 ? '#1e3a8a' : '#475569',
           }}>
             {row.nome}
           </span>
@@ -328,8 +328,7 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
 }
 
 // ── Tabela Hierárquica ──────────────────────────────────────────────────────
-function HierTable({ diretorias, distritais, coordenadores, filiais, labelAtualAno, searchTerm }) {
-  const [openDir, setOpenDir] = useState(new Set());
+function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTerm }) {
   const [openDist, setOpenDist] = useState(new Set());
   const [openCoord, setOpenCoord] = useState(new Set());
   const tog = (set, setSet, key) =>
@@ -340,107 +339,76 @@ function HierTable({ diretorias, distritais, coordenadores, filiais, labelAtualA
   // Auto-expandir se houver termo de busca correspondente aos filhos
   useEffect(() => {
     if (searchTerm) {
-      const dirsToOpen = new Set();
       const distsToOpen = new Set();
       const coordsToOpen = new Set();
       
-      (diretorias || []).forEach(dir => {
-        const ds = distritais.filter(d => d.diretoria === dir.nome);
-        ds.forEach(d => {
-          const cs = coordenadores.filter(c => c.distrital === d.nome);
-          cs.forEach(c => {
-            const fs = filiais.filter(f => f.coordenador === c.nome);
-            const anyFilMatch = fs.some(f => matches(f.nome));
-            if (anyFilMatch || matches(c.nome)) {
-              distsToOpen.add(d.nome);
-              dirsToOpen.add(dir.nome);
-            }
-            if (anyFilMatch) {
-              coordsToOpen.add(c.nome);
-            }
-          });
-          if (matches(d.nome)) dirsToOpen.add(dir.nome);
+      distritais.forEach(d => {
+        const cs = coordenadores.filter(c => c.distrital === d.nome);
+        cs.forEach(c => {
+          const fs = filiais.filter(f => f.coordenador === c.nome);
+          const anyFilMatch = fs.some(f => matches(f.nome));
+          if (anyFilMatch || matches(c.nome)) {
+            distsToOpen.add(d.nome);
+          }
+          if (anyFilMatch) {
+            coordsToOpen.add(c.nome);
+          }
         });
       });
       
-      setOpenDir(dirsToOpen);
       setOpenDist(distsToOpen);
       setOpenCoord(coordsToOpen);
     }
-  }, [searchTerm, diretorias, distritais, coordenadores, filiais]);
+  }, [searchTerm, distritais, coordenadores, filiais]);
 
-  const sortedDirs = [...(diretorias || [])]
-    .filter(dir => {
-      if (matches(dir.nome)) return true;
-      const ds = distritais.filter(d => d.diretoria === dir.nome);
-      return ds.some(d => {
-        if (matches(d.nome)) return true;
-        const cs = coordenadores.filter(c => c.distrital === d.nome);
-        return cs.some(c => matches(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matches(f.nome)));
-      });
+  const sorted = [...distritais]
+    .filter(d => {
+      if (matches(d.nome)) return true;
+      const cs = coordenadores.filter(c => c.distrital === d.nome);
+      return cs.some(c => matches(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matches(f.nome)));
     })
     .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
 
   const rows = [];
 
-  sortedDirs.forEach(dir => {
-    const isDirOpen = openDir.has(dir.nome);
-    const ds = distritais
-      .filter(d => d.diretoria === dir.nome)
-      .filter(d => {
-        if (matches(d.nome) || matches(dir.nome)) return true;
-        const cs = coordenadores.filter(c => c.distrital === d.nome);
-        return cs.some(c => matches(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matches(f.nome)));
+  sorted.forEach(dist => {
+    const isDistOpen = openDist.has(dist.nome);
+    const coords = coordenadores
+      .filter(c => c.distrital === dist.nome)
+      .filter(c => {
+        if (matches(c.nome) || matches(dist.nome)) return true;
+        const fils = filiais.filter(f => f.coordenador === c.nome);
+        return fils.some(f => matches(f.nome));
       })
       .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
 
     rows.push(
-      <HRow key={`dir-${dir.nome}`} row={dir} depth={0} expanded={isDirOpen}
-        hasChildren={ds.length > 0} onToggle={() => tog(openDir, setOpenDir, dir.nome)}
+      <HRow key={`d-${dist.nome}`} row={dist} depth={0} expanded={isDistOpen}
+        hasChildren={coords.length > 0} onToggle={() => tog(openDist, setOpenDist, dist.nome)}
         labelAtualAno={labelAtualAno} />
     );
 
-    if (isDirOpen) {
-      ds.forEach(dist => {
-        const isDistOpen = openDist.has(dist.nome);
-        const coords = coordenadores
-          .filter(c => c.distrital === dist.nome)
-          .filter(c => {
-            if (matches(c.nome) || matches(dist.nome) || matches(dir.nome)) return true;
-            const fils = filiais.filter(f => f.coordenador === c.nome);
-            return fils.some(f => matches(f.nome));
-          })
+    if (isDistOpen) {
+      coords.forEach(coord => {
+        const isCoordOpen = openCoord.has(coord.nome);
+        const fils = filiais
+          .filter(f => f.coordenador === coord.nome)
+          .filter(f => matches(f.nome) || matches(coord.nome) || matches(dist.nome))
           .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
 
         rows.push(
-          <HRow key={`d-${dist.nome}`} row={dist} depth={1} expanded={isDistOpen}
-            hasChildren={coords.length > 0} onToggle={() => tog(openDist, setOpenDist, dist.nome)}
+          <HRow key={`c-${coord.nome}`} row={coord} depth={1} expanded={isCoordOpen}
+            hasChildren={fils.length > 0} onToggle={() => tog(openCoord, setOpenCoord, coord.nome)}
             labelAtualAno={labelAtualAno} />
         );
 
-        if (isDistOpen) {
-          coords.forEach(coord => {
-            const isCoordOpen = openCoord.has(coord.nome);
-            const fils = filiais
-              .filter(f => f.coordenador === coord.nome)
-              .filter(f => matches(f.nome) || matches(coord.nome) || matches(dist.nome) || matches(dir.nome))
-              .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
-
+        if (isCoordOpen) {
+          fils.forEach(fil =>
             rows.push(
-              <HRow key={`c-${coord.nome}`} row={coord} depth={2} expanded={isCoordOpen}
-                hasChildren={fils.length > 0} onToggle={() => tog(openCoord, setOpenCoord, coord.nome)}
-                labelAtualAno={labelAtualAno} />
-            );
-
-            if (isCoordOpen) {
-              fils.forEach(fil =>
-                rows.push(
-                  <HRow key={`f-${fil.nome}`} row={fil} depth={3} expanded={false}
-                    hasChildren={false} onToggle={null} labelAtualAno={labelAtualAno} />
-                )
-              );
-            }
-          });
+              <HRow key={`f-${fil.nome}`} row={fil} depth={2} expanded={false}
+                hasChildren={false} onToggle={null} labelAtualAno={labelAtualAno} />
+            )
+          );
         }
       });
     }
@@ -521,22 +489,21 @@ export default function DrillPanel({ onUpload }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filtros
-  const [fDir, setFDir] = useState('all');
   const [fDist, setFDist] = useState('all');
   const [fCoord, setFCoord] = useState('all');
   const [fFilial, setFFilial] = useState('all');
   const [fGrupo, setFGrupo] = useState('all');
   const [fLinha, setFLinha] = useState('all');
 
-  const hasFilter = fDir !== 'all' || fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all';
+  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all';
 
-  const filters = { diretoria: fDir, distrital: fDist, coordenador: fCoord, filial: fFilial, grupo: fGrupo, linha: fLinha };
+  const filters = { distrital: fDist, coordenador: fCoord, filial: fFilial, grupo: fGrupo, linha: fLinha };
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setNoData(false);
     try {
       // Sempre busca sem filtro para ter as opções de dropdown
-      const resAll = await API.getMetas({ diretoria: 'all', distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all' });
+      const resAll = await API.getMetas({ distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all' });
       
       // Checar se o servidor ainda não tem planilha
       if (resAll.status === 'no_data') {
@@ -556,40 +523,22 @@ export default function DrillPanel({ onUpload }) {
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [fDir, fDist, fCoord, fFilial, fGrupo, fLinha]);
+  }, [fDist, fCoord, fFilial, fGrupo, fLinha]);
 
   useEffect(() => { load(); }, [load]);
 
   // Opções dos dropdowns (sempre do dado completo)
-  const dirOptions = useMemo(() =>
-    [...new Set((rawFull?.diretorias || []).map(d => d.nome))].sort(), [rawFull]);
+  const distOptions = useMemo(() =>
+    [...new Set((rawFull?.distritoriais || []).map(d => d.nome))].sort(), [rawFull]);
 
-  const distOptions = useMemo(() => {
-    const allDists = rawFull?.distritoriais || [];
-    return [...new Set(allDists
-      .filter(d => fDir === 'all' || d.diretoria === fDir)
-      .map(d => d.nome))].sort();
-  }, [rawFull, fDir]);
-
-  const coordOptions = useMemo(() => {
-    const allCoords = rawFull?.coordenadores || [];
-    const allDists = rawFull?.distritoriais || [];
-    return [...new Set(allCoords
-      .filter(c => {
-        if (fDist !== 'all') return c.distrital === fDist;
-        if (fDir !== 'all') {
-          const dist = allDists.find(d => d.nome === c.distrital);
-          return dist && dist.diretoria === fDir;
-        }
-        return true;
-      })
-      .map(c => c.nome))].sort();
-  }, [rawFull, fDir, fDist]);
+  const coordOptions = useMemo(() =>
+    [...new Set((rawFull?.coordenadores || [])
+      .filter(c => fDist === 'all' || c.distrital === fDist)
+      .map(c => c.nome))].sort(), [rawFull, fDist]);
 
   const filialOptions = useMemo(() => {
     const allFiliais = rawFull?.filiais || [];
     const allCoords = rawFull?.coordenadores || [];
-    const allDists = rawFull?.distritoriais || [];
     return [...new Set(allFiliais
       .filter(f => {
         if (fCoord !== 'all') return f.coordenador === fCoord;
@@ -597,16 +546,10 @@ export default function DrillPanel({ onUpload }) {
           const coord = allCoords.find(c => c.nome === f.coordenador);
           return coord && coord.distrital === fDist;
         }
-        if (fDir !== 'all') {
-          const coord = allCoords.find(c => c.nome === f.coordenador);
-          if (!coord) return false;
-          const dist = allDists.find(d => d.nome === coord.distrital);
-          return dist && dist.diretoria === fDir;
-        }
         return true;
       })
       .map(f => f.nome))].sort();
-  }, [rawFull, fDir, fDist, fCoord]);
+  }, [rawFull, fDist, fCoord]);
 
   const grupoOptions = useMemo(() =>
     [...new Set((rawFull?.grupos || []).map(g => g.nome))].sort(), [rawFull]);
@@ -623,7 +566,6 @@ export default function DrillPanel({ onUpload }) {
   const labelAtualAno = labelAtual.replace(/(\d{2})$/, m => String(Number(m) - 1).padStart(2, '0'));
   const labelAnt      = data?.label_mes_ant || 'Jun/26';
 
-  const diretorias    = data?.diretorias || [];
   const distritais    = data?.distritoriais || [];
   const coordenadores = data?.coordenadores || [];
   const filiais       = data?.filiais || [];
@@ -633,10 +575,8 @@ export default function DrillPanel({ onUpload }) {
   const chartItems = useMemo(() => {
     let rawList = [];
     if (activeTab === 'hierarquia') {
-      if (fDir === 'all' && fDist === 'all' && fCoord === 'all') {
-        rawList = diretorias.length > 0 ? diretorias : distritais;
-      } else if (fDist === 'all' && fCoord === 'all') {
-        rawList = distritais.filter(d => fDir === 'all' || d.diretoria === fDir);
+      if (fDist === 'all') {
+        rawList = distritais;
       } else if (fCoord === 'all') {
         rawList = coordenadores.filter(c => c.distrital === fDist);
       } else {
@@ -669,7 +609,7 @@ export default function DrillPanel({ onUpload }) {
           diff_pp: diffPP,
         };
       });
-  }, [activeTab, diretorias, distritais, coordenadores, filiais, grupos, linhas, fDir, fDist, fCoord, fGrupo]);
+  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo]);
 
   const handleChartClick = useCallback((state) => {
     if (!state || !state.activePayload || state.activePayload.length === 0) return;
@@ -677,12 +617,7 @@ export default function DrillPanel({ onUpload }) {
     const nome = clickedItem.nomeOriginal;
 
     if (activeTab === 'hierarquia') {
-      if (fDir === 'all' && diretorias.some(d => d.nome === nome)) {
-        setFDir(nome);
-        setFDist('all');
-        setFCoord('all');
-        setFFilial('all');
-      } else if (fDist === 'all') {
+      if (fDist === 'all') {
         setFDist(nome);
         setFCoord('all');
         setFFilial('all');
@@ -700,7 +635,7 @@ export default function DrillPanel({ onUpload }) {
         setFLinha(nome);
       }
     }
-  }, [activeTab, diretorias, fDir, fDist, fCoord, fFilial, fGrupo, fLinha]);
+  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fLinha]);
 
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
@@ -774,16 +709,9 @@ export default function DrillPanel({ onUpload }) {
             Filtros:
           </span>
           <FilterSelect
-            label="Diretoria"
-            value={fDir}
-            options={dirOptions}
-            onChange={v => { setFDir(v); setFDist('all'); setFCoord('all'); setFFilial('all'); }}
-          />
-          <FilterSelect
             label="Distrital"
             value={fDist}
             options={distOptions}
-            disabled={dirOptions.length > 0 && distOptions.length === 0}
             onChange={v => { setFDist(v); setFCoord('all'); setFFilial('all'); }}
           />
           <FilterSelect
@@ -815,7 +743,7 @@ export default function DrillPanel({ onUpload }) {
           />
           {hasFilter && (
             <button
-              onClick={() => { setFDir('all'); setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); }}
+              onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 4,
                 background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
@@ -830,7 +758,6 @@ export default function DrillPanel({ onUpload }) {
           {/* Chips de filtro ativo */}
           {hasFilter && (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 4 }}>
-              {fDir !== 'all' && <span style={chip}>{fDir}</span>}
               {fDist !== 'all' && <span style={chip}>{fDist}</span>}
               {fCoord !== 'all' && <span style={chip}>{fCoord}</span>}
               {fFilial !== 'all' && <span style={chip}>{fFilial}</span>}
@@ -1054,7 +981,7 @@ export default function DrillPanel({ onUpload }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 0 }}>
           <div style={{ display: 'flex', gap: 4 }}>
             {[
-              { key: 'hierarquia', label: 'Hierarquia — Diretoria · Distrital · Coord. · Filial' },
+              { key: 'hierarquia', label: 'Hierarquia — Distrital · Coord. · Filial' },
               { key: 'categorias', label: 'Grupos / Categorias → Linhas' },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
@@ -1116,7 +1043,7 @@ export default function DrillPanel({ onUpload }) {
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                   <th style={th('left', 200)}>
-                    {activeTab === 'hierarquia' ? 'Diretoria / Distrital / Coordenador / Filial' : 'Grupo / Linha'}
+                    {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'}
                   </th>
                   {(activeTab === 'hierarquia' ? COLS_HIER : COLS_CAT).map((c, i) => (
                     <th key={i} style={th('right')}>
@@ -1138,13 +1065,12 @@ export default function DrillPanel({ onUpload }) {
                     </tr>
                   ))
                 ) : activeTab === 'hierarquia' ? (
-                  diretorias.length === 0 && distritais.length === 0 ? (
+                  distritais.length === 0 ? (
                     <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
                       Nenhum dado disponível. Carregue um arquivo Excel atualizado.
                     </td></tr>
                   ) : (
                     <HierTable
-                      diretorias={diretorias}
                       distritais={distritais}
                       coordenadores={coordenadores}
                       filiais={filiais}
