@@ -219,6 +219,8 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
           </span>
         </div>
       </td>
+      <td style={td()}>{fmtR(row.meta_total)}</td>
+      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
       <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
       <td style={td()}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -228,8 +230,6 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
       </td>
       <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
-      <td style={td()}>{fmtR(row.meta_total)}</td>
-      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -273,6 +273,8 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
           </span>
         </div>
       </td>
+      <td style={td()}>{fmtR(row.meta_total)}</td>
+      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
       <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
       <td style={td()}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -282,8 +284,6 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
       </td>
       <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
       <td style={td()}>{fmtR(row.venda_jul25)}</td>
-      <td style={td()}>{fmtR(row.meta_total)}</td>
-      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
       <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
       <td style={{ ...td(), minWidth: 110 }}>
@@ -602,24 +602,24 @@ export default function DrillPanel({ onUpload }) {
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
 
   const COLS_HIER = [
+    'Meta Total',
+    '% Meta Total',
     `Venda E-comm\n${labelAtual}`,
     `Meta Parcial\n${labelAtual}`,
     'Desvio da Meta',
     `Venda\n${labelAtualAno}`,
-    'Meta Total',
-    '% Meta Total',
     `Evolução\nYoY vs ${labelAtualAno}`,
     `Crescimento\nMoM vs ${labelAnt}`,
     'Part. Digital',
   ];
 
   const COLS_CAT = [
+    'Meta Total',
+    '% Meta Total',
     `Venda E-comm\n${labelAtual}`,
     `Meta Parcial\n${labelAtual}`,
     'Desvio da Meta',
     `Venda\n${labelAtualAno}`,
-    'Meta Total',
-    '% Meta Total',
     `Evolução\nYoY vs ${labelAtualAno}`,
     `Crescimento\nMoM vs ${labelAnt}`,
     'Part. Digital',
@@ -1023,11 +1023,17 @@ export default function DrillPanel({ onUpload }) {
                     <td style={{ padding: '10px 12px 10px 16px', fontWeight: 800, color: '#0f2050', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       TOTAL GERAL
                     </td>
-                    <td style={td(true)}>{fmtR(t.venda_jul26)}</td>
-                    <td style={td()}>{fmtR(t.venda_jul25)}</td>
                     <td style={td()}>{fmtR(t.meta_total)}</td>
                     <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={t.pct_meta_total} /></td>
+                    <td style={td(true)}>{fmtR(t.venda_jul26)}</td>
+                    <td style={td()}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(t.meta_parcial)}</span>
+                        <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+                      </div>
+                    </td>
                     <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_parcial} /></td>
+                    <td style={td()}>{fmtR(t.venda_jul25)}</td>
                     <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
                     <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
                     <td style={{ ...td(), minWidth: 110 }}>
