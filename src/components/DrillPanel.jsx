@@ -88,7 +88,7 @@ function MetaBar({ pct }) {
       <div style={{ flex: 1, height: 5, borderRadius: 3, background: '#f1f5f9', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${Math.min(pct || 0, 100)}%`, background: c, borderRadius: 3, transition: 'width 0.4s ease' }} />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: c, minWidth: 44, textAlign: 'right' }}>{fmtPct(pct)}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#334155', minWidth: 44, textAlign: 'right' }}>{fmtPct(pct)}</span>
     </div>
   );
 }
