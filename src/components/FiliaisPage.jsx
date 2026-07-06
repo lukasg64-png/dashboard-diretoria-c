@@ -49,8 +49,16 @@ export default function FiliaisPage({ filters }) {
 
   const cols = [
     {
-      key: 'nome', label: 'Filial', width: '200px',
+      key: 'nome', label: 'Filial', width: '180px',
       render: v => <span className="bold-text">{v}</span>,
+    },
+    {
+      key: 'municipio', label: 'Cidade', width: '130px',
+      render: v => <span>{v || '—'}</span>,
+    },
+    {
+      key: 'uf', label: 'UF', width: '50px',
+      render: v => <span>{v || '—'}</span>,
     },
     { key: 'linhas', label: 'Linhas', align: 'right' },
     {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
+import GeoMapPage from './GeoMapPage';
 
 // ── Formatadores ────────────────────────────────────────────────────────────
 const fmtR = v => {
@@ -1001,6 +1002,7 @@ export default function DrillPanel({ onUpload }) {
             {[
               { key: 'hierarquia', label: 'Hierarquia — Distrital · Coord. · Filial' },
               { key: 'categorias', label: 'Grupos / Categorias → Linhas' },
+              { key: 'mapa', label: '🗺️ Mapa de Vendas & Metas' },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
                 padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -1030,118 +1032,130 @@ export default function DrillPanel({ onUpload }) {
           )}
         </div>
 
-        {/* ── Tabela ── */}
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
-              {activeTab === 'hierarquia' ? 'Desempenho E-Commerce — Hierarquia Organizacional' : 'Desempenho E-Commerce — Grupos e Linhas de Produtos'}
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="text"
-                placeholder="Pesquisar..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                style={{
-                  padding: '4px 10px', fontSize: 11, border: '1px solid #cbd5e1', borderRadius: 6,
-                  outline: 'none', width: 140, background: '#fff', color: '#1e293b',
-                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)', transition: 'border-color 0.15s'
-                }}
-              />
-              <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>
-                {activeTab === 'hierarquia'
-                  ? `${distritais.length} distritais`
-                  : `${grupos.length} grupos`}
+        {/* ── Conteúdo das Tabs ── */}
+        {activeTab === 'mapa' ? (
+          !loading && (
+            <GeoMapPage 
+              filiais={filiais}
+              labelAtual={labelAtual}
+              labelAtualAno={labelAtualAno}
+              labelAnt={labelAnt}
+            />
+          )
+        ) : (
+          /* ── Tabela ── */
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
+                {activeTab === 'hierarquia' ? 'Desempenho E-Commerce — Hierarquia Organizacional' : 'Desempenho E-Commerce — Grupos e Linhas de Produtos'}
               </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Pesquisar..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  style={{
+                    padding: '4px 10px', fontSize: 11, border: '1px solid #cbd5e1', borderRadius: 6,
+                    outline: 'none', width: 140, background: '#fff', color: '#1e293b',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)', transition: 'border-color 0.15s'
+                  }}
+                />
+                <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>
+                  {activeTab === 'hierarquia'
+                    ? `${distritais.length} distritais`
+                    : `${grupos.length} grupos`}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={th('left', 200)}>
-                    {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'}
-                  </th>
-                  {(activeTab === 'hierarquia' ? COLS_HIER : COLS_CAT).map((c, i) => (
-                    <th key={i} style={th('right')}>
-                      {c.split('\n').map((l, j) => <div key={j} style={{ lineHeight: 1.3 }}>{l}</div>)}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={th('left', 200)}>
+                      {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'}
                     </th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      {Array.from({ length: activeTab === 'hierarquia' ? 9 : 8 }).map((_, j) => (
-                        <td key={j} style={{ padding: 12 }}>
-                          <div style={{ height: 13, borderRadius: 3, background: '#f1f5f9', opacity: 0.7 }} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : activeTab === 'hierarquia' ? (
-                  distritais.length === 0 ? (
-                    <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-                      Nenhum dado disponível. Carregue um arquivo Excel atualizado.
-                    </td></tr>
-                  ) : (
-                    <HierTable
-                      distritais={distritais}
-                      coordenadores={coordenadores}
-                      filiais={filiais}
-                      labelAtualAno={labelAtualAno}
-                      searchTerm={searchTerm}
-                    />
-                  )
-                ) : (
-                  grupos.length === 0 ? (
-                    <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
-                  ) : (
-                    <CatTable grupos={grupos} linhas={linhas} labelAtualAno={labelAtualAno} searchTerm={searchTerm} />
-                  )
-                )}
-              </tbody>
-
-              {/* Totais */}
-              {!loading && (
-                <tfoot>
-                  <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc' }}>
-                    <td style={{ padding: '10px 12px 10px 16px', fontWeight: 800, color: '#0f2050', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      TOTAL GERAL
-                    </td>
-                    <td style={td()}>{fmtR(t.meta_total)}</td>
-                    <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={t.pct_meta_total} /></td>
-                    <td style={td(true)}>{fmtR(t.venda_jul26)}</td>
-                    <td style={td()}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(t.meta_parcial)}</span>
-                        <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
-                      </div>
-                    </td>
-                    <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_parcial} /></td>
-                    <td style={td()}>{fmtR(t.venda_jul25)}</td>
-                    <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
-                    <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
-                    <td style={{ ...td(), minWidth: 110 }}>
-                      <Part pct26={t.pct_ecomm_jul26} pct25={t.pct_ecomm_jul25} />
-                    </td>
+                    {(activeTab === 'hierarquia' ? COLS_HIER : COLS_CAT).map((c, i) => (
+                      <th key={i} style={th('right')}>
+                        {c.split('\n').map((l, j) => <div key={j} style={{ lineHeight: 1.3 }}>{l}</div>)}
+                      </th>
+                    ))}
                   </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
+                </thead>
 
-          {!loading && (
-            <div style={{ padding: '8px 16px', borderTop: '1px solid #f1f5f9', fontSize: 11, color: '#94a3b8', background: '#fafafa' }}>
-              {activeTab === 'hierarquia'
-                ? '💡 Clique no + ao lado do nome para expandir a hierarquia: Distrital → Coordenação → Filial'
-                : '💡 Clique no + ao lado do grupo para ver as Linhas de Produto dentro de cada Grupo'}
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        {Array.from({ length: activeTab === 'hierarquia' ? 9 : 8 }).map((_, j) => (
+                          <td key={j} style={{ padding: 12 }}>
+                            <div style={{ height: 13, borderRadius: 3, background: '#f1f5f9', opacity: 0.7 }} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : activeTab === 'hierarquia' ? (
+                    distritais.length === 0 ? (
+                      <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                        Nenhum dado disponível. Carregue um arquivo Excel atualizado.
+                      </td></tr>
+                    ) : (
+                      <HierTable
+                        distritais={distritais}
+                        coordenadores={coordenadores}
+                        filiais={filiais}
+                        labelAtualAno={labelAtualAno}
+                        searchTerm={searchTerm}
+                      />
+                    )
+                  ) : (
+                    grupos.length === 0 ? (
+                      <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
+                    ) : (
+                      <CatTable grupos={grupos} linhas={linhas} labelAtualAno={labelAtualAno} searchTerm={searchTerm} />
+                    )
+                  )}
+                </tbody>
+
+                {/* Totais */}
+                {!loading && (
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc' }}>
+                      <td style={{ padding: '10px 12px 10px 16px', fontWeight: 800, color: '#0f2050', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        TOTAL GERAL
+                      </td>
+                      <td style={td()}>{fmtR(t.meta_total)}</td>
+                      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={t.pct_meta_total} /></td>
+                      <td style={td(true)}>{fmtR(t.venda_jul26)}</td>
+                      <td style={td()}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(t.meta_parcial)}</span>
+                          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+                        </div>
+                      </td>
+                      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_parcial} /></td>
+                      <td style={td()}>{fmtR(t.venda_jul25)}</td>
+                      <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
+                      <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
+                      <td style={{ ...td(), minWidth: 110 }}>
+                        <Part pct26={t.pct_ecomm_jul26} pct25={t.pct_ecomm_jul25} />
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
             </div>
-          )}
-        </div>
+
+            {!loading && (
+              <div style={{ padding: '8px 16px', borderTop: '1px solid #f1f5f9', fontSize: 11, color: '#94a3b8', background: '#fafafa' }}>
+                {activeTab === 'hierarquia'
+                  ? '💡 Clique no + ao lado do nome para expandir a hierarquia: Distrital → Coordenação → Filial'
+                  : '💡 Clique no + ao lado do grupo para ver as Linhas de Produto dentro de cada Grupo'}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

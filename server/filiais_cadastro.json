@@ -1,0 +1,5752 @@
+{
+  "Frederico 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Frederico Westphalen",
+    "coords": [
+      -53.3952048,
+      -27.3570318
+    ]
+  },
+  "Frederico 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Frederico Westphalen",
+    "coords": [
+      -53.3947619,
+      -27.3559295
+    ]
+  },
+  "Frederico 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Frederico Westphalen",
+    "coords": [
+      -53.399992,
+      -27.359063
+    ]
+  },
+  "Frederico 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Horizontina 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Horizontina",
+    "coords": [
+      -54.311247,
+      -27.622945
+    ]
+  },
+  "Horizontina 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Horizontina",
+    "coords": [
+      -54.31076,
+      -27.625015
+    ]
+  },
+  "Nonoai": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Nonoai",
+    "coords": [
+      -52.7732636,
+      -27.3648945
+    ]
+  },
+  "Planalto": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Ronda Alta": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sarandi 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Sarandi",
+    "coords": [
+      -52.9230546,
+      -27.9417901
+    ]
+  },
+  "Sarandi 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Sarandi",
+    "coords": [
+      -52.920638,
+      -27.94227
+    ]
+  },
+  "Sarandi 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Seberi": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Seberi",
+    "coords": [
+      -53.402223,
+      -27.481124
+    ]
+  },
+  "Tenente Portela": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Tres De Maio 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Três de Maio",
+    "coords": [
+      -54.234762,
+      -27.779209
+    ]
+  },
+  "Tres De Maio 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Três de Maio",
+    "coords": [
+      -54.2345829,
+      -27.785544
+    ]
+  },
+  "Tres de Maio 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Três de Maio",
+    "coords": [
+      -54.229078,
+      -27.770194
+    ]
+  },
+  "Tres de Maio 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Tres Passos 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Três Passos",
+    "coords": [
+      -53.9288268,
+      -27.4564912
+    ]
+  },
+  "Tres Passos 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "RS",
+    "municipio": "Três Passos",
+    "coords": [
+      -52.4056216,
+      -27.4528637
+    ]
+  },
+  "Tres Passos 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Aran De Juli Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Carazinho 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.791701,
+      -28.2876534
+    ]
+  },
+  "Carazinho 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.7866392,
+      -28.2844447
+    ]
+  },
+  "Carazinho 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.789944,
+      -28.286619
+    ]
+  },
+  "Carazinho 6": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.7982156,
+      -28.2998043
+    ]
+  },
+  "Carazinho 7": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.7943864,
+      -28.2837292
+    ]
+  },
+  "Carazinho 8": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.791182,
+      -28.310427
+    ]
+  },
+  "Carazinho 9": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.781253,
+      -28.279507
+    ]
+  },
+  "Chapada": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Chapada",
+    "coords": [
+      -53.068517,
+      -28.057837
+    ]
+  },
+  "Nao Me Toque 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Não-Me-Toque",
+    "coords": [
+      -52.8200082,
+      -28.461294
+    ]
+  },
+  "Nao Me Toque 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - Boqueirao 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4244653,
+      -28.2690249
+    ]
+  },
+  "PF - Boqueirao 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4375875,
+      -28.2677571
+    ]
+  },
+  "PF - Boqueirao 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4316865,
+      -28.2677329
+    ]
+  },
+  "PF - Paissandu": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.411199,
+      -28.261114
+    ]
+  },
+  "PF - Santa Marta": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - Sao Jose": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.368698,
+      -28.234777
+    ]
+  },
+  "PF - Teixeira 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.413485,
+      -28.260465
+    ]
+  },
+  "PF - Teixeira 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -53.838986,
+      -29.07732
+    ]
+  },
+  "PF - Vera Cruz 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4252172,
+      -28.2470228
+    ]
+  },
+  "PF - Vera Cruz 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4268376,
+      -28.2446153
+    ]
+  },
+  "PF - Vera Cruz 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Camila May",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4200393,
+      -28.25206
+    ]
+  },
+  "PF - Bento 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.40542,
+      -28.263955
+    ]
+  },
+  "PF - Cap. Eleuterio": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4056216,
+      -28.260383
+    ]
+  },
+  "PF - Cidade Nova NOVA": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - Dez de Abril": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.416501,
+      -28.262796
+    ]
+  },
+  "PF - Fagundes": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4049103,
+      -28.25907
+    ]
+  },
+  "PF - General Canabarro": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - General Neto": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.407504,
+      -28.262596
+    ]
+  },
+  "PF - Loja Modelo": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.362786,
+      -28.266745
+    ]
+  },
+  "PF - Matriz": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.390893,
+      -28.248223
+    ]
+  },
+  "PF - Notre Dame": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.413363,
+      -28.263447
+    ]
+  },
+  "PF - Petropolis": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.3861883,
+      -28.2463023
+    ]
+  },
+  "PF - Rodoviaria": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.3949246,
+      -28.2550544
+    ]
+  },
+  "PF - Santa Maria": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.3847805,
+      -28.266411
+    ]
+  },
+  "PF - Sao Cristovao 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.3529649,
+      -28.2911842
+    ]
+  },
+  "PF - Sao Cristovao 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.39035,
+      -28.268271
+    ]
+  },
+  "PF - Sao Cristovao 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.3765468,
+      -28.2825083
+    ]
+  },
+  "PF - Shopping": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.409478,
+      -28.262711
+    ]
+  },
+  "PF - Shopping S.Crist": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.385459,
+      -28.270962
+    ]
+  },
+  "PF - UNA": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - Uruguai": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - Uruguai 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "PF - Zachia": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Fabiane Leite",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Erechim 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Erechim",
+    "coords": [
+      -52.256843,
+      -27.6502
+    ]
+  },
+  "Erechim 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Erechim",
+    "coords": [
+      -52.2748733,
+      -27.6331542
+    ]
+  },
+  "Erechim 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Erechim 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Erechim 5": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Getulio Vargas 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Getúlio Vargas",
+    "coords": [
+      -52.224529,
+      -27.88525
+    ]
+  },
+  "Getulio Vargas 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Getúlio Vargas",
+    "coords": [
+      -52.224902,
+      -27.887472
+    ]
+  },
+  "Lagoa Vermelha 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Lagoa Vermelha",
+    "coords": [
+      -51.522757,
+      -28.210088
+    ]
+  },
+  "Lagoa Vermelha 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Lagoa Vermelha",
+    "coords": [
+      -51.5220064,
+      -28.2104402
+    ]
+  },
+  "Marau 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Marau",
+    "coords": [
+      -52.1995671,
+      -28.4456601
+    ]
+  },
+  "Marau 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Marau",
+    "coords": [
+      -52.199137,
+      -28.4502461
+    ]
+  },
+  "Marau 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Marau",
+    "coords": [
+      -52.21183,
+      -28.43345
+    ]
+  },
+  "Marau 5": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Marau 6": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sananduva 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Sananduva",
+    "coords": [
+      -51.8096784,
+      -27.9498043
+    ]
+  },
+  "Sananduva 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Tapejara 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Tapejara",
+    "coords": [
+      -52.0100716,
+      -28.066415
+    ]
+  },
+  "Tapejara 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "RS",
+    "municipio": "Tapejara",
+    "coords": [
+      -52.00642,
+      -28.065097
+    ]
+  },
+  "Tapejara 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Gessica Perin",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Condor": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Ijui 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.9168808,
+      -28.3888528
+    ]
+  },
+  "Ijui 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.9105957,
+      -28.3933362
+    ]
+  },
+  "Ijui 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.914739,
+      -28.389853
+    ]
+  },
+  "Ijui 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.911901,
+      -28.389957
+    ]
+  },
+  "Ijui 5": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.913536,
+      -28.39191
+    ]
+  },
+  "Ijui 6": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.9270696,
+      -28.3894485
+    ]
+  },
+  "Ijui 7": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.9018222,
+      -28.3815675
+    ]
+  },
+  "Ijui 8": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.9385,
+      -28.393933
+    ]
+  },
+  "Ijui 9": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Ijuí",
+    "coords": [
+      -53.897814,
+      -28.393034
+    ]
+  },
+  "Ijui 10": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Palmeira 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Palmeira das Missões",
+    "coords": [
+      -53.499653,
+      -27.943307
+    ]
+  },
+  "Palmeira 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Palmeira das Missões",
+    "coords": [
+      -53.3101077,
+      -27.8961565
+    ]
+  },
+  "Palmeira 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Palmeira das Missões",
+    "coords": [
+      -53.311081,
+      -27.903814
+    ]
+  },
+  "Panambi 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Panambi",
+    "coords": [
+      -53.500888,
+      -28.2915982
+    ]
+  },
+  "Panambi 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Panambi",
+    "coords": [
+      -53.5012907,
+      -28.2899243
+    ]
+  },
+  "Panambi 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Panambi",
+    "coords": [
+      -53.4995683,
+      -28.2960797
+    ]
+  },
+  "Panambi 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "RS",
+    "municipio": "Panambi",
+    "coords": [
+      -53.494473,
+      -28.282167
+    ]
+  },
+  "Panambi 5": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Giovani Sisti",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Chapeco 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.618299,
+      -27.1039438
+    ]
+  },
+  "Chapeco 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.6132288,
+      -27.1078494
+    ]
+  },
+  "Chapeco 4": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.607142,
+      -27.106659
+    ]
+  },
+  "Chapeco 5": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.611753,
+      -27.0861564
+    ]
+  },
+  "Chapeco 6": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.6121635967438,
+      -27.1121609445581
+    ]
+  },
+  "Chapeco 8": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Chapeco 9": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Concordia 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Concórdia",
+    "coords": [
+      -52.0264371,
+      -27.233045
+    ]
+  },
+  "Concordia 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Concórdia",
+    "coords": [
+      -52.023979,
+      -27.231146
+    ]
+  },
+  "Concordia 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Dionisio Cerqueira": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Dionísio Cerqueira",
+    "coords": [
+      -53.636266,
+      -26.264965
+    ]
+  },
+  "Itapiranga": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Itapiranga",
+    "coords": [
+      -53.71497,
+      -27.17558
+    ]
+  },
+  "Maravilha 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Maravilha",
+    "coords": [
+      -53.1757664,
+      -26.7670222
+    ]
+  },
+  "Maravilha 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pinhalzinho": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Pinhalzinho",
+    "coords": [
+      -52.98724,
+      -26.8488
+    ]
+  },
+  "São Lourenço do Oeste": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sao Miguel do Oeste": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Seara": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Priscila Machado",
+    "uf": "SC",
+    "municipio": "Seara",
+    "coords": [
+      -52.31521,
+      -27.15832
+    ]
+  },
+  "Cacador 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Caçador",
+    "coords": [
+      -51.014882,
+      -26.774066
+    ]
+  },
+  "Cacador 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Caçador",
+    "coords": [
+      -51.01203,
+      -26.773002
+    ]
+  },
+  "Cacador 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Caçador",
+    "coords": [
+      -51.00781,
+      -26.77975
+    ]
+  },
+  "Campos Novos 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Campos Novos",
+    "coords": [
+      -51.224944,
+      -27.399511
+    ]
+  },
+  "Campos Novos 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Canoinhas 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Canoinhas",
+    "coords": [
+      -50.390441,
+      -26.172612
+    ]
+  },
+  "Canoinhas 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Capinzal": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Herval D' Oeste 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Herval d'Oeste",
+    "coords": [
+      -51.499244,
+      -27.175854
+    ]
+  },
+  "Herval D' Oeste 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Herval D'Oeste 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Joacaba 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Joaçaba",
+    "coords": [
+      -51.505341,
+      -27.173971
+    ]
+  },
+  "Joacaba 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Joaçaba",
+    "coords": [
+      -51.5059114,
+      -27.1736315
+    ]
+  },
+  "Porto União": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Videira 1": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Videira",
+    "coords": [
+      -51.152555,
+      -27.006526
+    ]
+  },
+  "Videira 2": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Videira",
+    "coords": [
+      -51.1562,
+      -27.005483
+    ]
+  },
+  "Videira 3": {
+    "distrital": "Fais Abdalla",
+    "coordenador": "Samantha Lima",
+    "uf": "SC",
+    "municipio": "Videira",
+    "coords": [
+      -51.13763,
+      -27.00613
+    ]
+  },
+  "Alegrete 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Alegrete",
+    "coords": [
+      -55.7932985,
+      -29.7829922
+    ]
+  },
+  "Alegrete 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Alegrete",
+    "coords": [
+      -55.7957743,
+      -29.7848322
+    ]
+  },
+  "Alegrete 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Alegrete",
+    "coords": [
+      -55.8006203,
+      -29.7944915
+    ]
+  },
+  "Alegrete 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Alegrete 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Alegrete 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cacequi": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Cacequi",
+    "coords": [
+      -54.826583,
+      -29.885583
+    ]
+  },
+  "Jaguari": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Jaguari",
+    "coords": [
+      -54.6923566,
+      -29.4944561
+    ]
+  },
+  "Rosario do Sul 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Rosário do Sul",
+    "coords": [
+      -54.898728,
+      -30.258149
+    ]
+  },
+  "Rosario do Sul 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Rosário do Sul",
+    "coords": [
+      -54.898728,
+      -30.258149
+    ]
+  },
+  "S. Francisco Assis": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "São Francisco de Assis",
+    "coords": [
+      -55.142647,
+      -29.423098
+    ]
+  },
+  "Santiago 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Santiago",
+    "coords": [
+      -54.867381,
+      -29.191575
+    ]
+  },
+  "Santiago 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Santiago",
+    "coords": [
+      -54.867381,
+      -29.191575
+    ]
+  },
+  "Santiago 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "Santiago",
+    "coords": [
+      -54.868448,
+      -29.190787
+    ]
+  },
+  "Santiago 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santiago 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sao Gabriel 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "São Gabriel",
+    "coords": [
+      -54.3200103,
+      -30.3402222
+    ]
+  },
+  "Sao Gabriel 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "São Gabriel",
+    "coords": [
+      -54.3202046,
+      -30.3385805
+    ]
+  },
+  "Sao Gabriel 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "São Gabriel",
+    "coords": [
+      -54.323108,
+      -30.337558
+    ]
+  },
+  "Sao Gabriel 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "RS",
+    "municipio": "São Gabriel",
+    "coords": [
+      -54.3284107,
+      -30.3277701
+    ]
+  },
+  "São Gabriel 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Andressa Biasi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pelotas 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3426352,
+      -31.7686706
+    ]
+  },
+  "Pelotas 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.340821,
+      -31.767835
+    ]
+  },
+  "Pelotas 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3402283,
+      -31.76101
+    ]
+  },
+  "Pelotas 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3446867,
+      -31.768356
+    ]
+  },
+  "Pelotas 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3447344,
+      -31.7595337
+    ]
+  },
+  "Pelotas 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3751409,
+      -31.7569812
+    ]
+  },
+  "Pelotas 7 - Nova": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pelotas 9": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3450988,
+      -31.7371191
+    ]
+  },
+  "Pelotas 11": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3433588,
+      -31.7297464
+    ]
+  },
+  "Pelotas 12": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3271252,
+      -31.7567406
+    ]
+  },
+  "Pelotas 15": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.270643,
+      -31.756591
+    ]
+  },
+  "Pelotas 16": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.342713,
+      -31.766648
+    ]
+  },
+  "Pelotas 18": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3322364,
+      -31.7350616
+    ]
+  },
+  "Pelotas 20": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3773382,
+      -31.7452551
+    ]
+  },
+  "Pelotas 21": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3424968,
+      -31.7127597
+    ]
+  },
+  "Pelotas 23": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.316821,
+      -31.755213
+    ]
+  },
+  "Pelotas 27 - Stock": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.342726,
+      -31.73066
+    ]
+  },
+  "Pelotas 29": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.338412,
+      -31.743346
+    ]
+  },
+  "Pelotas 30": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pelotas 31": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pelotas 32": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pelotas 33": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pelotas 34": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Aron Monteiro",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arroio Grande 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Arroio Grande",
+    "coords": [
+      -53.0844508,
+      -32.2379486
+    ]
+  },
+  "Arroio Grande 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Arroio Grande",
+    "coords": [
+      -53.0844508,
+      -32.2379486
+    ]
+  },
+  "Candiota": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Candiota",
+    "coords": [
+      -53.715201,
+      -31.548214
+    ]
+  },
+  "Cangucu 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Canguçu",
+    "coords": [
+      -52.6770414,
+      -31.3963374
+    ]
+  },
+  "Cangucu 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Canguçu",
+    "coords": [
+      -52.677767,
+      -31.398327
+    ]
+  },
+  "Cangucu 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Canguçu",
+    "coords": [
+      -52.6764473,
+      -31.3941457
+    ]
+  },
+  "Cangucu 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Canguçu",
+    "coords": [
+      -52.6774788,
+      -31.3902571
+    ]
+  },
+  "Chui": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Encruzilhada Do Sul 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Encruzilhada do Sul",
+    "coords": [
+      -52.523316,
+      -30.544451
+    ]
+  },
+  "Encruzilhada Do Sul 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Jaguarao 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Jaguarão",
+    "coords": [
+      -53.3755412,
+      -32.5687621
+    ]
+  },
+  "Jaguarao 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Jaguarão",
+    "coords": [
+      -53.376959,
+      -32.565762
+    ]
+  },
+  "Pinheiro Machado": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Pinheiro Machado",
+    "coords": [
+      -53.381586,
+      -31.57877
+    ]
+  },
+  "Piratini 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Piratini",
+    "coords": [
+      -53.102632,
+      -31.446665
+    ]
+  },
+  "Piratini 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Piratini",
+    "coords": [
+      -53.101089,
+      -31.443525
+    ]
+  },
+  "Sao Lourenco 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "São Lourenço do Sul",
+    "coords": [
+      -51.98074,
+      -31.364456
+    ]
+  },
+  "Sao Lourenco 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "São Lourenço do Sul",
+    "coords": [
+      -51.9804965,
+      -31.3655935
+    ]
+  },
+  "Sao Lourenco 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sta. Vitoria Palmar 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "RS",
+    "municipio": "Santa Vitória do Palmar",
+    "coords": [
+      -53.371602,
+      -33.519222
+    ]
+  },
+  "Sta. Vitoria Palmar 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Dieisson Tondo",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Mostardas": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Rio Grande 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.95418,
+      -32.31703
+    ]
+  },
+  "Rio Grande 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1007647,
+      -32.0359511
+    ]
+  },
+  "Rio Grande 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.094332,
+      -32.0318706
+    ]
+  },
+  "Rio Grande 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.0943913,
+      -32.0311523
+    ]
+  },
+  "Rio Grande 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1593665,
+      -32.1847293
+    ]
+  },
+  "Rio Grande 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1006057,
+      -32.0353874
+    ]
+  },
+  "Rio Grande 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.118597,
+      -32.0505609
+    ]
+  },
+  "Rio Grande 9": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1302211,
+      -32.0553292
+    ]
+  },
+  "Rio Grande 10": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.0986889,
+      -32.0319541
+    ]
+  },
+  "Rio Grande 11": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1109147,
+      -32.0473518
+    ]
+  },
+  "Rio Grande 13": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1636526,
+      -32.1809298
+    ]
+  },
+  "Rio Grande 14": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1248058,
+      -32.0529108
+    ]
+  },
+  "Rio Grande 15": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1533402,
+      -32.0755273
+    ]
+  },
+  "Rio Grande 16": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.13543,
+      -32.0535
+    ]
+  },
+  "Rio Grande 17": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Rio Grande 19": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "S. Jose Do Norte 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "São José do Norte",
+    "coords": [
+      -52.042017,
+      -32.012874
+    ]
+  },
+  "S. Jose Do Norte 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Diene Soares",
+    "uf": "RS",
+    "municipio": "São José do Norte",
+    "coords": [
+      -52.042858,
+      -32.010706
+    ]
+  },
+  "Cerro Largo": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Entre Ijuis": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Entre-Ijuís",
+    "coords": [
+      -54.2679924,
+      -28.3593661
+    ]
+  },
+  "Girua 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Giruá",
+    "coords": [
+      -54.3499293,
+      -28.0294993
+    ]
+  },
+  "Girua 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Giruá",
+    "coords": [
+      -54.3520087,
+      -28.0296904
+    ]
+  },
+  "Porto Xavier": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Rosa 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santa Rosa",
+    "coords": [
+      -54.4776352,
+      -27.8673915
+    ]
+  },
+  "Santa Rosa 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Rosa 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Rosa 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Rosa 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Rosa 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santo Angelo 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.2615725,
+      -28.3003464
+    ]
+  },
+  "Santo Angelo 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.2803721,
+      -28.2990195
+    ]
+  },
+  "Santo Angelo 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.260826,
+      -28.3063648
+    ]
+  },
+  "Santo Angelo 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.2629089,
+      -28.3001625
+    ]
+  },
+  "Santo Angelo 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.2610069,
+      -28.303812
+    ]
+  },
+  "Santo Angelo 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.24606,
+      -28.300156
+    ]
+  },
+  "Santo Angelo 8": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santo Angelo 9": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santo Antonio das Missoes Nova": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santo Cristo - Nova": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sao Luiz Gonzaga 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "São Luiz Gonzaga",
+    "coords": [
+      -54.9332657,
+      -28.412023
+    ]
+  },
+  "Sao Luiz Gonzaga 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "RS",
+    "municipio": "São Luiz Gonzaga",
+    "coords": [
+      -54.9606989,
+      -28.4039243
+    ]
+  },
+  "Sao Luiz Gonzaga 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Everton Elegda",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Acegua": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Bage 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Bagé",
+    "coords": [
+      -54.105908,
+      -31.32925
+    ]
+  },
+  "Bage 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Bagé",
+    "coords": [
+      -54.1051177,
+      -31.3325322
+    ]
+  },
+  "Bage 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Bagé",
+    "coords": [
+      -54.103924,
+      -31.3307408
+    ]
+  },
+  "Bage 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Bagé",
+    "coords": [
+      -54.0886018,
+      -31.3300179
+    ]
+  },
+  "Bage 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Bagé",
+    "coords": [
+      -54.0988221,
+      -31.3115837
+    ]
+  },
+  "Bage 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Bagé",
+    "coords": [
+      -54.1062246,
+      -31.3281105
+    ]
+  },
+  "Dom Pedrito 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Dom Pedrito",
+    "coords": [
+      -54.6709884,
+      -30.9665431
+    ]
+  },
+  "Dom Pedrito 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Dom Pedrito",
+    "coords": [
+      -54.736339,
+      -31.126681
+    ]
+  },
+  "Livramento 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.5357706,
+      -30.8947582
+    ]
+  },
+  "Livramento 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.5333485,
+      -30.8918553
+    ]
+  },
+  "Livramento 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.545939,
+      -30.88978
+    ]
+  },
+  "Livramento 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.5356636,
+      -30.8927237
+    ]
+  },
+  "Livramento 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.5232569,
+      -30.8847232
+    ]
+  },
+  "Livramento 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.534693,
+      -30.893731
+    ]
+  },
+  "Livramento 8": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.535673,
+      -30.89481
+    ]
+  },
+  "Livramento 9": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -51.14886,
+      -29.82392
+    ]
+  },
+  "Livramento 10": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Livramento 11": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Livramento 12": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Marcio Pruciano",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Barra do Quarai 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Itaqui 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Itaqui",
+    "coords": [
+      -56.5559114,
+      -29.1243239
+    ]
+  },
+  "Itaqui 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Itaqui",
+    "coords": [
+      -56.556227,
+      -29.139225
+    ]
+  },
+  "Quarai 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Quaraí",
+    "coords": [
+      -56.4521515,
+      -30.3881222
+    ]
+  },
+  "Quarai 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Quaraí",
+    "coords": [
+      -56.4525671,
+      -30.3858477
+    ]
+  },
+  "Sao Borja 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "São Borja",
+    "coords": [
+      -56.005658,
+      -28.659141
+    ]
+  },
+  "Sao Borja 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "São Borja",
+    "coords": [
+      -56.002927,
+      -28.657076
+    ]
+  },
+  "Sao Borja 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "São Borja",
+    "coords": [
+      -56.006645,
+      -28.660869
+    ]
+  },
+  "Sao Borja 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "São Borja",
+    "coords": [
+      -56.002476,
+      -28.659343
+    ]
+  },
+  "Sao Borja 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "São Borja",
+    "coords": [
+      -56.025815,
+      -28.633036
+    ]
+  },
+  "Sao Borja 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "São Borja",
+    "coords": [
+      -56.007897,
+      -28.653867
+    ]
+  },
+  "Sao Borja 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Uruguaiana 1": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0864541,
+      -29.7511481
+    ]
+  },
+  "Uruguaiana 2": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0839524,
+      -29.7556427
+    ]
+  },
+  "Uruguaiana 3": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0849598,
+      -29.7553057
+    ]
+  },
+  "Uruguaiana 4": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0861927,
+      -29.7542825
+    ]
+  },
+  "Uruguaiana 5": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.088905,
+      -29.7707603
+    ]
+  },
+  "Uruguaiana 6": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0767146,
+      -29.7652971
+    ]
+  },
+  "Uruguaiana 7": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.086352,
+      -29.7583278
+    ]
+  },
+  "Uruguaiana 8": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0948586,
+      -29.7778889
+    ]
+  },
+  "Uruguaiana 9": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0678874,
+      -29.7709546
+    ]
+  },
+  "Uruguaiana 12": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Uruguaiana 13": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Uruguaiana 14": {
+    "distrital": "Juliano Petrarca",
+    "coordenador": "Rafael Mendes",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Assis Chateaubriand 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "PR",
+    "municipio": "Assis Chateaubriand",
+    "coords": [
+      -53.525599,
+      -24.413724
+    ]
+  },
+  "Assis Chateaubriand 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 5": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 6": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 7": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 8": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 9": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Foz do Iguacu 10": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Marechal Candido Rondon 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "PR",
+    "municipio": "Marechal Cândido Rondon",
+    "coords": [
+      -54.058981,
+      -24.564025
+    ]
+  },
+  "Santa Helena": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "São Miguel do Iguaçu": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "PR",
+    "municipio": "São Miguel do Iguaçu",
+    "coords": [
+      -54.23996,
+      -25.34481
+    ]
+  },
+  "Sta Terezinha do Itaipu": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Toledo 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "PR",
+    "municipio": "Toledo",
+    "coords": [
+      -53.742172,
+      -24.729451
+    ]
+  },
+  "Toledo 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "PR",
+    "municipio": "Toledo",
+    "coords": [
+      -53.758267,
+      -24.719901
+    ]
+  },
+  "Toledo 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Toledo 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Adriceli Clemente",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Apucarana 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "PR",
+    "municipio": "Apucarana",
+    "coords": [
+      -51.458938,
+      -23.553593
+    ]
+  },
+  "Apucarana 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "PR",
+    "municipio": "Apucarana",
+    "coords": [
+      -51.45078,
+      -23.549897
+    ]
+  },
+  "Apucarana 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "PR",
+    "municipio": "Apucarana",
+    "coords": [
+      -51.452598,
+      -23.553485
+    ]
+  },
+  "Apucarana 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "PR",
+    "municipio": "Apucarana",
+    "coords": [
+      -51.47661,
+      -23.555362
+    ]
+  },
+  "Apucarana 5": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Apucarana 6": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arapongas 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "PR",
+    "municipio": "Arapongas",
+    "coords": [
+      -51.448809,
+      -23.39454
+    ]
+  },
+  "Arapongas 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arapongas 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arapongas 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Bela Vista do Paraiso": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cambara": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cornelio Procopio 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Faxinal": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Jacarezinho": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Mandaguari": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "PR",
+    "municipio": "Mandaguari",
+    "coords": [
+      -51.71808,
+      -23.42931
+    ]
+  },
+  "Rolandia 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Rolandia 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sertanopolis": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alex Delfim",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cambé 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cambé 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cambé 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cambé 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "PR",
+    "municipio": "Londrina",
+    "coords": [
+      -51.168426,
+      -23.305355
+    ]
+  },
+  "Londrina 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 5": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 6": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 7": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 8": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 10": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 11": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 12": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 13": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 15": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 17": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Londrina 19": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Alyne Kobayashi",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arapoti": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Araucária": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Araucária",
+    "coords": [
+      -49.395287,
+      -25.584018
+    ]
+  },
+  "Curitiba 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Curitiba",
+    "coords": [
+      -49.2723009,
+      -25.434434
+    ]
+  },
+  "Curitiba 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Curitiba 5": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Curitiba 6": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Fazenda Rio Grande": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Guarapuava 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Guarapuava 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Guarapuava 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Imbituva": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Imbituva",
+    "coords": [
+      -50.603034,
+      -25.230871
+    ]
+  },
+  "Laranjeiras do Sul": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Laranjeiras do Sul",
+    "coords": [
+      -52.413423,
+      -25.403308
+    ]
+  },
+  "Palmeira - PR": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Pinhais": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Pinhais",
+    "coords": [
+      -49.182364,
+      -25.449872
+    ]
+  },
+  "Pinhao": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Pinhão",
+    "coords": [
+      -51.655149,
+      -25.696808
+    ]
+  },
+  "Pirai do sul": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Prudentopolis": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Quitandinha": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "Quitandinha",
+    "coords": [
+      -49.500873,
+      -25.872481
+    ]
+  },
+  "Reserva": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "São Mateus do Sul": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "PR",
+    "municipio": "São Mateus do Sul",
+    "coords": [
+      -50.38639,
+      -25.867197
+    ]
+  },
+  "União da Vitória": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Fernanda Charneski Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Jandaia do Sul 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "PR",
+    "municipio": "Jandaia do Sul",
+    "coords": [
+      -51.703518,
+      -23.611493
+    ]
+  },
+  "Jandaia do Sul 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Marialva 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "PR",
+    "municipio": "Marialva",
+    "coords": [
+      -51.797543,
+      -23.48656
+    ]
+  },
+  "Marialva 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "PR",
+    "municipio": "Maringá",
+    "coords": [
+      -51.95263,
+      -23.448552
+    ]
+  },
+  "Maringa 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "PR",
+    "municipio": "Maringá",
+    "coords": [
+      -51.955642,
+      -23.393215
+    ]
+  },
+  "Maringa 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 5": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "PR",
+    "municipio": "Maringá",
+    "coords": [
+      -51.89456,
+      -23.41947
+    ]
+  },
+  "Maringa 7": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "PR",
+    "municipio": "Maringá",
+    "coords": [
+      -51.94559,
+      -23.42583
+    ]
+  },
+  "Maringa 8": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 10": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 11": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 12": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 13": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 14": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 15": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 16": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 17": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Maringa 18": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Graziele Pacheco",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Ampere": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Ampére",
+    "coords": [
+      -53.475875,
+      -25.917538
+    ]
+  },
+  "Cafelândia": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cascavel 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Cascavel",
+    "coords": [
+      -53.48531,
+      -24.968913
+    ]
+  },
+  "Cascavel 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Cascavel",
+    "coords": [
+      -53.458335,
+      -24.960257
+    ]
+  },
+  "Cascavel 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Cascavel",
+    "coords": [
+      -53.448704,
+      -24.951031
+    ]
+  },
+  "Cascavel 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cascavel 5": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cascavel 6": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Coronel Vivida": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Dois Vizinhos 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Dois Vizinhos",
+    "coords": [
+      -53.05551,
+      -25.743807
+    ]
+  },
+  "Dois Vizinhos 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Dois Vizinhos",
+    "coords": [
+      -53.055101,
+      -25.750216
+    ]
+  },
+  "Francisco Beltrao 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Francisco Beltrão",
+    "coords": [
+      -53.051822,
+      -26.076935
+    ]
+  },
+  "Francisco Beltrao 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Francisco Beltrão",
+    "coords": [
+      -53.044801,
+      -26.078435
+    ]
+  },
+  "Francisco Beltrao 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Itapejara D'Oeste": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Palmas 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Palmas 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Quedas do Iguacu": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "PR",
+    "municipio": "Quedas do Iguaçu",
+    "coords": [
+      -52.910112,
+      -25.451539
+    ]
+  },
+  "Realeza": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Guilber Mendes Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Araruna": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Campo Mourao 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Campo Mourão",
+    "coords": [
+      -52.39364,
+      -24.046696
+    ]
+  },
+  "Campo Mourao 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Campo Mourão",
+    "coords": [
+      -52.372893,
+      -24.039419
+    ]
+  },
+  "Cianorte 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Cianorte",
+    "coords": [
+      -52.598852,
+      -23.655603
+    ]
+  },
+  "Cianorte 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Cianorte",
+    "coords": [
+      -52.602398,
+      -23.658769
+    ]
+  },
+  "Cianorte 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Cianorte",
+    "coords": [
+      -52.613284,
+      -23.664012
+    ]
+  },
+  "Cianorte 4": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cruzeiro do Oeste": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Engenheiro Beltrão": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Engenheiro Beltrão",
+    "coords": [
+      -52.25715,
+      -23.80156
+    ]
+  },
+  "Goioerê": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Guaira": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Guaíra",
+    "coords": [
+      -54.24629,
+      -24.082783
+    ]
+  },
+  "Mandaguaçu": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Mandaguaçu",
+    "coords": [
+      -52.096389,
+      -23.3436
+    ]
+  },
+  "Paicandu": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "PR",
+    "municipio": "Paiçandu",
+    "coords": [
+      -52.038146,
+      -23.45362
+    ]
+  },
+  "Palotina": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Tapejara - PR": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Terra Boa": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Umuarama 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Umuarama 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Umuarama 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Juliana Caneia Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Alto Parana": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Astorga": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "PR",
+    "municipio": "Astorga",
+    "coords": [
+      -51.661772,
+      -23.235898
+    ]
+  },
+  "Colorado - PR": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Jaguapitã": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Loanda 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "PR",
+    "municipio": "Loanda",
+    "coords": [
+      -53.13465,
+      -22.9317
+    ]
+  },
+  "Loanda 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Nova Esperanca 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "PR",
+    "municipio": "Nova Esperança",
+    "coords": [
+      -52.202296,
+      -23.186332
+    ]
+  },
+  "Nova Esperanca 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Nova Londrina": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Paraíso do Norte": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Paranavaí 1": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "PR",
+    "municipio": "Paranavaí",
+    "coords": [
+      -52.46108,
+      -23.08096
+    ]
+  },
+  "Paranavaí 2": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Paranavaí 3": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Fé": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sarandi 1 - PR": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "PR",
+    "municipio": "Sarandi",
+    "coords": [
+      -51.871355,
+      -23.43939
+    ]
+  },
+  "Sarandi 2 - PR": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "PR",
+    "municipio": "Sarandi",
+    "coords": [
+      -51.876555,
+      -23.452531
+    ]
+  },
+  "Sarandi 4 - PR": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Terra Rica": {
+    "distrital": "Rodrigo Ferreira",
+    "coordenador": "Wyllames Amorim Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 6": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.806286,
+      -29.690815
+    ]
+  },
+  "Santa Maria 7": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.809893,
+      -29.69283
+    ]
+  },
+  "Santa Maria 9 - Hosp": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.806162,
+      -29.691722
+    ]
+  },
+  "Santa Maria 10": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.713662,
+      -29.702559
+    ]
+  },
+  "Santa Maria 11": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8124412,
+      -29.6941663
+    ]
+  },
+  "Santa Maria 13": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.7185047,
+      -29.7012939
+    ]
+  },
+  "Santa Maria 15": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.796611,
+      -29.696798
+    ]
+  },
+  "Santa Maria 17": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.818884,
+      -29.695897
+    ]
+  },
+  "Santa Maria 19": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.7929068,
+      -29.6891561
+    ]
+  },
+  "Santa Maria 24": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.723566,
+      -29.7055255
+    ]
+  },
+  "Santa Maria 28- Shop": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.795154,
+      -29.689963
+    ]
+  },
+  "Santa Maria 36": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.806411,
+      -29.6857497
+    ]
+  },
+  "Santa Maria 37": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.794108,
+      -29.689448
+    ]
+  },
+  "Santa Maria 38": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.80671,
+      -29.691056
+    ]
+  },
+  "Santa Maria 40": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 41": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 42": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 46": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 47 Nova": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 48": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Igor Ferreira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arroio do Tigre": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cachoeira 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.8886764,
+      -30.0500451
+    ]
+  },
+  "Cachoeira 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.894702,
+      -30.04386
+    ]
+  },
+  "Cachoeira 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.9085711,
+      -30.0300685
+    ]
+  },
+  "Cachoeira 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.898384,
+      -30.040071
+    ]
+  },
+  "Cachoeira 5": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.90804,
+      -30.02962
+    ]
+  },
+  "Cachoeira 6": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.8865703,
+      -30.0415646
+    ]
+  },
+  "Cachoeira 7": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.8961112,
+      -30.0417346
+    ]
+  },
+  "Cachoeira 9": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Candelaria 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Candelária",
+    "coords": [
+      -52.7870767,
+      -29.6714077
+    ]
+  },
+  "Candelaria 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Candelária",
+    "coords": [
+      -52.7878416,
+      -29.6697192
+    ]
+  },
+  "Candelaria 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Rio Pardo 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Rio Pardo",
+    "coords": [
+      -52.3742499,
+      -29.9833461
+    ]
+  },
+  "Rio Pardo 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Rio Pardo",
+    "coords": [
+      -52.3764021,
+      -29.9847569
+    ]
+  },
+  "Rio Pardo 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Salto Do Jacui": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Salto do Jacuí",
+    "coords": [
+      -53.198383,
+      -29.092356
+    ]
+  },
+  "Vera Cruz": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "RS",
+    "municipio": "Vera Cruz",
+    "coords": [
+      -52.5046358,
+      -29.7158805
+    ]
+  },
+  "Vera Cruz 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jessica Barros Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Cruz 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.42747,
+      -29.72014
+    ]
+  },
+  "Santa Cruz 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.4247775,
+      -29.7357333
+    ]
+  },
+  "Santa Cruz 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.4279613,
+      -29.7157479
+    ]
+  },
+  "Santa Cruz 5": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.429547,
+      -29.717548
+    ]
+  },
+  "Santa Cruz 6": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.427956,
+      -29.717805
+    ]
+  },
+  "Santa Cruz 7": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.425898,
+      -29.734638
+    ]
+  },
+  "Santa Cruz 8": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.432342,
+      -29.71741
+    ]
+  },
+  "Santa Cruz 9": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.426359,
+      -29.7170562
+    ]
+  },
+  "Santa Cruz 11": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.4380134,
+      -29.7050409
+    ]
+  },
+  "Santa Cruz 13": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.422864,
+      -29.742775
+    ]
+  },
+  "Santa Cruz 14": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Cruz 15": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Cruz 16": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Cruz 17": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Venancio Aires 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Venâncio Aires",
+    "coords": [
+      -52.1928173,
+      -29.6083269
+    ]
+  },
+  "Venancio Aires 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Venâncio Aires",
+    "coords": [
+      -52.1928691,
+      -29.6110987
+    ]
+  },
+  "Venancio Aires 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Venâncio Aires",
+    "coords": [
+      -52.1939269,
+      -29.615375
+    ]
+  },
+  "Venancio Aires 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Venâncio Aires",
+    "coords": [
+      -52.191624,
+      -29.6020016
+    ]
+  },
+  "Venancio Aires 5 Nova": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Venancio Aires 6": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Venâncio Aires",
+    "coords": [
+      -52.205032,
+      -29.620089
+    ]
+  },
+  "Venancio Aires 8": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Jose Felipe Araujo Trainee",
+    "uf": "RS",
+    "municipio": "Venâncio Aires",
+    "coords": [
+      -52.1917971,
+      -29.6099977
+    ]
+  },
+  "Agudo": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cacapava do Sul 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Caçapava do Sul",
+    "coords": [
+      -53.4919554,
+      -30.5156594
+    ]
+  },
+  "Cacapava do Sul 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Caçapava do Sul",
+    "coords": [
+      -53.492122,
+      -30.514436
+    ]
+  },
+  "Cacapava do Sul 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Caçapava do Sul",
+    "coords": [
+      -53.484759,
+      -30.514833
+    ]
+  },
+  "Cacapava do Sul 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Cruz Alta 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.6053779,
+      -28.6409776
+    ]
+  },
+  "Cruz Alta 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.60668,
+      -28.638704
+    ]
+  },
+  "Cruz Alta 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.605068,
+      -28.644897
+    ]
+  },
+  "Cruz Alta 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.605321,
+      -28.643777
+    ]
+  },
+  "Cruz Alta 5": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.5969989,
+      -28.646037
+    ]
+  },
+  "Cruz Alta 6": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.6067378,
+      -28.6476087
+    ]
+  },
+  "Cruz Alta 7": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.6067378,
+      -28.6476087
+    ]
+  },
+  "Cruz Alta 8": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Cruz Alta",
+    "coords": [
+      -53.610838,
+      -28.6271
+    ]
+  },
+  "Julio De Castilhos 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Júlio de Castilhos",
+    "coords": [
+      -53.68335,
+      -29.228219
+    ]
+  },
+  "Julio De Castilhos 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Júlio de Castilhos",
+    "coords": [
+      -53.684257,
+      -29.224412
+    ]
+  },
+  "Restinga Seca": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Restinga Sêca",
+    "coords": [
+      -53.37454,
+      -29.814797
+    ]
+  },
+  "São Pedro do Sul Nova": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Sao Sepe 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "São Sepé",
+    "coords": [
+      -53.5686579,
+      -30.1666992
+    ]
+  },
+  "Sao Sepe 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Tupancireta 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Tupanciretã",
+    "coords": [
+      -53.8364491,
+      -29.0813534
+    ]
+  },
+  "Tupancireta 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Lenin Brites",
+    "uf": "RS",
+    "municipio": "Tupanciretã",
+    "coords": [
+      -53.842506,
+      -29.075994
+    ]
+  },
+  "Santa Maria 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8108551,
+      -29.6869612
+    ]
+  },
+  "Santa Maria 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8037694,
+      -29.6903131
+    ]
+  },
+  "Santa Maria 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8080879,
+      -29.6845324
+    ]
+  },
+  "Santa Maria 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8063169,
+      -29.687392
+    ]
+  },
+  "Santa Maria 5": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.874804,
+      -29.699291
+    ]
+  },
+  "Santa Maria 12": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.87412,
+      -29.69139
+    ]
+  },
+  "Santa Maria 14": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8203344,
+      -29.6917633
+    ]
+  },
+  "Santa Maria 16": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8075132,
+      -29.6864511
+    ]
+  },
+  "Santa Maria 21": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8215964,
+      -29.6871575
+    ]
+  },
+  "Santa Maria 22": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.826772,
+      -29.675135
+    ]
+  },
+  "Santa Maria 23": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.802303,
+      -29.728656
+    ]
+  },
+  "Santa Maria 26": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.869723,
+      -29.691248
+    ]
+  },
+  "Santa Maria 27": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.800558,
+      -29.675777
+    ]
+  },
+  "Santa Maria 29": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8288003344007,
+      -29.701196211745
+    ]
+  },
+  "Santa Maria 30": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.875495,
+      -29.695536
+    ]
+  },
+  "Santa Maria 34": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.808223,
+      -29.686558
+    ]
+  },
+  "Santa Maria 39": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.830017,
+      -29.689048
+    ]
+  },
+  "Santa Maria 43": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 44": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 45": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 49": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Maria 50": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Monica Silveira",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Arvorezinha": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Arvorezinha",
+    "coords": [
+      -52.176572,
+      -28.873475
+    ]
+  },
+  "Barros Cassal": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Barros Cassal",
+    "coords": [
+      -52.58569,
+      -29.09243
+    ]
+  },
+  "Espumoso 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Espumoso",
+    "coords": [
+      -52.848106,
+      -28.725527
+    ]
+  },
+  "Espumoso 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Fontoura Xavier": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Fontoura Xavier",
+    "coords": [
+      -52.362287,
+      -28.982561
+    ]
+  },
+  "Guapore 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Guaporé",
+    "coords": [
+      -51.8916206,
+      -28.8478324
+    ]
+  },
+  "Guapore 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Guapore 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Ibiruba 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Ibirubá",
+    "coords": [
+      -53.0989891,
+      -28.6305639
+    ]
+  },
+  "Ibiruba 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Ibirubá",
+    "coords": [
+      -53.0906297,
+      -28.6308287
+    ]
+  },
+  "Ibiruba 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Ibirubá",
+    "coords": [
+      -53.093882,
+      -28.630535
+    ]
+  },
+  "Serafina Correa 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Serafina Corrêa",
+    "coords": [
+      -51.9348011,
+      -28.709892
+    ]
+  },
+  "Serafina Correa 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Soledade 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Soledade",
+    "coords": [
+      -52.5119809,
+      -28.8318659
+    ]
+  },
+  "Soledade 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Soledade",
+    "coords": [
+      -52.512285,
+      -28.829657
+    ]
+  },
+  "Soledade 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Soledade",
+    "coords": [
+      -52.511585,
+      -28.823575
+    ]
+  },
+  "Tapera": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr Trainee",
+    "uf": "RS",
+    "municipio": "Tapera",
+    "coords": [
+      -52.86927,
+      -28.628121
+    ]
+  },
+  "Arroio Do Meio 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Arroio do Meio",
+    "coords": [
+      -51.9468429,
+      -29.3990969
+    ]
+  },
+  "Arroio do Meio 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Bom Retiro do Sul": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Encantado 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Encantado",
+    "coords": [
+      -51.8642976,
+      -29.238858
+    ]
+  },
+  "Encantado 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Encantado",
+    "coords": [
+      -51.8657713,
+      -29.2384343
+    ]
+  },
+  "Encantado 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Estrela 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Estrela",
+    "coords": [
+      -51.9645068,
+      -29.5042183
+    ]
+  },
+  "Estrela 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Estrela",
+    "coords": [
+      -51.9613649,
+      -29.4930504
+    ]
+  },
+  "Lajeado 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.9653298,
+      -29.4624036
+    ]
+  },
+  "Lajeado 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.97483,
+      -29.46789
+    ]
+  },
+  "Lajeado 3 - Nova": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Lajeado 4": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.9734996,
+      -29.4568055
+    ]
+  },
+  "Lajeado 5": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.9642794,
+      -29.4656688
+    ]
+  },
+  "Lajeado 6": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.9652477,
+      -29.4510935
+    ]
+  },
+  "Lajeado 7": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.965237,
+      -29.450869
+    ]
+  },
+  "Lajeado 8": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Lajeado 9": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Lajeado 10": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Lajeado 11": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Roca Sales": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Santa Clara do Sul": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "",
+    "municipio": "",
+    "coords": null
+  },
+  "Teutonia 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Teutônia",
+    "coords": [
+      -51.8085782,
+      -29.471328
+    ]
+  },
+  "Teutonia 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Teutônia",
+    "coords": [
+      -51.8101606,
+      -29.4686299
+    ]
+  },
+  "Teutonia 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Wagner Schuck",
+    "uf": "RS",
+    "municipio": "Teutônia",
+    "coords": [
+      -51.8092588,
+      -29.5098984
+    ]
+  },
+  "Alegrete 4": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Alegrete",
+    "coords": [
+      -55.769464,
+      -29.787396
+    ]
+  },
+  "MP - Alegrete": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Alegrete",
+    "coords": [
+      -55.7936625,
+      -29.7835971
+    ]
+  },
+  "Cachoeira 8": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.902428,
+      -30.036929
+    ]
+  },
+  "Cachoeira 10": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Cachoeira do Sul",
+    "coords": [
+      -52.89503,
+      -30.0433
+    ]
+  },
+  "Carazinho 3": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Carazinho",
+    "coords": [
+      -52.7945667,
+      -28.2900292
+    ]
+  },
+  "Chapeco 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.6145317,
+      -27.1031572
+    ]
+  },
+  "Chapeco 7": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "SC",
+    "municipio": "Chapecó",
+    "coords": [
+      -52.62273,
+      -27.07782
+    ]
+  },
+  "Concordia 4": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "SC",
+    "municipio": "Concórdia",
+    "coords": [
+      -52.0225487,
+      -27.2451445
+    ]
+  },
+  "Curitiba 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Curitiba",
+    "coords": [
+      -49.2713763,
+      -25.4325038
+    ]
+  },
+  "Curitiba 3 - BIG": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Curitiba",
+    "coords": [
+      -49.254583,
+      -25.408339
+    ]
+  },
+  "Curitiba 4 - BIG": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Curitiba",
+    "coords": [
+      -49.23639,
+      -25.462168
+    ]
+  },
+  "Estrela 3": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Estrela",
+    "coords": [
+      -51.963884,
+      -29.499529
+    ]
+  },
+  "Foz do Iguaçu - BIG": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Foz do Iguaçu",
+    "coords": [
+      -54.584282,
+      -25.521654
+    ]
+  },
+  "Joacaba 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "SC",
+    "municipio": "Joaçaba",
+    "coords": [
+      -51.5014368,
+      -27.1722436
+    ]
+  },
+  "Lages 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "SC",
+    "municipio": "Lages",
+    "coords": [
+      -50.3274983,
+      -27.814964
+    ]
+  },
+  "Lages 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "SC",
+    "municipio": "Lages",
+    "coords": [
+      -50.3367435,
+      -27.8164875
+    ]
+  },
+  "MP - Lajeado 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Lajeado",
+    "coords": [
+      -51.9656449,
+      -29.4621657
+    ]
+  },
+  "Marau 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Marau",
+    "coords": [
+      -52.1996066,
+      -28.4417561
+    ]
+  },
+  "MP - Marau": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Marau",
+    "coords": [
+      -52.1989077,
+      -28.4519624
+    ]
+  },
+  "Maringa 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Maringá",
+    "coords": [
+      -51.95437,
+      -23.41728
+    ]
+  },
+  "Maringa 6": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Maringá",
+    "coords": [
+      -51.922161,
+      -23.405606
+    ]
+  },
+  "MP - Não Me Toque": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Não-Me-Toque",
+    "coords": [
+      -52.8184299,
+      -28.4623671
+    ]
+  },
+  "MP - Passo Fundo 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4120414,
+      -28.2625714
+    ]
+  },
+  "MP - Passo Fundo 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4392942,
+      -28.267962
+    ]
+  },
+  "PF - Bento 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4064469,
+      -28.2613678
+    ]
+  },
+  "PF - Sao Cristovao 4": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.3529649,
+      -28.2911842
+    ]
+  },
+  "PF - Stock - Merc": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.376645,
+      -28.2401
+    ]
+  },
+  "PF - Teixeira 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Passo Fundo",
+    "coords": [
+      -52.4138534,
+      -28.2596102
+    ]
+  },
+  "MP - Pelotas 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.344352,
+      -31.768416
+    ]
+  },
+  "MP - Pelotas 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3414047,
+      -31.7664069
+    ]
+  },
+  "Pelotas 13": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3740004,
+      -31.7571917
+    ]
+  },
+  "Pelotas 17": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.341876,
+      -31.768963
+    ]
+  },
+  "Pelotas 19": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Pelotas",
+    "coords": [
+      -52.3222004,
+      -31.7599766
+    ]
+  },
+  "Piraquara": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Piraquara",
+    "coords": [
+      -49.147167,
+      -25.450895
+    ]
+  },
+  "MP - Rio Grande 1": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1005796,
+      -32.0365459
+    ]
+  },
+  "Rio Grande 12": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.1439648,
+      -32.0592485
+    ]
+  },
+  "Rio Grande 18": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Rio Grande",
+    "coords": [
+      -52.10039,
+      -32.0346723
+    ]
+  },
+  "Livramento 5": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Sant'Ana do Livramento",
+    "coords": [
+      -55.5321989,
+      -30.8912423
+    ]
+  },
+  "Santa Cruz 2": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.429064,
+      -29.7160471
+    ]
+  },
+  "Santa Cruz 10": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.4236404,
+      -29.7100916
+    ]
+  },
+  "Santa Cruz 12 - BIG": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Cruz do Sul",
+    "coords": [
+      -52.433446,
+      -29.724938
+    ]
+  },
+  "Remex-Santa Maria": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8058119,
+      -29.6906047
+    ]
+  },
+  "Santa Maria 8": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.8000678,
+      -29.6898307
+    ]
+  },
+  "Santa Maria 18": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.795193,
+      -29.688638
+    ]
+  },
+  "Santa Maria 25": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.804765,
+      -29.689479
+    ]
+  },
+  "Santa Maria 32": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.81507,
+      -29.687442
+    ]
+  },
+  "Santa Maria 33- Shop": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.69715,
+      -29.701742
+    ]
+  },
+  "Santa Maria 35": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Maria",
+    "coords": [
+      -53.806911,
+      -29.6872283
+    ]
+  },
+  "Santa Rosa 3": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santa Rosa",
+    "coords": [
+      -54.4693973,
+      -27.8647226
+    ]
+  },
+  "Santo Angelo 6": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Santo Ângelo",
+    "coords": [
+      -54.2619041,
+      -28.2997367
+    ]
+  },
+  "MP - Sao Lourenco": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "São Lourenço do Sul",
+    "coords": [
+      -51.9806356,
+      -31.3651625
+    ]
+  },
+  "Sarandi 3 - PR": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Sarandi",
+    "coords": [
+      -51.877062,
+      -23.442768
+    ]
+  },
+  "Soledade 3": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Soledade",
+    "coords": [
+      -52.510655,
+      -28.828152
+    ]
+  },
+  "Umuarama - BIG": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "PR",
+    "municipio": "Umuarama",
+    "coords": [
+      -53.298579,
+      -23.74946
+    ]
+  },
+  "MP - Uruguaiana": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.0849871,
+      -29.7556384
+    ]
+  },
+  "Uruguaiana 10 - BIG": {
+    "distrital": "",
+    "coordenador": "",
+    "uf": "RS",
+    "municipio": "Uruguaiana",
+    "coords": [
+      -57.085741,
+      -29.770741
+    ]
+  }
+}

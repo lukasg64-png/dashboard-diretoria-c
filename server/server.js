@@ -33,6 +33,21 @@ const localTwoUp = path.join(__dirname, '..', '..', 'base Dashboard.xlsx');
 const DEFAULT_EXCEL = fs.existsSync(localOneUp) ? localOneUp : localTwoUp;
 const EXCEL_PATH    = process.env.EXCEL_PATH || DEFAULT_EXCEL;
 
+// Cadastro de Filiais (Coordenadores, Distritais e Localização Geográfica)
+const CADASTRO_PATH = path.join(__dirname, 'filiais_cadastro.json');
+let filiaisCadastro = {};
+function loadFiliaisCadastro() {
+  if (fs.existsSync(CADASTRO_PATH)) {
+    try {
+      filiaisCadastro = JSON.parse(fs.readFileSync(CADASTRO_PATH, 'utf8'));
+      console.log(`ℹ️ [cadastro] carregado com ${Object.keys(filiaisCadastro).length} filiais.`);
+    } catch (err) {
+      console.error(`❌ Erro ao ler filiais_cadastro.json:`, err.message);
+    }
+  }
+}
+loadFiliaisCadastro();
+
 // Configuração Google Cloud Storage (GCS)
 const GCS_BUCKET = process.env.GCS_BUCKET;
 const FILE_NAME  = 'base_dashboard.csv'; // Salvamos apenas o CSV no GCS para leveza absoluta
@@ -110,8 +125,8 @@ async function readCSVAsync(filePath) {
           return i >= 0 ? i : fallbackIndex;
         }
 
-        const distIndex = findColIndex(h => /distrital/i.test(h), 1);
-        const coordIndex = findColIndex(h => /coordenador/i.test(h), 2);
+        const distIndex = findColIndex(h => /distrital/i.test(h), -1);
+        const coordIndex = findColIndex(h => /coordenador/i.test(h), -1);
         const filialIndex = findColIndex(h => /desc_filial|filial/i.test(h), 3);
         const grupoIndex = findColIndex(h => /desc_grupo|grupo/i.test(h), 4);
         const linhaIndex = findColIndex(h => /desc_linha|linha/i.test(h), 5);
@@ -146,18 +161,23 @@ async function readCSVAsync(filePath) {
         return;
       }
 
-      const distValRaw = row[C.dist];
-      if (distValRaw == null || distValRaw === '') return;
-
       const getVal = (idx) => {
+        if (idx < 0 || idx == null) return null;
         const val = row[idx];
         return val != null ? val.replace(/^"|"$/g, '') : null;
       };
 
+      const filialName = String(getVal(C.filial) || '').trim();
+      if (!filialName) return;
+
+      const cadastro = filiaisCadastro[filialName] || {};
+      const distVal = (C.dist >= 0 ? String(getVal(C.dist) || '').trim() : '') || cadastro.distrital || '';
+      const coordVal = (C.coord >= 0 ? String(getVal(C.coord) || '').trim() : '') || cadastro.coordenador || '';
+
       records.push({
-        dist:   String(getVal(C.dist)   || '').trim(),
-        coord:  String(getVal(C.coord)  || '').trim(),
-        filial: String(getVal(C.filial) || '').trim(),
+        dist:   distVal,
+        coord:  coordVal,
+        filial: filialName,
         grupo:  String(getVal(C.grupo)  || '').trim(),
         linha:  String(getVal(C.linha)  || '').trim(),
         mt:     safe(getVal(C.metaTot)),
@@ -167,6 +187,9 @@ async function readCSVAsync(filePath) {
         jun:    safe(getVal(C.vJun26)),
         be26:   safe(getVal(C.beJul26)),
         be25:   safe(getVal(C.beJul25)),
+        uf:     cadastro.uf || '',
+        mun:    cadastro.municipio || '',
+        coords: cadastro.coords || null
       });
     });
 
@@ -195,6 +218,7 @@ function aggregate(records) {
   const filiais  = {};
   const cdDist   = {};  // coordenador → distrital
   const flCoord  = {};  // filial → coordenador
+  const flGeo    = {};  // filial → dados geográficos
   const lgMap    = {};  // linha → grupo (primeiro grupo encontrado)
   
   let gt = { 
@@ -203,7 +227,7 @@ function aggregate(records) {
   };
 
   for (const r of records) {
-    const { dist, coord, filial, grupo, linha, mt, mp, v26, v25, jun, be26, be25 } = r;
+    const { dist, coord, filial, grupo, linha, mt, mp, v26, v25, jun, be26, be25, uf, mun, coords } = r;
 
     function add(map, key) {
       if (!map[key]) {
@@ -249,7 +273,11 @@ function aggregate(records) {
 
     if (dist)   { add(dists,   dist); }
     if (coord)  { add(coords,  coord); cdDist[coord] = dist; }
-    if (filial) { add(filiais, filial); flCoord[filial] = coord; }
+    if (filial) { 
+      add(filiais, filial); 
+      flCoord[filial] = coord;
+      flGeo[filial] = { uf, mun, coords };
+    }
     if (grupo)  { add(grupos,  grupo); }
     // Agrupa linhas por grupo: chave composta para manter relação
     if (linha) {
@@ -286,7 +314,12 @@ function aggregate(records) {
       nome, distrital: cdDist[nome] || '', ...m(v),
     })),
     filiais: Object.entries(filiais).map(([nome, v]) => ({
-      nome, coordenador: flCoord[nome] || '', ...m(v),
+      nome, 
+      coordenador: flCoord[nome] || '', 
+      uf: (flGeo[nome] && flGeo[nome].uf) || '',
+      municipio: (flGeo[nome] && flGeo[nome].mun) || '',
+      coords: (flGeo[nome] && flGeo[nome].coords) || null,
+      ...m(v),
     })),
     grupos: Object.entries(grupos).map(([nomeOrig, v]) => ({
       nome:         nomeOrig.replace(/\(\d+\)$/, '').trim(),
@@ -461,8 +494,8 @@ app.post('/api/upload', (req, res, next) => {
         stream.on('error', err => reject(err));
       });
 
-      if (!firstLine || !firstLine.toLowerCase().includes('distrital')) {
-        throw new Error('O arquivo não parece conter um cabeçalho válido com a coluna "Distrital". Certifique-se de enviar a planilha correta.');
+      if (!firstLine || !firstLine.toLowerCase().includes('filial')) {
+        throw new Error('O arquivo não parece conter um cabeçalho válido com a coluna "Filial" ou "Desc_Filial". Certifique-se de enviar a planilha correta.');
       }
     } catch (err) {
       try { fs.unlinkSync(localTempPath); } catch (_) {}
@@ -491,6 +524,7 @@ app.post('/api/upload', (req, res, next) => {
     // Limpar arquivo temporário
     try { fs.unlinkSync(localTempPath); } catch (_) {}
     
+    loadFiliaisCadastro();
     clearCache();
     if (global.gc) { try { global.gc(); } catch (_) {} }
 
@@ -578,6 +612,7 @@ app.get('/api/filtros', async (req, res) => {
 
 // Limpar cache + recarregar (para botão de refresh)
 app.post('/api/refresh', async (req, res) => {
+  loadFiliaisCadastro();
   clearCache();
   try {
     const full = await getCached();
