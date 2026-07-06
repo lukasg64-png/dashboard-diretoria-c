@@ -212,7 +212,7 @@ async function readCSVAsync(filePath) {
 // ─── Agregação de registros ──────────────────────────────────────────────────
 function aggregate(records) {
   const dists    = {};
-  const coords   = {};
+  const coordsAgg = {};
   const grupos   = {};
   const linhas   = {};  // key = "grupo||linha" para manter relação
   const filiais  = {};
@@ -272,7 +272,7 @@ function aggregate(records) {
     }
 
     if (dist)   { add(dists,   dist); }
-    if (coord)  { add(coords,  coord); cdDist[coord] = dist; }
+    if (coord)  { add(coordsAgg, coord); cdDist[coord] = dist; }
     if (filial) { 
       add(filiais, filial); 
       flCoord[filial] = coord;
@@ -310,7 +310,7 @@ function aggregate(records) {
     distritoriais: Object.entries(dists).map(([nome, v]) => ({
       nome, ...m(v),
     })),
-    coordenadores: Object.entries(coords).map(([nome, v]) => ({
+    coordenadores: Object.entries(coordsAgg).map(([nome, v]) => ({
       nome, distrital: cdDist[nome] || '', ...m(v),
     })),
     filiais: Object.entries(filiais).map(([nome, v]) => ({
