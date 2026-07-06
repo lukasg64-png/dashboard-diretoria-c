@@ -377,13 +377,15 @@ function clearCache() { cache = { data: null, ts: 0 }; }
 
 // ─── Filtro pós-cache ───────────────────────────────────────────────────────
 function applyFilters(full, filters) {
-  const { distrital, coordenador, filial, grupo, linha } = filters;
+  const { distrital, coordenador, filial, grupo, linha, uf, cidade } = filters;
 
   const isAll = (!distrital || distrital === 'all') &&
                 (!coordenador || coordenador === 'all') &&
                 (!filial || filial === 'all') &&
                 (!grupo || grupo === 'all') &&
-                (!linha || linha === 'all');
+                (!linha || linha === 'all') &&
+                (!uf || uf === 'all') &&
+                (!cidade || cidade === 'all');
 
   if (isAll && full.globalAgg) {
     return {
@@ -418,6 +420,12 @@ function applyFilters(full, filters) {
   }
   if (linha && linha !== 'all') {
     records = records.filter(r => r.linha === linha);
+  }
+  if (uf && uf !== 'all') {
+    records = records.filter(r => r.uf === uf);
+  }
+  if (cidade && cidade !== 'all') {
+    records = records.filter(r => r.mun === cidade);
   }
 
   const globalAgg = full.globalAgg || aggregate(full.records);
@@ -547,6 +555,8 @@ app.get('/api/metas', async (req, res) => {
       filial:      req.query.filial      || 'all',
       grupo:       req.query.grupo       || 'all',
       linha:       req.query.linha       || 'all',
+      uf:          req.query.uf          || 'all',
+      cidade:      req.query.cidade      || 'all',
     };
     const data = applyFilters(full, filters);
 
@@ -555,9 +565,11 @@ app.get('/api/metas', async (req, res) => {
     const options = {
       distritoriais: globalAgg.distritoriais.map(d => ({ nome: d.nome })),
       coordenadores: globalAgg.coordenadores.map(c => ({ nome: c.nome, distrital: c.distrital })),
-      filiais: globalAgg.filiais.map(f => ({ nome: f.nome, coordenador: f.coordenador })),
+      filiais: globalAgg.filiais.map(f => ({ nome: f.nome, coordenador: f.coordenador, uf: f.uf, municipio: f.municipio })),
       grupos: globalAgg.grupos.map(g => ({ nome: g.nomeOriginal || g.nome })),
-      linhas: globalAgg.linhas.map(l => ({ nome: l.nome, grupo: l.grupo }))
+      linhas: globalAgg.linhas.map(l => ({ nome: l.nome, grupo: l.grupo })),
+      ufs: [...new Set(globalAgg.filiais.map(f => f.uf).filter(Boolean))].sort(),
+      cidades: [...new Set(globalAgg.filiais.map(f => f.municipio).filter(Boolean))].sort()
     };
 
     res.json({ status: 'ok', data, filters, options, cache_age_ms: Date.now() - cache.ts });

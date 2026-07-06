@@ -481,6 +481,7 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm }) {
 export default function DrillPanel({ onUpload }) {
   const [data, setData] = useState(null);
   const [rawFull, setRawFull] = useState(null); // dados sem filtro para popular opções
+  const [apiOptions, setApiOptions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [noData, setNoData] = useState(false); // true quando servidor não tem planilha carregada
@@ -496,17 +497,40 @@ export default function DrillPanel({ onUpload }) {
   const [fFilial, setFFilial] = useState('all');
   const [fGrupo, setFGrupo] = useState('all');
   const [fLinha, setFLinha] = useState('all');
+  const [fUF, setFUF] = useState('all');
+  const [fCidade, setFCidade] = useState('all');
 
-  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all';
-  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fLinha].filter(f => f !== 'all').length;
+  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all' || fUF !== 'all' || fCidade !== 'all';
+  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade].filter(f => f !== 'all').length;
 
-  const filters = { distrital: fDist, coordenador: fCoord, filial: fFilial, grupo: fGrupo, linha: fLinha };
+  const filters = { 
+    distrital: fDist, 
+    coordenador: fCoord, 
+    filial: fFilial, 
+    grupo: fGrupo, 
+    linha: fLinha,
+    uf: fUF,
+    cidade: fCidade
+  };
+
+  const handleCidadeChange = useCallback((v) => {
+    setFCidade(v);
+    if (v !== 'all' && apiOptions?.filiais) {
+      const filialMatch = apiOptions.filiais.find(f => f.municipio === v);
+      if (filialMatch && filialMatch.uf) {
+        setFUF(filialMatch.uf);
+      }
+    }
+  }, [apiOptions]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setNoData(false);
     try {
       // Sempre busca sem filtro para ter as opções de dropdown
-      const resAll = await API.getMetas({ distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all' });
+      const resAll = await API.getMetas({ 
+        distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all',
+        uf: 'all', cidade: 'all'
+      });
       
       // Checar se o servidor ainda não tem planilha
       if (resAll.status === 'no_data') {
@@ -516,6 +540,7 @@ export default function DrillPanel({ onUpload }) {
       }
 
       setRawFull(resAll.data);
+      setApiOptions(resAll.options);
 
       // Se tem filtro, busca com filtro
       if (hasFilter) {
@@ -526,33 +551,72 @@ export default function DrillPanel({ onUpload }) {
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [fDist, fCoord, fFilial, fGrupo, fLinha]);
+  }, [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
 
   useEffect(() => { load(); }, [load]);
 
   // Opções dos dropdowns (sempre do dado completo)
-  const distOptions = useMemo(() =>
-    [...new Set((rawFull?.distritoriais || []).map(d => d.nome))].sort(), [rawFull]);
+  const distOptions = useMemo(() => {
+    let list = rawFull?.distritoriais || [];
+    if (fUF !== 'all' && apiOptions?.filiais) {
+      const filiaisUf = apiOptions.filiais.filter(f => f.uf === fUF);
+      const coordsUf = new Set(filiaisUf.map(f => f.coordenador));
+      const distsUf = new Set((apiOptions.coordenadores || [])
+        .filter(c => coordsUf.has(c.nome))
+        .map(c => c.distrital));
+      list = list.filter(d => distsUf.has(d.nome));
+    }
+    return [...new Set(list.map(d => d.nome))].sort();
+  }, [rawFull, fUF, apiOptions]);
 
-  const coordOptions = useMemo(() =>
-    [...new Set((rawFull?.coordenadores || [])
-      .filter(c => fDist === 'all' || c.distrital === fDist)
-      .map(c => c.nome))].sort(), [rawFull, fDist]);
+  const coordOptions = useMemo(() => {
+    let list = rawFull?.coordenadores || [];
+    if (fDist !== 'all') {
+      list = list.filter(c => c.distrital === fDist);
+    }
+    if (fUF !== 'all' && apiOptions?.filiais) {
+      const filiaisUf = apiOptions.filiais.filter(f => f.uf === fUF);
+      const coordsUf = new Set(filiaisUf.map(f => f.coordenador));
+      list = list.filter(c => coordsUf.has(c.nome));
+    }
+    return [...new Set(list.map(c => c.nome))].sort();
+  }, [rawFull, fDist, fUF, apiOptions]);
 
   const filialOptions = useMemo(() => {
-    const allFiliais = rawFull?.filiais || [];
+    let list = rawFull?.filiais || [];
     const allCoords = rawFull?.coordenadores || [];
-    return [...new Set(allFiliais
-      .filter(f => {
-        if (fCoord !== 'all') return f.coordenador === fCoord;
-        if (fDist !== 'all') {
-          const coord = allCoords.find(c => c.nome === f.coordenador);
-          return coord && coord.distrital === fDist;
-        }
-        return true;
-      })
-      .map(f => f.nome))].sort();
-  }, [rawFull, fDist, fCoord]);
+    
+    if (fCoord !== 'all') {
+      list = list.filter(f => f.coordenador === fCoord);
+    } else if (fDist !== 'all') {
+      const coordsInDist = new Set(allCoords.filter(c => c.distrital === fDist).map(c => c.nome));
+      list = list.filter(f => coordsInDist.has(f.coordenador));
+    }
+    
+    if (fUF !== 'all' && apiOptions?.filiais) {
+      const ufsMap = new Map(apiOptions.filiais.map(f => [f.nome, f.uf]));
+      list = list.filter(f => ufsMap.get(f.nome) === fUF);
+    }
+    if (fCidade !== 'all' && apiOptions?.filiais) {
+      const cidadesMap = new Map(apiOptions.filiais.map(f => [f.nome, f.municipio]));
+      list = list.filter(f => cidadesMap.get(f.nome) === fCidade);
+    }
+    
+    return [...new Set(list.map(f => f.nome))].sort();
+  }, [rawFull, fDist, fCoord, fUF, fCidade, apiOptions]);
+
+  const ufOptions = useMemo(() => apiOptions?.ufs || [], [apiOptions]);
+
+  const cidadeOptions = useMemo(() => {
+    if (!apiOptions?.cidades) return [];
+    if (fUF === 'all') return apiOptions.cidades;
+    const filiaisUf = apiOptions.filiais || [];
+    const matchingCities = filiaisUf
+      .filter(f => f.uf === fUF)
+      .map(f => f.municipio)
+      .filter(Boolean);
+    return [...new Set(matchingCities)].sort();
+  }, [apiOptions, fUF]);
 
   const grupoOptions = useMemo(() =>
     [...new Set((rawFull?.grupos || []).map(g => g.nome))].sort(), [rawFull]);
@@ -745,6 +809,19 @@ export default function DrillPanel({ onUpload }) {
               onChange={v => setFFilial(v)}
             />
             <FilterSelect
+              label="UF"
+              value={fUF}
+              options={ufOptions}
+              onChange={v => { setFUF(v); setFCidade('all'); }}
+            />
+            <FilterSelect
+              label="Cidade"
+              value={fCidade}
+              options={cidadeOptions}
+              disabled={cidadeOptions.length === 0}
+              onChange={handleCidadeChange}
+            />
+            <FilterSelect
               label="Grupo"
               value={fGrupo}
               options={grupoOptions}
@@ -759,7 +836,7 @@ export default function DrillPanel({ onUpload }) {
             />
             {hasFilter && (
               <button
-                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); }}
+                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); setFUF('all'); setFCidade('all'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
@@ -777,6 +854,10 @@ export default function DrillPanel({ onUpload }) {
                 {fDist !== 'all' && <span style={chip}>{fDist}</span>}
                 {fCoord !== 'all' && <span style={chip}>{fCoord}</span>}
                 {fFilial !== 'all' && <span style={chip}>{fFilial}</span>}
+                {fUF !== 'all' && <span style={chip}>{fUF}</span>}
+                {fCidade !== 'all' && <span style={chip}>{fCidade}</span>}
+                {fGrupo !== 'all' && <span style={chip}>{fGrupo}</span>}
+                {fLinha !== 'all' && <span style={chip}>{fLinha}</span>}
               </div>
             )}
           </div>
