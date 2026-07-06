@@ -1,12 +1,13 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
-import { MapPin, TrendingUp, TrendingDown, Target, DollarSign, Globe } from 'lucide-react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Plus, Minus } from 'lucide-react';
 
 export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAnt }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layerGroupRef = useRef(null);
-  const [mapMetric, setMapMetric] = useState('atingimento'); // atingimento, evolucao, participacao
+  const [mapMetric, setMapMetric] = useState('atingimento'); // atingimento, evolucao, crescimento, participacao
+  const [expandedUFs, setExpandedUFs] = useState(new Set());
 
   // Formatação de valores
   const fmtR = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
@@ -17,56 +18,121 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     return filiais.filter(f => f.coords && Array.isArray(f.coords) && f.coords.length === 2);
   }, [filiais]);
 
-  // 1. Agregação por Estado (UF)
-  const dadosPorUF = useMemo(() => {
+  // Alterna o colapso/expansão de um estado
+  const toggleUF = (uf) => {
+    setExpandedUFs(prev => {
+      const next = new Set(prev);
+      if (next.has(uf)) {
+        next.delete(uf);
+      } else {
+        next.add(uf);
+      }
+      return next;
+    });
+  };
+
+  // 1. Agregação Hierárquica por Estado (UF) e Cidade
+  const dadosHierarquiaUF = useMemo(() => {
     const ufMap = {};
     filiais.forEach(f => {
       const uf = f.uf || 'N/I';
+      const cidade = f.municipio || 'Não Informado';
+
       if (!ufMap[uf]) {
-        ufMap[uf] = { uf, venda: 0, meta: 0, venda_anterior: 0, be_atual: 0, be_anterior: 0, lojas: 0 };
+        ufMap[uf] = {
+          uf,
+          venda: 0,
+          meta: 0,
+          meta_parcial: 0,
+          venda_anterior: 0,
+          venda_mes_anterior: 0,
+          be_atual: 0,
+          be_anterior: 0,
+          lojas: 0,
+          cidades: {}
+        };
       }
+
       ufMap[uf].venda += f.venda_jul26 || 0;
       ufMap[uf].meta += f.meta_total || 0;
+      ufMap[uf].meta_parcial += f.meta_parcial || 0;
       ufMap[uf].venda_anterior += f.venda_jul25 || 0;
+      ufMap[uf].venda_mes_anterior += f.venda_jun26 || 0;
       ufMap[uf].be_atual += f.base_emp_jul26 || 0;
       ufMap[uf].be_anterior += f.base_emp_jul25 || 0;
       ufMap[uf].lojas += 1;
+
+      if (!ufMap[uf].cidades[cidade]) {
+        ufMap[uf].cidades[cidade] = {
+          cidade,
+          uf,
+          venda: 0,
+          meta: 0,
+          meta_parcial: 0,
+          venda_anterior: 0,
+          venda_mes_anterior: 0,
+          be_atual: 0,
+          be_anterior: 0,
+          lojas: 0
+        };
+      }
+
+      const c = ufMap[uf].cidades[cidade];
+      c.venda += f.venda_jul26 || 0;
+      c.meta += f.meta_total || 0;
+      c.meta_parcial += f.meta_parcial || 0;
+      c.venda_anterior += f.venda_jul25 || 0;
+      c.venda_mes_anterior += f.venda_jun26 || 0;
+      c.be_atual += f.base_emp_jul26 || 0;
+      c.be_anterior += f.base_emp_jul25 || 0;
+      c.lojas += 1;
     });
 
-    return Object.values(ufMap).map(u => ({
-      ...u,
-      pct_meta: u.meta ? (u.venda / u.meta) * 100 : 0,
-      evol_yoy: u.venda_anterior ? ((u.venda - u.venda_anterior) / u.venda_anterior) * 100 : 0,
-      part_digital: u.be_atual ? (u.venda / u.be_atual) * 100 : 0
-    })).sort((a, b) => b.venda - a.venda);
+    return Object.values(ufMap).map(u => {
+      const cidadesList = Object.values(u.cidades).map(c => ({
+        ...c,
+        pct_meta: c.meta ? (c.venda / c.meta) * 100 : 0,
+        pct_meta_parcial: c.meta_parcial ? (c.venda / c.meta_parcial) * 100 : 0,
+        evol_yoy: c.venda_anterior ? ((c.venda - c.venda_anterior) / c.venda_anterior) * 100 : 0,
+        evol_mom: c.venda_mes_anterior ? ((c.venda - c.venda_mes_anterior) / c.venda_mes_anterior) * 100 : 0,
+        part_digital: c.be_atual ? (c.venda / c.be_atual) * 100 : 0
+      })).sort((a, b) => b.venda - a.venda);
+
+      return {
+        ...u,
+        cidadesList,
+        pct_meta: u.meta ? (u.venda / u.meta) * 100 : 0,
+        pct_meta_parcial: u.meta_parcial ? (u.venda / u.meta_parcial) * 100 : 0,
+        evol_yoy: u.venda_anterior ? ((u.venda - u.venda_anterior) / u.venda_anterior) * 100 : 0,
+        evol_mom: u.venda_mes_anterior ? ((u.venda - u.venda_mes_anterior) / u.venda_mes_anterior) * 100 : 0,
+        part_digital: u.be_atual ? (u.venda / u.be_atual) * 100 : 0
+      };
+    }).sort((a, b) => b.venda - a.venda);
   }, [filiais]);
 
-  // 2. Agregação por Cidade (Top 10)
-  const dadosPorCidade = useMemo(() => {
-    const cidMap = {};
-    filiais.forEach(f => {
-      const cidade = f.municipio || 'Não Informado';
-      const uf = f.uf || '';
-      const key = `${cidade} - ${uf}`;
-      if (!cidMap[key]) {
-        cidMap[key] = { key, cidade, uf, venda: 0, meta: 0, lojas: 0 };
-      }
-      cidMap[key].venda += f.venda_jul26 || 0;
-      cidMap[key].meta += f.meta_total || 0;
-      cidMap[key].lojas += 1;
-    });
+  // Para o gráfico de estado, usamos os dados consolidados de UF
+  const dadosPorUF = useMemo(() => {
+    return dadosHierarquiaUF.map(u => ({
+      uf: u.uf,
+      venda: u.venda
+    }));
+  }, [dadosHierarquiaUF]);
 
-    return Object.values(cidMap)
-      .map(c => ({
-        ...c,
-        pct_meta: c.meta ? (c.venda / c.meta) * 100 : 0
-      }))
+  // 2. Agregação por Cidade (Top 10) para o gráfico
+  const dadosPorCidadeGrafico = useMemo(() => {
+    const list = [];
+    dadosHierarquiaUF.forEach(u => {
+      u.cidadesList.forEach(c => {
+        list.push(c);
+      });
+    });
+    return list
       .sort((a, b) => b.venda - a.venda)
       .slice(0, 10);
-  }, [filiais]);
+  }, [dadosHierarquiaUF]);
 
   // Determinar cor e descrição para o mapa
-  const getMarkerProperties = (f) => {
+  const getMarkerProperties = useCallback((f) => {
     let color = '#94a3b8';
     let valueStr = '';
     let label = '';
@@ -85,6 +151,13 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       if (evol < 0) color = '#ef4444';
       else if (evol < 10) color = '#f59e0b';
       else color = '#10b981';
+    } else if (mapMetric === 'crescimento') {
+      label = 'Crescimento MoM';
+      const mom = f.evol_mom || 0;
+      valueStr = (mom >= 0 ? '+' : '') + fmtPct(mom);
+      if (mom < 0) color = '#ef4444';
+      else if (mom < 5) color = '#f59e0b';
+      else color = '#10b981';
     } else if (mapMetric === 'participacao') {
       label = 'Participação Digital';
       const part = f.pct_ecomm_jul26 || 0;
@@ -95,7 +168,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     }
 
     return { color, valueStr, label };
-  };
+  }, [mapMetric]);
 
   useEffect(() => {
     if (!window.L) return;
@@ -103,7 +176,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     if (!mapInstanceRef.current && mapRef.current) {
       // Centro do Sul do Brasil
       const map = window.L.map(mapRef.current, {
-        center: [-29.0, -53.0],
+        center: [-28.5, -52.5],
         zoom: 6,
         minZoom: 4,
         maxZoom: 16
@@ -131,7 +204,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const { color, valueStr, label } = getMarkerProperties(f);
+      const { color } = getMarkerProperties(f);
       const baseVenda = f.venda_jul26 || 0;
       const radius = Math.max(800, Math.min(25000, Math.sqrt(baseVenda) * 65));
 
@@ -143,27 +216,43 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         weight: 1.5
       });
 
+      // Detalha os 4 Pilares da Loja no Popup
       const popupContent = `
-        <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #1e293b; padding: 4px; min-width: 180px;">
-          <h4 style="margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #0f2050; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+        <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #1e293b; padding: 6px; min-width: 220px; line-height: 1.4;">
+          <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #0f2050; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
             ${f.nome}
           </h4>
-          <div style="margin-bottom: 3px;"><strong>Local:</strong> ${f.municipio || '—'} (${f.uf || '—'})</div>
-          <div style="margin-bottom: 3px;"><strong>Coordenador:</strong> ${f.coordenador || '—'}</div>
-          <div style="margin-bottom: 6px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 4px;">
-            <strong>Venda Digital:</strong> <span style="font-weight: 700; color: #7c3aed;">${fmtR(f.venda_jul26)}</span>
+          <div style="margin-bottom: 4px;"><strong>Local:</strong> ${f.municipio || '—'} (${f.uf || '—'})</div>
+          <div style="margin-bottom: 4px;"><strong>Coordenador:</strong> ${f.coordenador || '—'}</div>
+          <div style="margin-bottom: 8px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+            <div>
+              <span style="color: #64748b; font-size: 9px; text-transform: uppercase;">Venda Digital</span><br/>
+              <strong style="color: #7c3aed; font-size: 12px;">${fmtR(f.venda_jul26)}</strong>
+            </div>
+            <div>
+              <span style="color: #64748b; font-size: 9px; text-transform: uppercase;">Meta Total</span><br/>
+              <strong style="color: #1e293b; font-size: 12px;">${fmtR(f.meta_total)}</strong>
+            </div>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
             <span>Ating. Meta Parcial:</span>
-            <span style="font-weight:700;">${fmtPct(f.pct_meta_parcial)}</span>
+            <strong style="color: ${f.pct_meta_parcial >= 100 ? '#10b981' : f.pct_meta_parcial >= 85 ? '#f59e0b' : '#ef4444'}">${fmtPct(f.pct_meta_parcial)}</strong>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-            <span>Evolução YoY:</span>
-            <span style="font-weight:700; color:${f.evol_yoy >= 0 ? '#10b981' : '#ef4444'}">${f.evol_yoy >= 0 ? '+' : ''}${fmtPct(f.evol_yoy)}</span>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
+            <span>Ating. Meta Total:</span>
+            <strong style="color: ${f.pct_meta_total >= 100 ? '#10b981' : f.pct_meta_total >= 85 ? '#f59e0b' : '#ef4444'}">${fmtPct(f.pct_meta_total)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
+            <span>Evolução YoY (Pilar 2):</span>
+            <strong style="color:${f.evol_yoy >= 0 ? '#10b981' : '#ef4444'}">${f.evol_yoy >= 0 ? '+' : ''}${fmtPct(f.evol_yoy)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
+            <span>Crescimento MoM (Pilar 3):</span>
+            <strong style="color:${f.evol_mom >= 0 ? '#10b981' : '#ef4444'}">${f.evol_mom >= 0 ? '+' : ''}${fmtPct(f.evol_mom)}</strong>
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span>Part. Digital:</span>
-            <span style="font-weight:700;">${fmtPct(f.pct_ecomm_jul26)}</span>
+            <span>Participação Digital (Pilar 4):</span>
+            <strong style="color: #2563eb;">${fmtPct(f.pct_ecomm_jul26)}</strong>
           </div>
         </div>
       `;
@@ -172,9 +261,8 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       layerGroup.addLayer(circle);
     });
 
-  }, [filiaisComCoords, mapMetric]);
+  }, [filiaisComCoords, getMarkerProperties]);
 
-  // Cores personalizadas para os gráficos de Estados
   const STATE_COLORS = {
     'RS': '#3b82f6',
     'SC': '#10b981',
@@ -187,7 +275,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       
       {/* ── CARD 1: MAPA PRINCIPAL COM LEGENDA ── */}
       <div style={{ padding: '16px 20px', background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               🗺️ Análise de Geolocalização por Lojas
@@ -199,9 +287,10 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
           <div style={{ display: 'flex', gap: 4, alignItems: 'center', background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
             {[
-              { key: 'atingimento', label: 'Meta Parcial (%)' },
-              { key: 'evolucao', label: 'Evolução YoY (%)' },
-              { key: 'participacao', label: 'Part. Digital (%)' },
+              { key: 'atingimento', label: 'Meta Parcial (Pilar 1)' },
+              { key: 'evolucao', label: 'Evolução YoY (Pilar 2)' },
+              { key: 'crescimento', label: 'Crescimento MoM (Pilar 3)' },
+              { key: 'participacao', label: 'Part. Digital (Pilar 4)' },
             ].map(m => (
               <button
                 key={m.key}
@@ -276,6 +365,22 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                     </div>
                   </>
                 )}
+                {mapMetric === 'crescimento' && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                      <span>Crescimento MoM (&ge; 5%)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                      <span>Estável (0% a 4.9%)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                      <span>Queda MoM (&lt; 0%)</span>
+                    </div>
+                  </>
+                )}
                 {mapMetric === 'participacao' && (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -339,7 +444,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           </h4>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosPorCidade} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+              <BarChart data={dadosPorCidadeGrafico} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10 }} stroke="#64748b" tickFormatter={v => fmtR(v)} />
                 <YAxis type="category" dataKey="cidade" tick={{ fontSize: 10 }} stroke="#64748b" width={90} />
@@ -352,45 +457,130 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
       </div>
 
-      {/* ── CARD 3: TABELA DE PERFORMANCE POR ESTADO (UF) ── */}
+      {/* ── CARD 3: TABELA HIERÁRQUICA DE PERFORMANCE POR ESTADO (UF) ── */}
       <div style={{ padding: '16px 20px', background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
-        <h4 style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          📋 Demonstrativo Consolidado por Unidade Federativa
-        </h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            📋 Demonstrativo Consolidado por Unidade Federativa
+          </h4>
+          <span style={{ fontSize: 11, color: '#64748b' }}>
+            Clique no estado (<span style={{ fontWeight: 700, color: '#6366f1' }}>+</span>) para detalhar os indicadores por cidade
+          </span>
+        </div>
+        
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, textAlign: 'left' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontWeight: 700 }}>
-                <th style={{ padding: '10px 12px' }}>Estado (UF)</th>
+                <th style={{ padding: '10px 12px' }}>Estado (UF) / Cidade</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Qtd. Filiais</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Venda E-comm</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Meta</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>% Atingimento</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Part. Digital</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Evolução YoY</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Meta Total</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ating. Parcial (Pilar 1)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Part. Digital (Pilar 4)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Evolução YoY (Pilar 2)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Crescimento MoM (Pilar 3)</th>
               </tr>
             </thead>
             <tbody>
-              {dadosPorUF.map((u, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', hover: { background: '#f8fafc' } }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATE_COLORS[u.uf] || '#94a3b8' }} />
-                    {u.uf === 'RS' ? 'Rio Grande do Sul' : u.uf === 'SC' ? 'Santa Catarina' : u.uf === 'PR' ? 'Paraná' : 'Não Informado'} ({u.uf})
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{u.lojas}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#0f2050' }}>{fmtR(u.venda)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{fmtR(u.meta)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.pct_meta >= 100 ? '#10b981' : u.pct_meta >= 85 ? '#f59e0b' : '#ef4444' }}>
-                    {fmtPct(u.pct_meta)}
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500, color: 'var(--accent)' }}>
-                    {fmtPct(u.part_digital)}
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.evol_yoy >= 0 ? '#10b981' : '#ef4444' }}>
-                    {u.evol_yoy >= 0 ? '+' : ''}{fmtPct(u.evol_yoy)}
-                  </td>
-                </tr>
-              ))}
+              {dadosHierarquiaUF.map((u) => {
+                const isExpanded = expandedUFs.has(u.uf);
+                return (
+                  <React.Fragment key={u.uf}>
+                    {/* Linha Pai: Estado (UF) */}
+                    <tr 
+                      onClick={() => toggleUF(u.uf)}
+                      style={{ 
+                        borderBottom: '1px solid #e2e8f0', 
+                        background: '#fff', 
+                        cursor: 'pointer',
+                        transition: 'background-color 0.15s'
+                      }}
+                      className="table-row-hover"
+                    >
+                      <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ 
+                          fontSize: 14, 
+                          fontWeight: 700, 
+                          width: 18, 
+                          height: 18,
+                          display: 'flex', 
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 4,
+                          background: isExpanded ? 'rgba(99,102,241,0.1)' : 'rgba(100,116,139,0.06)',
+                          color: isExpanded ? '#6366f1' : '#64748b',
+                        }}>
+                          {isExpanded ? <Minus size={10} strokeWidth={3} /> : <Plus size={10} strokeWidth={3} />}
+                        </span>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATE_COLORS[u.uf] || '#94a3b8' }} />
+                        {u.uf === 'RS' ? 'Rio Grande do Sul' : u.uf === 'SC' ? 'Santa Catarina' : u.uf === 'PR' ? 'Paraná' : 'Não Informado'} ({u.uf})
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{u.lojas}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#0f2050' }}>{fmtR(u.venda)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{fmtR(u.meta)}</td>
+                      
+                      {/* Ating. Meta Parcial */}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.pct_meta_parcial >= 100 ? '#10b981' : u.pct_meta_parcial >= 85 ? '#f59e0b' : '#ef4444' }}>
+                        {fmtPct(u.pct_meta_parcial)}
+                      </td>
+                      
+                      {/* Part. Digital */}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 500, color: '#2563eb' }}>
+                        {fmtPct(u.part_digital)}
+                      </td>
+                      
+                      {/* Evolução YoY */}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.evol_yoy >= 0 ? '#10b981' : '#ef4444' }}>
+                        {u.evol_yoy >= 0 ? '+' : ''}{fmtPct(u.evol_yoy)}
+                      </td>
+
+                      {/* Crescimento MoM */}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.evol_mom >= 0 ? '#10b981' : '#ef4444' }}>
+                        {u.evol_mom >= 0 ? '+' : ''}{fmtPct(u.evol_mom)}
+                      </td>
+                    </tr>
+
+                    {/* Linhas Filhas: Cidades do Estado */}
+                    {isExpanded && u.cidadesList.map((c, idx) => (
+                      <tr 
+                        key={`${u.uf}-${c.cidade}-${idx}`} 
+                        style={{ 
+                          borderBottom: '1px solid #f1f5f9', 
+                          background: '#f8fafc',
+                        }}
+                      >
+                        <td style={{ padding: '8px 12px 8px 36px', fontWeight: 500, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ color: '#94a3b8', fontSize: 10 }}>↳</span> {c.cidade}
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{c.lojas}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#334155' }}>{fmtR(c.venda)}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{fmtR(c.meta)}</td>
+                        
+                        {/* Ating. Meta Parcial */}
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: c.pct_meta_parcial >= 100 ? '#10b981' : c.pct_meta_parcial >= 85 ? '#f59e0b' : '#ef4444' }}>
+                          {fmtPct(c.pct_meta_parcial)}
+                        </td>
+                        
+                        {/* Part. Digital */}
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 500, color: '#3b82f6' }}>
+                          {fmtPct(c.part_digital)}
+                        </td>
+                        
+                        {/* Evolução YoY */}
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: c.evol_yoy >= 0 ? '#10b981' : '#ef4444' }}>
+                          {c.evol_yoy >= 0 ? '+' : ''}{fmtPct(c.evol_yoy)}
+                        </td>
+
+                        {/* Crescimento MoM */}
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: c.evol_mom >= 0 ? '#10b981' : '#ef4444' }}>
+                          {c.evol_mom >= 0 ? '+' : ''}{fmtPct(c.evol_mom)}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
