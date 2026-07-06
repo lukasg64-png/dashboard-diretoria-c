@@ -89,18 +89,25 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     });
 
     return Object.values(ufMap).map(u => {
-      const cidadesList = Object.values(u.cidades).map(c => ({
-        ...c,
-        pct_meta: c.meta ? (c.venda / c.meta) * 100 : 0,
-        pct_meta_parcial: c.meta_parcial ? (c.venda / c.meta_parcial) * 100 : 0,
-        evol_yoy: c.venda_anterior ? ((c.venda - c.venda_anterior) / c.venda_anterior) * 100 : 0,
-        evol_mom: c.venda_mes_anterior ? ((c.venda - c.venda_mes_anterior) / c.venda_mes_anterior) * 100 : 0,
-        part_digital: c.be_atual ? (c.venda / c.be_atual) * 100 : 0
-      })).sort((a, b) => b.venda - a.venda);
+      const cidadesList = Object.values(u.cidades).map(c => {
+        const desvio_parcial = c.meta_parcial ? ((c.venda / c.meta_parcial) - 1) * 100 : 0;
+        return {
+          ...c,
+          desvio_parcial,
+          pct_meta: c.meta ? (c.venda / c.meta) * 100 : 0,
+          pct_meta_parcial: c.meta_parcial ? (c.venda / c.meta_parcial) * 100 : 0,
+          evol_yoy: c.venda_anterior ? ((c.venda - c.venda_anterior) / c.venda_anterior) * 100 : 0,
+          evol_mom: c.venda_mes_anterior ? ((c.venda - c.venda_mes_anterior) / c.venda_mes_anterior) * 100 : 0,
+          part_digital: c.be_atual ? (c.venda / c.be_atual) * 100 : 0
+        };
+      }).sort((a, b) => b.venda - a.venda);
+
+      const desvio_parcial = u.meta_parcial ? ((u.venda / u.meta_parcial) - 1) * 100 : 0;
 
       return {
         ...u,
         cidadesList,
+        desvio_parcial,
         pct_meta: u.meta ? (u.venda / u.meta) * 100 : 0,
         pct_meta_parcial: u.meta_parcial ? (u.venda / u.meta_parcial) * 100 : 0,
         evol_yoy: u.venda_anterior ? ((u.venda - u.venda_anterior) / u.venda_anterior) * 100 : 0,
@@ -110,15 +117,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     }).sort((a, b) => b.venda - a.venda);
   }, [filiais]);
 
-  // Para o gráfico de estado, usamos os dados consolidados de UF
-  const dadosPorUF = useMemo(() => {
-    return dadosHierarquiaUF.map(u => ({
-      uf: u.uf,
-      venda: u.venda
-    }));
-  }, [dadosHierarquiaUF]);
-
-  // 2. Agregação por Cidade (Top 10) para o gráfico
+  // Cidade options para o gráfico (Top 10 cidades por faturamento)
   const dadosPorCidadeGrafico = useMemo(() => {
     const list = [];
     dadosHierarquiaUF.forEach(u => {
@@ -126,10 +125,39 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         list.push(c);
       });
     });
-    return list
-      .sort((a, b) => b.venda - a.venda)
-      .slice(0, 10);
+    return list.sort((a, b) => b.venda - a.venda).slice(0, 10);
   }, [dadosHierarquiaUF]);
+
+  // 2. Dados dos Gráficos Dinâmicos baseados no Pilar Ativo (mapMetric)
+  const chartDataUF = useMemo(() => {
+    return dadosHierarquiaUF.map(u => {
+      let value = 0;
+      if (mapMetric === 'atingimento') value = u.desvio_parcial;
+      else if (mapMetric === 'evolucao') value = u.evol_yoy;
+      else if (mapMetric === 'crescimento') value = u.evol_mom;
+      else if (mapMetric === 'participacao') value = u.part_digital;
+
+      return {
+        uf: u.uf,
+        value: Number(value.toFixed(1))
+      };
+    });
+  }, [dadosHierarquiaUF, mapMetric]);
+
+  const chartDataCidade = useMemo(() => {
+    return dadosPorCidadeGrafico.map(c => {
+      let value = 0;
+      if (mapMetric === 'atingimento') value = c.desvio_parcial;
+      else if (mapMetric === 'evolucao') value = c.evol_yoy;
+      else if (mapMetric === 'crescimento') value = c.evol_mom;
+      else if (mapMetric === 'participacao') value = c.part_digital;
+
+      return {
+        cidade: c.cidade,
+        value: Number(value.toFixed(1))
+      };
+    });
+  }, [dadosPorCidadeGrafico, mapMetric]);
 
   // Determinar cor e descrição para o mapa
   const getMarkerProperties = useCallback((f) => {
@@ -138,12 +166,12 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     let label = '';
 
     if (mapMetric === 'atingimento') {
-      label = 'Ating. Meta Parcial';
-      const pct = f.pct_meta_parcial || 0;
-      valueStr = fmtPct(pct);
-      if (pct < 85) color = '#ef4444';
-      else if (pct < 100) color = '#f59e0b';
-      else color = '#10b981';
+      label = 'Desvio Meta Parcial';
+      const desvio = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
+      valueStr = (desvio >= 0 ? '+' : '') + fmtPct(desvio);
+      if (desvio < -15) color = '#ef4444';      // Desvio pior que -15%
+      else if (desvio < 0) color = '#f59e0b';     // Desvio negativo mas sob controle
+      else color = '#10b981';                     // Meta batida ou desvio positivo
     } else if (mapMetric === 'evolucao') {
       label = 'Evolução YoY';
       const evol = f.evol_yoy || 0;
@@ -197,7 +225,8 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
     layerGroup.clearLayers();
 
-    // Plotar círculos para cada filial no mapa
+    // Plotar circleMarkers no mapa. Eles têm tamanho fixo em PIXELS na tela,
+    // o que faz com que eles fiquem pequenos e se separem visualmente quando o usuário dá zoom!
     filiaisComCoords.forEach(f => {
       const lat = f.coords[1];
       const lng = f.coords[0];
@@ -206,14 +235,17 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
       const { color } = getMarkerProperties(f);
       const baseVenda = f.venda_jul26 || 0;
-      const radius = Math.max(800, Math.min(25000, Math.sqrt(baseVenda) * 65));
+      
+      // Raio dinâmico em pixels (Min: 6px, Max: 22px) baseado no faturamento
+      const radius = Math.max(6, Math.min(22, Math.sqrt(baseVenda) * 0.022));
+      const desvioParcial = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
 
-      const circle = window.L.circle([lat, lng], {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.6,
+      const marker = window.L.circleMarker([lat, lng], {
         radius: radius,
-        weight: 1.5
+        color: '#ffffff',
+        weight: 1.2,
+        fillColor: color,
+        fillOpacity: 0.85
       });
 
       // Detalha os 4 Pilares da Loja no Popup
@@ -235,8 +267,10 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
-            <span>Ating. Meta Parcial:</span>
-            <strong style="color: ${f.pct_meta_parcial >= 100 ? '#10b981' : f.pct_meta_parcial >= 85 ? '#f59e0b' : '#ef4444'}">${fmtPct(f.pct_meta_parcial)}</strong>
+            <span>Desvio Meta Parcial (Pilar 1):</span>
+            <strong style="color: ${desvioParcial >= 0 ? '#10b981' : desvioParcial >= -15 ? '#f59e0b' : '#ef4444'}">
+              ${desvioParcial >= 0 ? '+' : ''}${fmtPct(desvioParcial)}
+            </strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
             <span>Ating. Meta Total:</span>
@@ -257,8 +291,8 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         </div>
       `;
 
-      circle.bindPopup(popupContent);
-      layerGroup.addLayer(circle);
+      marker.bindPopup(popupContent);
+      layerGroup.addLayer(marker);
     });
 
   }, [filiaisComCoords, getMarkerProperties]);
@@ -270,12 +304,25 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     'N/I': '#94a3b8'
   };
 
+  // Nomes amigáveis para títulos de gráficos e tooltips baseados no pilar
+  const infoFiltro = useMemo(() => {
+    if (mapMetric === 'atingimento') {
+      return { title: 'Desvio Meta Parcial (%)', label: 'Desvio' };
+    } else if (mapMetric === 'evolucao') {
+      return { title: 'Evolução YoY (%)', label: 'Evolução' };
+    } else if (mapMetric === 'crescimento') {
+      return { title: 'Crescimento MoM (%)', label: 'Crescimento' };
+    } else {
+      return { title: 'Participação Digital (%)', label: 'Participação' };
+    }
+  }, [mapMetric]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       
       {/* ── CARD 1: MAPA PRINCIPAL COM LEGENDA ── */}
       <div style={{ padding: '16px 20px', background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-        <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               🗺️ Análise de Geolocalização por Lojas
@@ -287,10 +334,10 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
           <div style={{ display: 'flex', gap: 4, alignItems: 'center', background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
             {[
-              { key: 'atingimento', label: 'Meta Parcial (Pilar 1)' },
-              { key: 'evolucao', label: 'Evolução YoY (Pilar 2)' },
-              { key: 'crescimento', label: 'Crescimento MoM (Pilar 3)' },
-              { key: 'participacao', label: 'Part. Digital (Pilar 4)' },
+              { key: 'atingimento', label: 'Desvio M. Parcial (P1)' },
+              { key: 'evolucao', label: 'Evolução YoY (P2)' },
+              { key: 'crescimento', label: 'Crescimento MoM (P3)' },
+              { key: 'participacao', label: 'Part. Digital (P4)' },
             ].map(m => (
               <button
                 key={m.key}
@@ -337,15 +384,15 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                      <span>Meta Batida (&ge; 100%)</span>
+                      <span>Meta Batida (&ge; 0% Desvio)</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                      <span>Alerta (85% a 99%)</span>
+                      <span>Alerta (-15% a -0,1%)</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                      <span>Insuficiente (&lt; 85%)</span>
+                      <span>Queda (&lt; -15% Desvio)</span>
                     </div>
                   </>
                 )}
@@ -402,33 +449,33 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
             <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 10 }}>
               <h4 style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                Volume E-comm
+                Fidelidade Visual
               </h4>
               <span style={{ color: '#475569', lineHeight: 1.4, fontSize: 11 }}>
-                Tamanho da bolha corresponde à **venda digital** atual. Lojas com maior faturamento formam círculos maiores no mapa.
+                Pontos mantêm tamanho consistente na tela e se separam conforme o zoom aumenta.
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── CARD 2: INDICADORES E GRÁFICOS POR ESTADO E CIDADE ── */}
+      {/* ── CARD 2: INDICADORES E GRÁFICOS DINÂMICOS POR ESTADO E CIDADE ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 16 }}>
         
-        {/* Gráfico 1: Venda por Estado */}
+        {/* Gráfico 1: Performance por Estado */}
         <div style={{ padding: '16px 20px', background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <h4 style={{ margin: '0 0 16px', fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            📊 Venda E-commerce por Estado (UF)
+            📊 {infoFiltro.title} por Estado
           </h4>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosPorUF} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <BarChart data={chartDataUF} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="uf" tick={{ fontSize: 11 }} stroke="#64748b" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#64748b" tickFormatter={v => fmtR(v)} />
-                <Tooltip formatter={(v) => [fmtR(v), 'Venda']} contentStyle={{ fontSize: 11, borderRadius: 6 }} />
-                <Bar dataKey="venda" radius={[4, 4, 0, 0]}>
-                  {dadosPorUF.map((entry, index) => (
+                <YAxis tick={{ fontSize: 11 }} stroke="#64748b" tickFormatter={v => `${v}%`} />
+                <Tooltip formatter={(v) => [`${v}%`, infoFiltro.label]} contentStyle={{ fontSize: 11, borderRadius: 6 }} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {chartDataUF.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={STATE_COLORS[entry.uf] || '#6366f1'} />
                   ))}
                 </Bar>
@@ -437,19 +484,19 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           </div>
         </div>
 
-        {/* Gráfico 2: Top 10 Cidades */}
+        {/* Gráfico 2: Top 10 Cidades no Pilar */}
         <div style={{ padding: '16px 20px', background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <h4 style={{ margin: '0 0 16px', fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            🏙️ Top 10 Municípios em Faturamento Digital
+            🏙️ Top 10 Municípios em {infoFiltro.title}
           </h4>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosPorCidadeGrafico} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+              <BarChart data={chartDataCidade} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 10 }} stroke="#64748b" tickFormatter={v => fmtR(v)} />
+                <XAxis type="number" tick={{ fontSize: 10 }} stroke="#64748b" tickFormatter={v => `${v}%`} />
                 <YAxis type="category" dataKey="cidade" tick={{ fontSize: 10 }} stroke="#64748b" width={90} />
-                <Tooltip formatter={(v) => [fmtR(v), 'Venda']} contentStyle={{ fontSize: 11, borderRadius: 6 }} />
-                <Bar dataKey="venda" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                <Tooltip formatter={(v) => [`${v}%`, infoFiltro.label]} contentStyle={{ fontSize: 11, borderRadius: 6 }} />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -476,10 +523,10 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Qtd. Filiais</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Venda E-comm</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Meta Total</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ating. Parcial (Pilar 1)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Part. Digital (Pilar 4)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Evolução YoY (Pilar 2)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Crescimento MoM (Pilar 3)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Desvio M. Parcial (P1)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Part. Digital (P4)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Evolução YoY (P2)</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Crescimento MoM (P3)</th>
               </tr>
             </thead>
             <tbody>
@@ -520,9 +567,9 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                       <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#0f2050' }}>{fmtR(u.venda)}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>{fmtR(u.meta)}</td>
                       
-                      {/* Ating. Meta Parcial */}
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.pct_meta_parcial >= 100 ? '#10b981' : u.pct_meta_parcial >= 85 ? '#f59e0b' : '#ef4444' }}>
-                        {fmtPct(u.pct_meta_parcial)}
+                      {/* Desvio Meta Parcial */}
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: u.desvio_parcial >= 0 ? '#10b981' : u.desvio_parcial >= -15 ? '#f59e0b' : '#ef4444' }}>
+                        {u.desvio_parcial >= 0 ? '+' : ''}{fmtPct(u.desvio_parcial)}
                       </td>
                       
                       {/* Part. Digital */}
@@ -557,9 +604,9 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                         <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#334155' }}>{fmtR(c.venda)}</td>
                         <td style={{ padding: '8px 12px', textAlign: 'right', color: '#64748b' }}>{fmtR(c.meta)}</td>
                         
-                        {/* Ating. Meta Parcial */}
-                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: c.pct_meta_parcial >= 100 ? '#10b981' : c.pct_meta_parcial >= 85 ? '#f59e0b' : '#ef4444' }}>
-                          {fmtPct(c.pct_meta_parcial)}
+                        {/* Desvio Meta Parcial */}
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: c.desvio_parcial >= 0 ? '#10b981' : c.desvio_parcial >= -15 ? '#f59e0b' : '#ef4444' }}>
+                          {c.desvio_parcial >= 0 ? '+' : ''}{fmtPct(c.desvio_parcial)}
                         </td>
                         
                         {/* Part. Digital */}
