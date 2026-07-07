@@ -1043,6 +1043,133 @@ export default function DrillPanel({ onUpload }) {
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
 
+  const kpiBlocks = useMemo(() => {
+    if (loading || !t) {
+      return [
+        { label: 'Carregando...', value: '...' },
+        { label: 'Carregando...', value: '...' },
+        { label: 'Carregando...', value: '...' },
+        { label: 'Carregando...', value: '...' }
+      ];
+    }
+
+    const fmtCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
+    const fmtInteger = (v) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v || 0);
+
+    if (viewMode === 'venda') {
+      const tDesvioVal = desvioAbs(t.venda_jul26, t.meta_parcial);
+      return [
+        {
+          label: 'Venda E-commerce',
+          value: fmtR(t.venda_jul26),
+          evol: t.evol_yoy,
+          evolLabel: 'YoY',
+          sub: `Mês Ant.: ${fmtR(t.venda_jun26)} (${fmtEvol(t.evol_mom)} MoM)`
+        },
+        {
+          label: 'Meta Total',
+          value: fmtR(t.meta_total),
+          sub: `Atingido: ${fmtPct(t.pct_meta_total)}`
+        },
+        {
+          label: 'Desvio Meta Parcial',
+          value: tDesvioVal != null ? (tDesvioVal >= 0 ? '+' : '') + fmtR(tDesvioVal) : '—',
+          evol: desvioPct(t.venda_jul26, t.meta_parcial),
+          evolLabel: 'desvio',
+          sub: `Meta Parcial: ${fmtR(t.meta_parcial)}`,
+          highlight: true
+        },
+        {
+          label: 'Participação Digital',
+          value: fmtPct(t.pct_ecomm_jul26),
+          evol: tPartEvol,
+          evolLabel: 'p.p. YoY',
+          sub: `Ano Anterior: ${fmtPct(t.pct_ecomm_jul25)}`
+        }
+      ];
+    } else if (viewMode === 'cup') {
+      const c26 = t.cupons_jul26 || 0;
+      const c25 = t.cupons_jul25 || 0;
+      const cJun = t.cupons_jun26 || 0;
+
+      const yoy = c25 ? ((c26 - c25) / c25) * 100 : 0;
+      const mom = cJun ? ((c26 - cJun) / cJun) * 100 : 0;
+
+      const diffYoY = c26 - c25;
+      const diffMoM = c26 - cJun;
+
+      return [
+        {
+          label: 'Total Cupons',
+          value: fmtInteger(c26),
+          evol: yoy,
+          evolLabel: 'YoY',
+          sub: `Mês Ant.: ${fmtInteger(cJun)} (${fmtEvol(mom)} MoM)`
+        },
+        {
+          label: 'Cupons Ano Anterior',
+          value: fmtInteger(c25),
+          sub: `Período: ${labelAtualAno}`
+        },
+        {
+          label: 'Crescimento YoY (Qtd)',
+          value: (diffYoY >= 0 ? '+' : '') + fmtInteger(diffYoY),
+          sub: `Diferença vs ${labelAtualAno}`,
+          highlight: true
+        },
+        {
+          label: 'Crescimento MoM (Qtd)',
+          value: (diffMoM >= 0 ? '+' : '') + fmtInteger(diffMoM),
+          sub: `Diferença vs ${labelAnt}`
+        }
+      ];
+    } else {
+      // viewMode === 'tm'
+      const v26 = t.venda_jul26 || 0;
+      const c26 = t.cupons_jul26 || 0;
+      const v25 = t.venda_jul25 || 0;
+      const c25 = t.cupons_jul25 || 0;
+      const vJun = t.venda_jun26 || 0;
+      const cJun = t.cupons_jun26 || 0;
+
+      const tm26 = c26 ? v26 / c26 : 0;
+      const tm25 = c25 ? v25 / c25 : 0;
+      const tmJun = cJun ? vJun / cJun : 0;
+
+      const yoy = tm25 ? ((tm26 - tm25) / tm25) * 100 : 0;
+      const mom = tmJun ? ((tm26 - tmJun) / tmJun) * 100 : 0;
+
+      const diffYoY = tm26 - tm25;
+      const diffMoM = tm26 - tmJun;
+
+      return [
+        {
+          label: 'Ticket Médio',
+          value: fmtCurrency(tm26),
+          evol: yoy,
+          evolLabel: 'YoY',
+          sub: `Mês Ant.: ${fmtCurrency(tmJun)} (${fmtEvol(mom)} MoM)`
+        },
+        {
+          label: 'T. Médio Ano Anterior',
+          value: fmtCurrency(tm25),
+          sub: `Período: ${labelAtualAno}`
+        },
+        {
+          label: 'Crescimento YoY (R$)',
+          value: (diffYoY >= 0 ? '+' : '') + fmtCurrency(diffYoY),
+          sub: `Diferença vs ${labelAtualAno}`,
+          highlight: true
+        },
+        {
+          label: 'Crescimento MoM (R$)',
+          value: (diffMoM >= 0 ? '+' : '') + fmtCurrency(diffMoM),
+          sub: `Diferença vs ${labelAnt}`
+        }
+      ];
+    }
+  }, [loading, t, viewMode, labelAtualAno, labelAnt, tPartEvol]);
+
   const COLS_HIER = [
     'Meta Total',
     '% Meta Total',
@@ -1261,33 +1388,17 @@ export default function DrillPanel({ onUpload }) {
             {hasFilter && <span style={{ marginLeft: 12, color: '#7c3aed', fontWeight: 700 }}>• Dados filtrados</span>}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            <KpiBlock 
-              label={`Venda E-commerce`} 
-              value={loading ? '...' : fmtR(t.venda_jul26)} 
-              evol={t.evol_yoy} 
-              evolLabel="YoY"
-              sub={`Mês Ant.: ${fmtR(t.venda_jun26)} (${fmtEvol(t.evol_mom)} MoM)`}
-            />
-            <KpiBlock 
-              label="Meta Total" 
-              value={loading ? '...' : fmtR(t.meta_total)} 
-              sub={`Atingido: ${fmtPct(t.pct_meta_total)}`}
-            />
-            <KpiBlock 
-              label="Desvio Meta Parcial" 
-              value={loading ? '...' : (tDesvio != null ? (tDesvio >= 0 ? '+' : '') + fmtR(tDesvio) : '—')} 
-              evol={desvioPct(t.venda_jul26, t.meta_parcial)} 
-              evolLabel="desvio"
-              sub={`Meta Parcial: ${fmtR(t.meta_parcial)}`}
-              highlight 
-            />
-            <KpiBlock 
-              label="Participação Digital" 
-              value={loading ? '...' : fmtPct(t.pct_ecomm_jul26)} 
-              evol={tPartEvol} 
-              evolLabel="p.p. YoY"
-              sub={`Ano Anterior: ${fmtPct(t.pct_ecomm_jul25)}`}
-            />
+            {kpiBlocks.map((b, idx) => (
+              <KpiBlock 
+                key={idx}
+                label={b.label} 
+                value={b.value} 
+                evol={b.evol} 
+                evolLabel={b.evolLabel}
+                sub={b.sub}
+                highlight={b.highlight} 
+              />
+            ))}
           </div>
         </div>
 

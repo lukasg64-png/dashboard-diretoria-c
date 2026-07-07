@@ -422,44 +422,54 @@ function aggregate(indices) {
 
   return {
     total: m(gt),
-    distritoriais: Object.entries(dists).map(([idStr, v]) => ({
-      nome: getStrVal(Number(idStr)), ...m(v),
-    })),
-    coordenadores: Object.entries(coordsAgg).map(([idStr, v]) => ({
-      nome: getStrVal(Number(idStr)), 
-      distrital: getStrVal(cdDist[Number(idStr)]), 
-      ...m(v),
-    })),
-    filiais: Object.entries(filiais).map(([idStr, v]) => {
-      const fid = Number(idStr);
-      return {
-        nome: getStrVal(fid), 
-        coordenador: getStrVal(flCoord[fid]), 
-        uf: getStrVal(flGeo[fid]?.uf),
-        municipio: getStrVal(flGeo[fid]?.mun),
-        coords: coordsCache[fid] || null,
+    distritoriais: Object.entries(dists)
+      .map(([idStr, v]) => ({
+        nome: getStrVal(Number(idStr)), ...m(v),
+      }))
+      .filter(d => d.nome && d.nome.trim() !== ''),
+    coordenadores: Object.entries(coordsAgg)
+      .map(([idStr, v]) => ({
+        nome: getStrVal(Number(idStr)), 
+        distrital: getStrVal(cdDist[Number(idStr)]), 
         ...m(v),
-      };
-    }),
-    grupos: Object.entries(grupos).map(([idStr, v]) => {
-      const gStr = getStrVal(Number(idStr));
-      return {
-        nome: gStr.replace(/\(\d+\)$/, '').trim(),
-        nomeOriginal: gStr,
-        ...m(v),
-      };
-    }),
-    linhas: Object.entries(linhas).map(([key, v]) => {
-      const sep = key.indexOf('||');
-      const gId = Number(key.substring(0, sep));
-      const lId = Number(key.substring(sep + 2));
-      const gStr = getStrVal(gId);
-      return {
-        nome: getStrVal(lId),
-        grupo: gStr.replace(/\(\d+\)$/, '').trim(),
-        ...m(v),
-      };
-    }),
+      }))
+      .filter(c => c.nome && c.nome.trim() !== ''),
+    filiais: Object.entries(filiais)
+      .map(([idStr, v]) => {
+        const fid = Number(idStr);
+        return {
+          nome: getStrVal(fid), 
+          coordenador: getStrVal(flCoord[fid]), 
+          uf: getStrVal(flGeo[fid]?.uf),
+          municipio: getStrVal(flGeo[fid]?.mun),
+          coords: coordsCache[fid] || null,
+          ...m(v),
+        };
+      })
+      .filter(f => f.nome && f.nome.trim() !== ''),
+    grupos: Object.entries(grupos)
+      .map(([idStr, v]) => {
+        const gStr = getStrVal(Number(idStr));
+        return {
+          nome: gStr.replace(/\(\d+\)$/, '').trim(),
+          nomeOriginal: gStr,
+          ...m(v),
+        };
+      })
+      .filter(g => g.nome && g.nome.trim() !== ''),
+    linhas: Object.entries(linhas)
+      .map(([key, v]) => {
+        const sep = key.indexOf('||');
+        const gId = Number(key.substring(0, sep));
+        const lId = Number(key.substring(sep + 2));
+        const gStr = getStrVal(gId);
+        return {
+          nome: getStrVal(lId),
+          grupo: gStr.replace(/\(\d+\)$/, '').trim(),
+          ...m(v),
+        };
+      })
+      .filter(l => l.nome && l.nome.trim() !== ''),
   };
 }
 
