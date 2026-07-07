@@ -649,6 +649,62 @@ export default function DrillPanel({ onUpload }) {
       } else {
         rawList = filiais.filter(f => f.coordenador === fCoord);
       }
+    } else if (activeTab === 'mapa') {
+      if (fUF === 'all') {
+        // Agrupa filiais por UF
+        const ufMap = {};
+        filiais.forEach(f => {
+          const uf = f.uf || 'N/I';
+          if (!ufMap[uf]) {
+            ufMap[uf] = { nome: uf, mt: 0, mp: 0, v26: 0, v25: 0, jun: 0, be26: 0, be25: 0 };
+          }
+          const u = ufMap[uf];
+          u.mt += f.meta_total || 0;
+          u.mp += f.meta_parcial || 0;
+          u.v26 += f.venda_jul26 || 0;
+          u.v25 += f.venda_jul25 || 0;
+          u.jun += f.venda_jun26 || 0;
+          u.be26 += f.base_emp_jul26 || 0;
+          u.be25 += f.base_emp_jul25 || 0;
+        });
+        rawList = Object.values(ufMap).map(u => ({
+          nome: u.nome,
+          venda_jul26: u.v26,
+          meta_parcial: u.mp,
+          meta_total: u.mt,
+          pct_ecomm_jul26: u.be26 ? (u.v26 / u.be26) * 100 : 0,
+          pct_ecomm_jul25: u.be25 ? (u.v25 / u.be25) * 100 : 0
+        }));
+      } else if (fCidade === 'all') {
+        // Agrupa filiais por cidade no UF ativo
+        const cidMap = {};
+        const filiaisUf = filiais.filter(f => f.uf === fUF);
+        filiaisUf.forEach(f => {
+          const cid = f.municipio || 'Não Informado';
+          if (!cidMap[cid]) {
+            cidMap[cid] = { nome: cid, mt: 0, mp: 0, v26: 0, v25: 0, jun: 0, be26: 0, be25: 0 };
+          }
+          const c = cidMap[cid];
+          c.mt += f.meta_total || 0;
+          c.mp += f.meta_parcial || 0;
+          c.v26 += f.venda_jul26 || 0;
+          c.v25 += f.venda_jul25 || 0;
+          c.jun += f.venda_jun26 || 0;
+          c.be26 += f.base_emp_jul26 || 0;
+          c.be25 += f.base_emp_jul25 || 0;
+        });
+        rawList = Object.values(cidMap).map(c => ({
+          nome: c.nome,
+          venda_jul26: c.v26,
+          meta_parcial: c.mp,
+          meta_total: c.mt,
+          pct_ecomm_jul26: c.be26 ? (c.v26 / c.be26) * 100 : 0,
+          pct_ecomm_jul25: c.be25 ? (c.v25 / c.be25) * 100 : 0
+        }));
+      } else {
+        // Mostra filiais individuais na cidade ativa
+        rawList = filiais.filter(f => f.uf === fUF && f.municipio === fCidade);
+      }
     } else {
       if (fGrupo === 'all') {
         rawList = grupos;
@@ -676,7 +732,7 @@ export default function DrillPanel({ onUpload }) {
           diff_pp: diffPP,
         };
       });
-  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo]);
+  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo, fUF, fCidade]);
 
   const handleChartClick = useCallback((state) => {
     if (!state || !state.activePayload || state.activePayload.length === 0) return;
@@ -694,6 +750,17 @@ export default function DrillPanel({ onUpload }) {
       } else if (fFilial === 'all') {
         setFFilial(nome);
       }
+    } else if (activeTab === 'mapa') {
+      if (fUF === 'all') {
+        setFUF(nome);
+        setFCidade('all');
+        setFFilial('all');
+      } else if (fCidade === 'all') {
+        setFCidade(nome);
+        setFFilial('all');
+      } else if (fFilial === 'all') {
+        setFFilial(nome);
+      }
     } else {
       if (fGrupo === 'all') {
         setFGrupo(nome);
@@ -702,7 +769,7 @@ export default function DrillPanel({ onUpload }) {
         setFLinha(nome);
       }
     }
-  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fLinha]);
+  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
 
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
