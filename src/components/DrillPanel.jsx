@@ -915,26 +915,27 @@ export default function DrillPanel({ onUpload }) {
         filiais.forEach(f => {
           const uf = f.uf || 'N/I';
           if (!ufMap[uf]) {
-            ufMap[uf] = { nome: uf, mt: 0, mp: 0, v26: 0, v25: 0, jun: 0, be26: 0, be25: 0 };
+            ufMap[uf] = { nome: uf, mt: 0, mp: 0, venda_jul26: 0, venda_jul25: 0, venda_jun26: 0, base_emp_jul26: 0, base_emp_jul25: 0, cupons_jul26: 0, cupons_jul25: 0, cupons_jun26: 0 };
           }
           const u = ufMap[uf];
           u.mt += f.meta_total || 0;
           u.mp += f.meta_parcial || 0;
-          u.v26 += f.venda_jul26 || 0;
-          u.v25 += f.venda_jul25 || 0;
-          u.jun += f.venda_jun26 || 0;
-          u.be26 += f.base_emp_jul26 || 0;
-          u.be25 += f.base_emp_jul25 || 0;
+          u.venda_jul26 += f.venda_jul26 || 0;
+          u.venda_jul25 += f.venda_jul25 || 0;
+          u.venda_jun26 += f.venda_jun26 || 0;
+          u.base_emp_jul26 += f.base_emp_jul26 || 0;
+          u.base_emp_jul25 += f.base_emp_jul25 || 0;
+          u.cupons_jul26 += f.cupons_jul26 || 0;
+          u.cupons_jul25 += f.cupons_jul25 || 0;
+          u.cupons_jun26 += f.cupons_jun26 || 0;
         });
         rawList = Object.values(ufMap).map(u => ({
           nome: u.nome,
-          venda_jul26: u.v26,
-          meta_parcial: u.mp,
-          meta_total: u.mt,
-          pct_ecomm_jul26: u.be26 ? (u.v26 / u.be26) * 100 : 0,
-          pct_ecomm_jul25: u.be25 ? (u.v25 / u.be25) * 100 : 0,
-          evol_yoy: u.v25 ? ((u.v26 - u.v25) / u.v25) * 100 : 0,
-          evol_mom: u.jun ? ((u.v26 - u.jun) / u.jun) * 100 : 0
+          ...u,
+          pct_ecomm_jul26: u.base_emp_jul26 ? (u.venda_jul26 / u.base_emp_jul26) * 100 : 0,
+          pct_ecomm_jul25: u.base_emp_jul25 ? (u.venda_jul25 / u.base_emp_jul25) * 100 : 0,
+          evol_yoy: u.venda_jul25 ? ((u.venda_jul26 - u.venda_jul25) / u.venda_jul25) * 100 : 0,
+          evol_mom: u.venda_jun26 ? ((u.venda_jul26 - u.venda_jun26) / u.venda_jun26) * 100 : 0
         }));
       } else if (fCidade === 'all') {
         // Agrupa filiais por cidade no UF ativo
@@ -944,26 +945,27 @@ export default function DrillPanel({ onUpload }) {
         filiaisUf.forEach(f => {
           const cid = f.municipio || 'Não Informado';
           if (!cidMap[cid]) {
-            cidMap[cid] = { nome: cid, mt: 0, mp: 0, v26: 0, v25: 0, jun: 0, be26: 0, be25: 0 };
+            cidMap[cid] = { nome: cid, mt: 0, mp: 0, venda_jul26: 0, venda_jul25: 0, venda_jun26: 0, base_emp_jul26: 0, base_emp_jul25: 0, cupons_jul26: 0, cupons_jul25: 0, cupons_jun26: 0 };
           }
           const c = cidMap[cid];
           c.mt += f.meta_total || 0;
           c.mp += f.meta_parcial || 0;
-          c.v26 += f.venda_jul26 || 0;
-          c.v25 += f.venda_jul25 || 0;
-          c.jun += f.venda_jun26 || 0;
-          c.be26 += f.base_emp_jul26 || 0;
-          c.be25 += f.base_emp_jul25 || 0;
+          c.venda_jul26 += f.venda_jul26 || 0;
+          c.venda_jul25 += f.venda_jul25 || 0;
+          c.venda_jun26 += f.venda_jun26 || 0;
+          c.base_emp_jul26 += f.base_emp_jul26 || 0;
+          c.base_emp_jul25 += f.base_emp_jul25 || 0;
+          c.cupons_jul26 += f.cupons_jul26 || 0;
+          c.cupons_jul25 += f.cupons_jul25 || 0;
+          c.cupons_jun26 += f.cupons_jun26 || 0;
         });
         rawList = Object.values(cidMap).map(c => ({
           nome: c.nome,
-          venda_jul26: c.v26,
-          meta_parcial: c.mp,
-          meta_total: c.mt,
-          pct_ecomm_jul26: c.be26 ? (c.v26 / c.be26) * 100 : 0,
-          pct_ecomm_jul25: c.be25 ? (c.v25 / c.be25) * 100 : 0,
-          evol_yoy: c.v25 ? ((c.v26 - c.v25) / c.v25) * 100 : 0,
-          evol_mom: c.jun ? ((c.v26 - c.jun) / c.jun) * 100 : 0
+          ...c,
+          pct_ecomm_jul26: c.base_emp_jul26 ? (c.venda_jul26 / c.base_emp_jul26) * 100 : 0,
+          pct_ecomm_jul25: c.base_emp_jul25 ? (c.venda_jul25 / c.base_emp_jul25) * 100 : 0,
+          evol_yoy: c.venda_jul25 ? ((c.venda_jul26 - c.venda_jul25) / c.venda_jul25) * 100 : 0,
+          evol_mom: c.venda_jun26 ? ((c.venda_jul26 - c.venda_jun26) / c.venda_jun26) * 100 : 0
         }));
       } else {
         // Mostra filiais individuais na cidade ativa
@@ -979,29 +981,30 @@ export default function DrillPanel({ onUpload }) {
         rawList = linhas.filter(l => gruposSelected.includes(l.grupo));
       }
     }
-    return [...rawList]
-      .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0))
-      .slice(0, 15)
-      .map(item => {
-        const venda = item.venda_jul26 || 0;
-        const meta = item.meta_parcial || 0;
-        const part26 = item.pct_ecomm_jul26 != null ? item.pct_ecomm_jul26 : 0;
-        const part25 = item.pct_ecomm_jul25 != null ? item.pct_ecomm_jul25 : 0;
-        const diffPP = (item.pct_ecomm_jul26 != null && item.pct_ecomm_jul25 != null) ? (item.pct_ecomm_jul26 - item.pct_ecomm_jul25) : 0;
-        return {
-          name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
-          nomeOriginal: item.nome,
-          venda,
-          meta,
-          desvio: desvioAbs(venda, meta) || 0,
-          participacao: part26,
-          participacao_ant: part25,
-          diff_pp: diffPP,
-          evol_yoy: item.evol_yoy != null ? item.evol_yoy : 0,
-          evol_mom: item.evol_mom != null ? item.evol_mom : 0
-        };
-      });
-  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo, fUF, fCidade]);
+
+    const items = rawList.map(item => {
+      const m = getMetrics(item);
+      const part26 = item.pct_ecomm_jul26 != null ? item.pct_ecomm_jul26 : 0;
+      const part25 = item.pct_ecomm_jul25 != null ? item.pct_ecomm_jul25 : 0;
+      const diffPP = (item.pct_ecomm_jul26 != null && item.pct_ecomm_jul25 != null) ? (item.pct_ecomm_jul26 - item.pct_ecomm_jul25) : 0;
+      return {
+        name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
+        nomeOriginal: item.nome,
+        venda: m.val26,
+        meta: item.meta_parcial || 0,
+        desvio: viewMode === 'venda' ? desvioAbs(m.val26, item.meta_parcial) || 0 : 0,
+        participacao: part26,
+        participacao_ant: part25,
+        diff_pp: diffPP,
+        evol_yoy: m.yoy,
+        evol_mom: m.mom
+      };
+    });
+
+    return items
+      .sort((a, b) => b.venda - a.venda)
+      .slice(0, 15);
+  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo, fUF, fCidade, getMetrics, viewMode]);
 
   const handleChartClick = useCallback((state) => {
     if (!state || !state.activePayload || state.activePayload.length === 0) return;
@@ -1449,7 +1452,7 @@ export default function DrillPanel({ onUpload }) {
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por Venda)
+                📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})
               </h4>
               
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>

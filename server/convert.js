@@ -38,8 +38,8 @@ for (let r = 0; r < maxRow; r++) {
     continue;
   }
   const cells = [];
-  // There are 13 columns in this sheet
-  for (let c = 0; c < 13; c++) {
+  const maxCol = row.length || 0;
+  for (let c = 0; c < maxCol; c++) {
     const cell = row[c];
     cells.push(escapeCSV(cell && cell.v != null ? cell.v : ''));
   }
