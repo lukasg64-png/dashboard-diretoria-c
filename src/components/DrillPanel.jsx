@@ -47,6 +47,24 @@ const renderCustomLabel = (props) => {
   );
 };
 
+const renderCustomPctLabel = (props) => {
+  const { x, y, width, value } = props;
+  if (value == null) return null;
+  const yOffset = value >= 0 ? -6 : 12;
+  const color = value >= 0 ? '#059669' : '#dc2626';
+  return (
+    <text 
+      x={x + width / 2} 
+      y={y + yOffset} 
+      fill={color} 
+      textAnchor="middle" 
+      style={{ fontSize: 9, fontWeight: 700 }}
+    >
+      {fmtEvol(value)}
+    </text>
+  );
+};
+
 const renderCustomPartLabel = (props) => {
   const { x, y, width, value } = props;
   if (value == null) return null;
@@ -1029,6 +1047,8 @@ export default function DrillPanel({ onUpload }) {
                     { key: 'desvio', label: 'Desvio (R$)' },
                     { key: 'venda_meta', label: 'Venda vs Meta' },
                     { key: 'participacao', label: 'Part. Digital (%)' },
+                    { key: 'evolucao', label: 'Evolução YoY (%)' },
+                    { key: 'crescimento', label: 'Crescimento MoM (%)' },
                   ].map(m => (
                     <button
                       key={m.key}
@@ -1079,13 +1099,33 @@ export default function DrillPanel({ onUpload }) {
                 </span>
               </div>
             )}
+            {chartMetric === 'evolucao' && (
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981', display: 'inline-block' }} /> Crescimento YoY
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} /> Queda YoY
+                </span>
+              </div>
+            )}
+            {chartMetric === 'crescimento' && (
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981', display: 'inline-block' }} /> Crescimento MoM
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} /> Queda MoM
+                </span>
+              </div>
+            )}
             <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <div style={{ width: '100%', minWidth: 640, height: 210 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
-                    <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => chartMetric === 'participacao' ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
                     <Tooltip 
                       formatter={(value, name, props) => {
                         if (name === 'participacao' || name === 'Part. Digital Atual') {
@@ -1098,6 +1138,8 @@ export default function DrillPanel({ onUpload }) {
                         }
                         if (name === 'venda' || name === 'Venda E-commerce') return [fmtR(value), `Venda E-comm (${labelAtual})`];
                         if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
+                        if (name === 'evol_yoy') return [fmtEvol(value), `Evolução YoY (${labelAtualAno})`];
+                        if (name === 'evol_mom') return [fmtEvol(value), `Crescimento MoM (${labelAnt})`];
                         return [fmtR(value), 'Desvio da Meta Parcial'];
                       }}
                       contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
@@ -1132,6 +1174,24 @@ export default function DrillPanel({ onUpload }) {
                     {chartMetric === 'participacao' && (
                       <Bar dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
                         <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
+                      </Bar>
+                    )}
+
+                    {chartMetric === 'evolucao' && (
+                      <Bar dataKey="evol_yoy" radius={[4, 4, 0, 0]}>
+                        {chartItems.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.evol_yoy >= 0 ? '#10b981' : '#ef4444'} />
+                        ))}
+                        <LabelList content={renderCustomPctLabel} />
+                      </Bar>
+                    )}
+
+                    {chartMetric === 'crescimento' && (
+                      <Bar dataKey="evol_mom" radius={[4, 4, 0, 0]}>
+                        {chartItems.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.evol_mom >= 0 ? '#10b981' : '#ef4444'} />
+                        ))}
+                        <LabelList content={renderCustomPctLabel} />
                       </Bar>
                     )}
                   </BarChart>
