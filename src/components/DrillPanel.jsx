@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
@@ -206,34 +206,143 @@ function Part({ pct26, pct25, labelAno }) {
 }
 
 // ── Dropdown de Filtro ──────────────────────────────────────────────────────
+// ── Dropdown de Filtro (Pesquisável & Multi-seleção) ──────────────────────
 function FilterSelect({ label, value, options, onChange, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) setSearch('');
+  }, [isOpen]);
+
+  const selectedValues = useMemo(() => {
+    if (!value || value === 'all') return [];
+    return value.split(',');
+  }, [value]);
+
+  const handleToggleOption = (opt) => {
+    if (opt === 'all') {
+      onChange('all');
+    } else {
+      let nextSelected;
+      if (selectedValues.includes(opt)) {
+        nextSelected = selectedValues.filter(x => x !== opt);
+      } else {
+        nextSelected = [...selectedValues, opt];
+      }
+      onChange(nextSelected.length === 0 ? 'all' : nextSelected.join(','));
+    }
+  };
+
+  const filteredOptions = useMemo(() => {
+    if (!search) return options;
+    const lower = search.toLowerCase();
+    return options.filter(o => String(o).toLowerCase().includes(lower));
+  }, [options, search]);
+
+  const displayValue = useMemo(() => {
+    if (selectedValues.length === 0) return 'Todos';
+    if (selectedValues.length === 1) return selectedValues[0];
+    return `${selectedValues.length} selecionados`;
+  }, [selectedValues]);
+
+  const isOptionSelected = (opt) => {
+    if (opt === 'all') return selectedValues.length === 0;
+    return selectedValues.includes(opt);
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 3, position: 'relative' }}>
       <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.5)' }}>
         {label}
       </span>
       <div style={{ position: 'relative' }}>
-        <select
-          value={value}
-          onChange={e => onChange(e.target.value)}
+        <button
+          onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
+          type="button"
           style={{
             background: value !== 'all' ? 'rgba(123,97,255,0.25)' : 'rgba(255,255,255,0.08)',
             border: value !== 'all' ? '1px solid rgba(123,97,255,0.6)' : '1px solid rgba(255,255,255,0.2)',
             color: '#fff', borderRadius: 6, padding: '5px 28px 5px 10px',
             fontSize: 12, fontWeight: value !== 'all' ? 700 : 400,
             cursor: disabled ? 'not-allowed' : 'pointer',
-            outline: 'none', appearance: 'none', minWidth: 160,
-            opacity: disabled ? 0.4 : 1,
+            textAlign: 'left', minWidth: 160, maxWidth: 200,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            opacity: disabled ? 0.4 : 1, display: 'block', width: '100%',
+            outline: 'none',
           }}
         >
-          <option value="all" style={{ background: '#1e293b', color: '#fff' }}>Todos</option>
-          {options.map(o => (
-            <option key={o} value={o} style={{ background: '#1e293b', color: '#fff' }}>{o}</option>
-          ))}
-        </select>
+          {displayValue}
+        </button>
         <ChevronDown size={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.5)', pointerEvents: 'none' }} />
       </div>
+
+      {isOpen && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, marginTop: 4,
+          background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5)',
+          zIndex: 1000, width: 220, padding: 8, display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          <input
+            type="text"
+            placeholder="Pesquisar..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', padding: '5px 8px', fontSize: 11,
+              background: '#0f172a', border: '1px solid #475569', borderRadius: 4,
+              color: '#fff', outline: 'none', boxSizing: 'border-box'
+            }}
+          />
+          <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, paddingRight: 2 }}>
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px',
+              borderRadius: 4, cursor: 'pointer', fontSize: 11, color: '#fff',
+              background: isOptionSelected('all') ? 'rgba(123,97,255,0.15)' : 'transparent',
+            }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.background = isOptionSelected('all') ? 'rgba(123,97,255,0.15)' : 'transparent'}>
+              <input
+                type="checkbox"
+                checked={isOptionSelected('all')}
+                onChange={() => handleToggleOption('all')}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Todos</span>
+            </label>
+            {filteredOptions.map(o => (
+              <label key={o} style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px',
+                borderRadius: 4, cursor: 'pointer', fontSize: 11, color: '#fff',
+                background: isOptionSelected(o) ? 'rgba(123,97,255,0.2)' : 'transparent',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.background = isOptionSelected(o) ? 'rgba(123,97,255,0.2)' : 'transparent'}>
+                <input
+                  type="checkbox"
+                  checked={isOptionSelected(o)}
+                  onChange={() => handleToggleOption(o)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span title={o}>{o}</span>
+              </label>
+            ))}
+            {filteredOptions.length === 0 && (
+              <span style={{ fontSize: 10, color: '#64748b', padding: '6px 8px', textAlign: 'center' }}>Nenhum resultado</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -534,7 +643,8 @@ export default function DrillPanel({ onUpload }) {
   const handleCidadeChange = useCallback((v) => {
     setFCidade(v);
     if (v !== 'all' && apiOptions?.filiais) {
-      const filialMatch = apiOptions.filiais.find(f => f.municipio === v);
+      const vSingle = v.split(',')[0];
+      const filialMatch = apiOptions.filiais.find(f => f.municipio === vSingle);
       if (filialMatch && filialMatch.uf) {
         setFUF(filialMatch.uf);
       }
@@ -577,7 +687,8 @@ export default function DrillPanel({ onUpload }) {
   const distOptions = useMemo(() => {
     let list = rawFull?.distritoriais || [];
     if (fUF !== 'all' && apiOptions?.filiais) {
-      const filiaisUf = apiOptions.filiais.filter(f => f.uf === fUF);
+      const ufsSelected = fUF.split(',');
+      const filiaisUf = apiOptions.filiais.filter(f => ufsSelected.includes(f.uf));
       const coordsUf = new Set(filiaisUf.map(f => f.coordenador));
       const distsUf = new Set((apiOptions.coordenadores || [])
         .filter(c => coordsUf.has(c.nome))
@@ -590,10 +701,12 @@ export default function DrillPanel({ onUpload }) {
   const coordOptions = useMemo(() => {
     let list = rawFull?.coordenadores || [];
     if (fDist !== 'all') {
-      list = list.filter(c => c.distrital === fDist);
+      const distsSelected = fDist.split(',');
+      list = list.filter(c => distsSelected.includes(c.distrital));
     }
     if (fUF !== 'all' && apiOptions?.filiais) {
-      const filiaisUf = apiOptions.filiais.filter(f => f.uf === fUF);
+      const ufsSelected = fUF.split(',');
+      const filiaisUf = apiOptions.filiais.filter(f => ufsSelected.includes(f.uf));
       const coordsUf = new Set(filiaisUf.map(f => f.coordenador));
       list = list.filter(c => coordsUf.has(c.nome));
     }
@@ -605,19 +718,23 @@ export default function DrillPanel({ onUpload }) {
     const allCoords = rawFull?.coordenadores || [];
     
     if (fCoord !== 'all') {
-      list = list.filter(f => f.coordenador === fCoord);
+      const coordsSelected = fCoord.split(',');
+      list = list.filter(f => coordsSelected.includes(f.coordenador));
     } else if (fDist !== 'all') {
-      const coordsInDist = new Set(allCoords.filter(c => c.distrital === fDist).map(c => c.nome));
+      const distsSelected = fDist.split(',');
+      const coordsInDist = new Set(allCoords.filter(c => distsSelected.includes(c.distrital)).map(c => c.nome));
       list = list.filter(f => coordsInDist.has(f.coordenador));
     }
     
     if (fUF !== 'all' && apiOptions?.filiais) {
       const ufsMap = new Map(apiOptions.filiais.map(f => [f.nome, f.uf]));
-      list = list.filter(f => ufsMap.get(f.nome) === fUF);
+      const ufsSelected = fUF.split(',');
+      list = list.filter(f => ufsSelected.includes(ufsMap.get(f.nome)));
     }
     if (fCidade !== 'all' && apiOptions?.filiais) {
       const cidadesMap = new Map(apiOptions.filiais.map(f => [f.nome, f.municipio]));
-      list = list.filter(f => cidadesMap.get(f.nome) === fCidade);
+      const cidadesSelected = fCidade.split(',');
+      list = list.filter(f => cidadesSelected.includes(cidadesMap.get(f.nome)));
     }
     
     return [...new Set(list.map(f => f.nome))].sort();
@@ -629,8 +746,9 @@ export default function DrillPanel({ onUpload }) {
     if (!apiOptions?.cidades) return [];
     if (fUF === 'all') return apiOptions.cidades;
     const filiaisUf = apiOptions.filiais || [];
+    const ufsSelected = fUF.split(',');
     const matchingCities = filiaisUf
-      .filter(f => f.uf === fUF)
+      .filter(f => ufsSelected.includes(f.uf))
       .map(f => f.municipio)
       .filter(Boolean);
     return [...new Set(matchingCities)].sort();
@@ -641,8 +759,9 @@ export default function DrillPanel({ onUpload }) {
 
   const linhaOptions = useMemo(() => {
     const allLinhas = rawFull?.linhas || [];
+    const gruposSelected = fGrupo.split(',');
     return [...new Set(allLinhas
-      .filter(l => fGrupo === 'all' || l.grupo === fGrupo)
+      .filter(l => fGrupo === 'all' || gruposSelected.includes(l.grupo))
       .map(l => l.nome))].sort();
   }, [rawFull, fGrupo]);
 
@@ -663,9 +782,11 @@ export default function DrillPanel({ onUpload }) {
       if (fDist === 'all') {
         rawList = distritais;
       } else if (fCoord === 'all') {
-        rawList = coordenadores.filter(c => c.distrital === fDist);
+        const distsSelected = fDist.split(',');
+        rawList = coordenadores.filter(c => distsSelected.includes(c.distrital));
       } else {
-        rawList = filiais.filter(f => f.coordenador === fCoord);
+        const coordsSelected = fCoord.split(',');
+        rawList = filiais.filter(f => coordsSelected.includes(f.coordenador));
       }
     } else if (activeTab === 'mapa') {
       if (fUF === 'all') {
@@ -698,7 +819,8 @@ export default function DrillPanel({ onUpload }) {
       } else if (fCidade === 'all') {
         // Agrupa filiais por cidade no UF ativo
         const cidMap = {};
-        const filiaisUf = filiais.filter(f => f.uf === fUF);
+        const ufsSelected = fUF.split(',');
+        const filiaisUf = filiais.filter(f => ufsSelected.includes(f.uf));
         filiaisUf.forEach(f => {
           const cid = f.municipio || 'Não Informado';
           if (!cidMap[cid]) {
@@ -725,13 +847,16 @@ export default function DrillPanel({ onUpload }) {
         }));
       } else {
         // Mostra filiais individuais na cidade ativa
-        rawList = filiais.filter(f => f.uf === fUF && f.municipio === fCidade);
+        const ufsSelected = fUF.split(',');
+        const cidadesSelected = fCidade.split(',');
+        rawList = filiais.filter(f => ufsSelected.includes(f.uf) && cidadesSelected.includes(f.municipio));
       }
     } else {
       if (fGrupo === 'all') {
         rawList = grupos;
       } else {
-        rawList = linhas.filter(l => l.grupo === fGrupo);
+        const gruposSelected = fGrupo.split(',');
+        rawList = linhas.filter(l => gruposSelected.includes(l.grupo));
       }
     }
     return [...rawList]

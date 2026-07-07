@@ -480,31 +480,43 @@ function clearCache() {
 function getFilteredIndices(filters) {
   const { distrital, coordenador, filial, grupo, linha, uf, cidade } = filters;
   
-  if (distrital && distrital !== 'all' && !stringMap.has(distrital)) return [];
-  if (coordenador && coordenador !== 'all' && !stringMap.has(coordenador)) return [];
-  if (filial && filial !== 'all' && !stringMap.has(filial)) return [];
-  if (linha && linha !== 'all' && !stringMap.has(linha)) return [];
-  if (uf && uf !== 'all' && !stringMap.has(uf)) return [];
-  if (cidade && cidade !== 'all' && !stringMap.has(cidade)) return [];
+  const getFilterIds = (val) => {
+    if (!val || val === 'all') return null;
+    const items = val.split(',');
+    const ids = new Set();
+    items.forEach(item => {
+      if (stringMap.has(item)) {
+        ids.add(stringMap.get(item));
+      }
+    });
+    if (ids.size === 0) {
+      ids.add(-9999);
+    }
+    return ids;
+  };
 
-  const distId = distrital && distrital !== 'all' ? stringMap.get(distrital) : -1;
-  const coordId = coordenador && coordenador !== 'all' ? stringMap.get(coordenador) : -1;
-  const filialId = filial && filial !== 'all' ? stringMap.get(filial) : -1;
-  const linhaId = linha && linha !== 'all' ? stringMap.get(linha) : -1;
-  const ufId = uf && uf !== 'all' ? stringMap.get(uf) : -1;
-  const cidadeId = cidade && cidade !== 'all' ? stringMap.get(cidade) : -1;
+  const distIds = getFilterIds(distrital);
+  const coordIds = getFilterIds(coordenador);
+  const filialIds = getFilterIds(filial);
+  const linhaIds = getFilterIds(linha);
+  const ufIds = getFilterIds(uf);
+  const cidadeIds = getFilterIds(cidade);
 
   let matchingGrupoIds = null;
   if (grupo && grupo !== 'all') {
     matchingGrupoIds = new Set();
+    const gruposSelected = grupo.split(',');
+    const gruposSet = new Set(gruposSelected);
     for (let id = 0; id < stringPool.length; id++) {
       const gStr = stringPool[id];
       const cleanGStr = gStr.replace(/\(\d+\)$/, '').trim();
-      if (cleanGStr === grupo) {
+      if (gruposSet.has(cleanGStr)) {
         matchingGrupoIds.add(id);
       }
     }
-    if (matchingGrupoIds.size === 0) return [];
+    if (matchingGrupoIds.size === 0) {
+      matchingGrupoIds.add(-9999);
+    }
   }
 
   const indices = [];
@@ -512,15 +524,13 @@ function getFilteredIndices(filters) {
   for (let i = 0; i < recordsCount; i++) {
     const baseIdx = i * 7;
     
-    if (distId !== -1 && idMatrix[baseIdx + 0] !== distId) continue;
-    if (coordId !== -1 && idMatrix[baseIdx + 1] !== coordId) continue;
-    if (filialId !== -1 && idMatrix[baseIdx + 2] !== filialId) continue;
-    
+    if (distIds && !distIds.has(idMatrix[baseIdx + 0])) continue;
+    if (coordIds && !coordIds.has(idMatrix[baseIdx + 1])) continue;
+    if (filialIds && !filialIds.has(idMatrix[baseIdx + 2])) continue;
     if (matchingGrupoIds !== null && !matchingGrupoIds.has(idMatrix[baseIdx + 3])) continue;
-    
-    if (linhaId !== -1 && idMatrix[baseIdx + 4] !== linhaId) continue;
-    if (ufId !== -1 && idMatrix[baseIdx + 5] !== ufId) continue;
-    if (cidadeId !== -1 && idMatrix[baseIdx + 6] !== cidadeId) continue;
+    if (linhaIds && !linhaIds.has(idMatrix[baseIdx + 4])) continue;
+    if (ufIds && !ufIds.has(idMatrix[baseIdx + 5])) continue;
+    if (cidadeIds && !cidadeIds.has(idMatrix[baseIdx + 6])) continue;
     
     indices.push(i);
   }
