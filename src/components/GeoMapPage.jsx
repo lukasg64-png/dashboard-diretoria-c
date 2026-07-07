@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Plus, Minus } from 'lucide-react';
 
-export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAnt, onSelectFiliais, selectedFiliais }) {
+export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAnt, onSelectFiliais, selectedFiliais, viewMode }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layerGroupRef = useRef(null);
@@ -41,6 +41,58 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     });
   };
 
+  // Helper para obter métrica ativa de acordo com viewMode
+  const getActiveMetricValues = useCallback((f) => {
+    if (viewMode === 'venda') {
+      return {
+        v26: f.venda_jul26 || 0,
+        v25: f.venda_jul25 || 0,
+        vJun: f.venda_jun26 || 0,
+        evol: f.evol_yoy || 0,
+        mom: f.evol_mom || 0
+      };
+    } else if (viewMode === 'cup') {
+      const c26 = f.cupons_jul26 || 0;
+      const c25 = f.cupons_jul25 || 0;
+      const cJun = f.cupons_jun26 || 0;
+      return {
+        v26: c26,
+        v25: c25,
+        vJun: cJun,
+        evol: c25 ? ((c26 - c25) / c25) * 100 : 0,
+        mom: cJun ? ((c26 - cJun) / cJun) * 100 : 0
+      };
+    } else {
+      const c26 = f.cupons_jul26 || 0;
+      const c25 = f.cupons_jul25 || 0;
+      const cJun = f.cupons_jun26 || 0;
+      const v26 = f.venda_jul26 || 0;
+      const v25 = f.venda_jul25 || 0;
+      const vJun = f.venda_jun26 || 0;
+
+      const tm26 = c26 ? v26 / c26 : 0;
+      const tm25 = c25 ? v25 / c25 : 0;
+      const tmJun = cJun ? vJun / cJun : 0;
+
+      return {
+        v26: tm26,
+        v25: tm25,
+        vJun: tmJun,
+        evol: tm25 ? ((tm26 - tm25) / tm25) * 100 : 0,
+        mom: tmJun ? ((tm26 - tmJun) / tmJun) * 100 : 0
+      };
+    }
+  }, [viewMode]);
+
+  // Se viewMode mudar, resetar mapMetric se a atual for incompatível
+  useEffect(() => {
+    if (viewMode !== 'venda') {
+      if (mapMetric === 'atingimento' || mapMetric === 'participacao') {
+        setMapMetric('evolucao');
+      }
+    }
+  }, [viewMode, mapMetric]);
+
   // 1. Agregação Hierárquica por Estado (UF) e Cidade
   const dadosHierarquiaUF = useMemo(() => {
     const ufMap = {};
@@ -59,7 +111,10 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           be_atual: 0,
           be_anterior: 0,
           lojas: 0,
-          cidades: {}
+          cidades: {},
+          cupons: 0,
+          cupons_anterior: 0,
+          cupons_mes_anterior: 0
         };
       }
 
@@ -71,6 +126,9 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       ufMap[uf].be_atual += f.base_emp_jul26 || 0;
       ufMap[uf].be_anterior += f.base_emp_jul25 || 0;
       ufMap[uf].lojas += 1;
+      ufMap[uf].cupons += f.cupons_jul26 || 0;
+      ufMap[uf].cupons_anterior += f.cupons_jul25 || 0;
+      ufMap[uf].cupons_mes_anterior += f.cupons_jun26 || 0;
 
       if (!ufMap[uf].cidades[cidade]) {
         ufMap[uf].cidades[cidade] = {
@@ -83,7 +141,10 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           venda_mes_anterior: 0,
           be_atual: 0,
           be_anterior: 0,
-          lojas: 0
+          lojas: 0,
+          cupons: 0,
+          cupons_anterior: 0,
+          cupons_mes_anterior: 0
         };
       }
 
@@ -96,38 +157,63 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       c.be_atual += f.base_emp_jul26 || 0;
       c.be_anterior += f.base_emp_jul25 || 0;
       c.lojas += 1;
+      c.cupons += f.cupons_jul26 || 0;
+      c.cupons_anterior += f.cupons_jul25 || 0;
+      c.cupons_mes_anterior += f.cupons_jun26 || 0;
     });
+
+    const getVal26 = (x) => {
+      if (viewMode === 'venda') return x.venda;
+      if (viewMode === 'cup') return x.cupons;
+      return x.cupons ? x.venda / x.cupons : 0;
+    };
+    const getVal25 = (x) => {
+      if (viewMode === 'venda') return x.venda_anterior;
+      if (viewMode === 'cup') return x.cupons_anterior;
+      return x.cupons_anterior ? x.venda_anterior / x.cupons_anterior : 0;
+    };
+    const getValJun = (x) => {
+      if (viewMode === 'venda') return x.venda_mes_anterior;
+      if (viewMode === 'cup') return x.cupons_mes_anterior;
+      return x.cupons_mes_anterior ? x.venda_mes_anterior / x.cupons_mes_anterior : 0;
+    };
 
     return Object.values(ufMap).map(u => {
       const cidadesList = Object.values(u.cidades).map(c => {
-        const desvio_parcial = c.meta_parcial ? ((c.venda / c.meta_parcial) - 1) * 100 : 0;
+        const cVal26 = getVal26(c);
+        const cVal25 = getVal25(c);
+        const cValJun = getValJun(c);
         return {
           ...c,
-          desvio_parcial,
+          val26: cVal26,
+          desvio_parcial: c.meta_parcial ? ((c.venda / c.meta_parcial) - 1) * 100 : 0,
           pct_meta: c.meta ? (c.venda / c.meta) * 100 : 0,
           pct_meta_parcial: c.meta_parcial ? (c.venda / c.meta_parcial) * 100 : 0,
-          evol_yoy: c.venda_anterior ? ((c.venda - c.venda_anterior) / c.venda_anterior) * 100 : 0,
-          evol_mom: c.venda_mes_anterior ? ((c.venda - c.venda_mes_anterior) / c.venda_mes_anterior) * 100 : 0,
+          evol_yoy: cVal25 ? ((cVal26 - cVal25) / cVal25) * 100 : 0,
+          evol_mom: cValJun ? ((cVal26 - cValJun) / cValJun) * 100 : 0,
           part_digital: c.be_atual ? (c.venda / c.be_atual) * 100 : 0
         };
-      }).sort((a, b) => b.venda - a.venda);
+      }).sort((a, b) => b.val26 - a.val26);
 
-      const desvio_parcial = u.meta_parcial ? ((u.venda / u.meta_parcial) - 1) * 100 : 0;
+      const uVal26 = getVal26(u);
+      const uVal25 = getVal25(u);
+      const uValJun = getValJun(u);
 
       return {
         ...u,
+        val26: uVal26,
         cidadesList,
-        desvio_parcial,
+        desvio_parcial: u.meta_parcial ? ((u.venda / u.meta_parcial) - 1) * 100 : 0,
         pct_meta: u.meta ? (u.venda / u.meta) * 100 : 0,
         pct_meta_parcial: u.meta_parcial ? (u.venda / u.meta_parcial) * 100 : 0,
-        evol_yoy: u.venda_anterior ? ((u.venda - u.venda_anterior) / u.venda_anterior) * 100 : 0,
-        evol_mom: u.venda_mes_anterior ? ((u.venda - u.venda_mes_anterior) / u.venda_mes_anterior) * 100 : 0,
+        evol_yoy: uVal25 ? ((uVal26 - uVal25) / uVal25) * 100 : 0,
+        evol_mom: uValJun ? ((uVal26 - uValJun) / uValJun) * 100 : 0,
         part_digital: u.be_atual ? (u.venda / u.be_atual) * 100 : 0
       };
-    }).sort((a, b) => b.venda - a.venda);
-  }, [filiais]);
+    }).sort((a, b) => b.val26 - a.val26);
+  }, [filiais, viewMode]);
 
-  // Cidade options para o gráfico (Top 10 cidades por faturamento)
+  // Cidade options para o gráfico (Top 10 cidades por métrica ativa)
   const dadosPorCidadeGrafico = useMemo(() => {
     const list = [];
     dadosHierarquiaUF.forEach(u => {
@@ -135,7 +221,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         list.push(c);
       });
     });
-    return list.sort((a, b) => b.venda - a.venda).slice(0, 10);
+    return list.sort((a, b) => b.val26 - a.val26).slice(0, 10);
   }, [dadosHierarquiaUF]);
 
   // 2. Dados dos Gráficos Dinâmicos baseados no Pilar Ativo (mapMetric)
@@ -174,6 +260,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     let color = '#94a3b8';
     let valueStr = '';
     let label = '';
+    const mv = getActiveMetricValues(f);
 
     if (mapMetric === 'atingimento') {
       label = 'Desvio Meta Parcial';
@@ -184,14 +271,14 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       else color = '#10b981';                     // Meta batida ou desvio positivo
     } else if (mapMetric === 'evolucao') {
       label = 'Evolução YoY';
-      const evol = f.evol_yoy || 0;
+      const evol = mv.evol;
       valueStr = (evol >= 0 ? '+' : '') + fmtPct(evol);
       if (evol < 0) color = '#ef4444';
       else if (evol < 10) color = '#f59e0b';
       else color = '#10b981';
     } else if (mapMetric === 'crescimento') {
       label = 'Crescimento MoM';
-      const mom = f.evol_mom || 0;
+      const mom = mv.mom;
       valueStr = (mom >= 0 ? '+' : '') + fmtPct(mom);
       if (mom < 0) color = '#ef4444';
       else if (mom < 5) color = '#f59e0b';
@@ -206,7 +293,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     }
 
     return { color, valueStr, label };
-  }, [mapMetric]);
+  }, [mapMetric, getActiveMetricValues]);
 
   const countsByColor = useMemo(() => {
     let green = 0;
@@ -214,18 +301,19 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     let red = 0;
 
     filiais.forEach(f => {
+      const mv = getActiveMetricValues(f);
       if (mapMetric === 'atingimento') {
         const desvio = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
         if (desvio < -15) red++;
         else if (desvio < 0) orange++;
         else green++;
       } else if (mapMetric === 'evolucao') {
-        const evol = f.evol_yoy || 0;
+        const evol = mv.evol;
         if (evol < 0) red++;
         else if (evol < 10) orange++;
         else green++;
       } else if (mapMetric === 'crescimento') {
-        const mom = f.evol_mom || 0;
+        const mom = mv.mom;
         if (mom < 0) red++;
         else if (mom < 5) orange++;
         else green++;
@@ -238,7 +326,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     });
 
     return { green, orange, red };
-  }, [filiais, mapMetric]);
+  }, [filiais, mapMetric, getActiveMetricValues]);
 
   const filiaisComCoordsRef = useRef(filiaisComCoords);
   useEffect(() => {
@@ -388,9 +476,9 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       if (isNaN(lat) || isNaN(lng)) return;
 
       const { color } = getMarkerProperties(f);
-      const baseVenda = f.venda_jul26 || 0;
+      const mv = getActiveMetricValues(f);
       
-      const radius = Math.max(6, Math.min(22, Math.sqrt(baseVenda) * 0.022));
+      const radius = Math.max(6, Math.min(22, Math.sqrt(mv.v26) * (viewMode === 'cup' ? 0.3 : viewMode === 'tm' ? 2.0 : 0.022)));
       const desvioParcial = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
 
       const marker = window.L.circleMarker([lat, lng], {
@@ -401,6 +489,15 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         fillOpacity: 0.85
       });
 
+      const isVendaMode = viewMode === 'venda';
+      const isCupMode = viewMode === 'cup';
+      
+      const labelM1 = isVendaMode ? 'Venda Digital' : isCupMode ? 'Cupons' : 'Ticket Médio';
+      const valM1 = isVendaMode ? fmtR(f.venda_jul26) : isCupMode ? new Intl.NumberFormat('pt-BR').format(f.cupons_jul26 || 0) : fmtR(mv.v26);
+
+      const labelM2 = isVendaMode ? 'Meta Total' : isCupMode ? 'Cupons Anterior' : 'T. Médio Anterior';
+      const valM2 = isVendaMode ? fmtR(f.meta_total) : isCupMode ? new Intl.NumberFormat('pt-BR').format(f.cupons_jul25 || 0) : fmtR(mv.v25);
+
       const popupContent = `
         <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #1e293b; padding: 6px; min-width: 220px; line-height: 1.4;">
           <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #0f2050; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
@@ -410,16 +507,18 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           <div style="margin-bottom: 4px;"><strong>Coordenador:</strong> ${f.coordenador || '—'}</div>
           <div style="margin-bottom: 8px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 6px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
             <div>
-              <span style="color: #64748b; font-size: 9px; text-transform: uppercase;">Venda Digital</span><br/>
-              <strong style="color: #7c3aed; font-size: 12px;">${fmtR(f.venda_jul26)}</strong>
+              <span style="color: #64748b; font-size: 9px; text-transform: uppercase;">${labelM1}</span><br/>
+              <strong style="color: #7c3aed; font-size: 12px;">${valM1}</strong>
             </div>
             <div>
-              <span style="color: #64748b; font-size: 9px; text-transform: uppercase;">Meta Total</span><br/>
-              <strong style="color: #1e293b; font-size: 12px;">${fmtR(f.meta_total)}</strong>
+              <span style="color: #64748b; font-size: 9px; text-transform: uppercase;">${labelM2}</span><br/>
+              <strong style="color: #1e293b; font-size: 12px;">${valM2}</strong>
             </div>
           </div>
+          
+          ${isVendaMode ? `
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
-            <span>Desvio Meta Parcial (Pilar 1):</span>
+            <span>Desvio Meta Parcial (P1):</span>
             <strong style="color: ${desvioParcial >= 0 ? '#10b981' : desvioParcial >= -15 ? '#f59e0b' : '#ef4444'}">
               ${desvioParcial >= 0 ? '+' : ''}${fmtPct(desvioParcial)}
             </strong>
@@ -428,18 +527,23 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
             <span>Ating. Meta Total:</span>
             <strong style="color: ${f.pct_meta_total >= 100 ? '#10b981' : f.pct_meta_total >= 85 ? '#f59e0b' : '#ef4444'}">${fmtPct(f.pct_meta_total)}</strong>
           </div>
+          ` : ''}
+          
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
-            <span>Evolução YoY (Pilar 2):</span>
-            <strong style="color:${f.evol_yoy >= 0 ? '#10b981' : '#ef4444'}">${f.evol_yoy >= 0 ? '+' : ''}${fmtPct(f.evol_yoy)}</strong>
+            <span>Evolução YoY (P2):</span>
+            <strong style="color:${mv.evol >= 0 ? '#10b981' : '#ef4444'}">${mv.evol >= 0 ? '+' : ''}${fmtPct(mv.evol)}</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f8fafc; padding-bottom: 2px;">
-            <span>Crescimento MoM (Pilar 3):</span>
-            <strong style="color:${f.evol_mom >= 0 ? '#10b981' : '#ef4444'}">${f.evol_mom >= 0 ? '+' : ''}${fmtPct(f.evol_mom)}</strong>
+            <span>Crescimento MoM (P3):</span>
+            <strong style="color:${mv.mom >= 0 ? '#10b981' : '#ef4444'}">${mv.mom >= 0 ? '+' : ''}${fmtPct(mv.mom)}</strong>
           </div>
+          
+          ${isVendaMode ? `
           <div style="display: flex; justify-content: space-between;">
-            <span>Participação Digital (Pilar 4):</span>
+            <span>Participação Digital (P4):</span>
             <strong style="color: #2563eb;">${fmtPct(f.pct_ecomm_jul26)}</strong>
           </div>
+          ` : ''}
         </div>
       `;
 
@@ -447,7 +551,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       layerGroup.addLayer(marker);
     });
 
-  }, [filiaisComCoords, getMarkerProperties]);
+  }, [filiaisComCoords, getMarkerProperties, getActiveMetricValues, viewMode]);
 
   const STATE_COLORS = {
     'RS': '#3b82f6',
@@ -490,26 +594,28 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
               { key: 'evolucao', label: 'Evolução YoY (P2)' },
               { key: 'crescimento', label: 'Crescimento MoM (P3)' },
               { key: 'participacao', label: 'Part. Digital (P4)' },
-            ].map(m => (
-              <button
-                key={m.key}
-                onClick={() => setMapMetric(m.key)}
-                style={{
-                  background: mapMetric === m.key ? '#fff' : 'transparent',
-                  border: 'none',
-                  color: mapMetric === m.key ? '#0f2050' : '#64748b',
-                  borderRadius: 6,
-                  padding: '6px 14px',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: mapMetric === m.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {m.label}
-              </button>
-            ))}
+            ]
+              .filter(m => viewMode === 'venda' || (m.key !== 'atingimento' && m.key !== 'participacao'))
+              .map(m => (
+                <button
+                  key={m.key}
+                  onClick={() => setMapMetric(m.key)}
+                  style={{
+                    background: mapMetric === m.key ? '#fff' : 'transparent',
+                    border: 'none',
+                    color: mapMetric === m.key ? '#0f2050' : '#64748b',
+                    borderRadius: 6,
+                    padding: '6px 14px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: mapMetric === m.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
           </div>
         </div>
 

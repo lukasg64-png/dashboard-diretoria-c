@@ -165,6 +165,9 @@ async function readCSVAsync(filePath) {
         const vJun26Index = findColIndex(h => /venda/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h), 10);
         const beJul26Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), 11);
         const beJul25Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), 12);
+        const cupJul26Index = findColIndex(h => /cupons/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), -1);
+        const cupJul25Index = findColIndex(h => /cupons/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), -1);
+        const cupJun26Index = findColIndex(h => /cupons/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h), -1);
 
         C = {
           dist:      distIndex,
@@ -179,30 +182,33 @@ async function readCSVAsync(filePath) {
           vJun26:    vJun26Index,
           beJul26:   beJul26Index,
           beJul25:   beJul25Index,
+          cupJul26:  cupJul26Index,
+          cupJul25:  cupJul25Index,
+          cupJun26:  cupJun26Index,
           labelJul26: String(header[vJul26Index] || 'Julho/26').replace('Venda Parcial ', ''),
           labelJun26: String(header[vJun26Index] || 'Junho/26').replace('Venda Parcial ', '')
         };
         return;
       }
-
+ 
       const getVal = (idx) => {
         if (idx < 0 || idx == null) return null;
         const val = row[idx];
         return val != null ? val.replace(/^"|"$/g, '') : null;
       };
-
+ 
       const filialName = String(getVal(C.filial) || '').trim();
       if (!filialName) return;
-
+ 
       const cadastro = filiaisCadastro[filialName] || {};
       const distVal = (C.dist >= 0 ? String(getVal(C.dist) || '').trim() : '') || cadastro.distrital || '';
       const coordVal = (C.coord >= 0 ? String(getVal(C.coord) || '').trim() : '') || cadastro.coordenador || '';
-
+ 
       const filialId = getStrId(filialName);
       if (cadastro.coords && !coordsCache[filialId]) {
         coordsCache[filialId] = cadastro.coords;
       }
-
+ 
       tempRecords.push({
         distId:   getStrId(distVal),
         coordId:  getStrId(coordVal),
@@ -217,18 +223,22 @@ async function readCSVAsync(filePath) {
         v25:      safe(getVal(C.vJul25)),
         jun:      safe(getVal(C.vJun26)),
         be26:     safe(getVal(C.beJul26)),
-        be25:     safe(getVal(C.beJul25))
+        be25:     safe(getVal(C.beJul25)),
+        c26:      safe(getVal(C.cupJul26)),
+        c25:      safe(getVal(C.cupJul25)),
+        cJun:     safe(getVal(C.cupJun26))
       });
     });
 
     rl.on('close', () => {
       recordsCount = tempRecords.length;
       idMatrix = new Int32Array(recordsCount * 7);
-      valMatrix = new Float64Array(recordsCount * 7);
+      valMatrix = new Float64Array(recordsCount * 10);
 
       for (let i = 0; i < recordsCount; i++) {
         const r = tempRecords[i];
         const baseIdx = i * 7;
+        const baseValIdx = i * 10;
 
         idMatrix[baseIdx + 0] = r.distId;
         idMatrix[baseIdx + 1] = r.coordId;
@@ -238,13 +248,16 @@ async function readCSVAsync(filePath) {
         idMatrix[baseIdx + 5] = r.ufId;
         idMatrix[baseIdx + 6] = r.munId;
 
-        valMatrix[baseIdx + 0] = r.mt;
-        valMatrix[baseIdx + 1] = r.mp;
-        valMatrix[baseIdx + 2] = r.v26;
-        valMatrix[baseIdx + 3] = r.v25;
-        valMatrix[baseIdx + 4] = r.jun;
-        valMatrix[baseIdx + 5] = r.be26;
-        valMatrix[baseIdx + 6] = r.be25;
+        valMatrix[baseValIdx + 0] = r.mt;
+        valMatrix[baseValIdx + 1] = r.mp;
+        valMatrix[baseValIdx + 2] = r.v26;
+        valMatrix[baseValIdx + 3] = r.v25;
+        valMatrix[baseValIdx + 4] = r.jun;
+        valMatrix[baseValIdx + 5] = r.be26;
+        valMatrix[baseValIdx + 6] = r.be25;
+        valMatrix[baseValIdx + 7] = r.c26;
+        valMatrix[baseValIdx + 8] = r.c25;
+        valMatrix[baseValIdx + 9] = r.cJun;
       }
 
       resolve({
@@ -274,14 +287,16 @@ function aggregate(indices) {
   
   let gt = { 
     mt:0, mp:0, v26:0, v25:0, jun:0, be26:0, be25:0,
-    v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0 
+    v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0,
+    c26:0, c25:0, cJun:0
   };
 
   function add(map, key) {
     if (!map[key]) {
       map[key] = { 
         mt:0, mp:0, v26:0, v25:0, jun:0, be26:0, be25:0,
-        v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0 
+        v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0,
+        c26:0, c25:0, cJun:0
       };
     }
     return map[key];
@@ -291,6 +306,7 @@ function aggregate(indices) {
   for (let idx = 0; idx < count; idx++) {
     const i = indices ? indices[idx] : idx;
     const baseIdx = i * 7;
+    const baseValIdx = i * 10;
     
     const distId   = idMatrix[baseIdx + 0];
     const coordId  = idMatrix[baseIdx + 1];
@@ -300,13 +316,16 @@ function aggregate(indices) {
     const ufId     = idMatrix[baseIdx + 5];
     const munId    = idMatrix[baseIdx + 6];
     
-    const mt   = valMatrix[baseIdx + 0];
-    const mp   = valMatrix[baseIdx + 1];
-    const v26  = valMatrix[baseIdx + 2];
-    const v25  = valMatrix[baseIdx + 3];
-    const jun  = valMatrix[baseIdx + 4];
-    const be26 = valMatrix[baseIdx + 5];
-    const be25 = valMatrix[baseIdx + 6];
+    const mt   = valMatrix[baseValIdx + 0];
+    const mp   = valMatrix[baseValIdx + 1];
+    const v26  = valMatrix[baseValIdx + 2];
+    const v25  = valMatrix[baseValIdx + 3];
+    const jun  = valMatrix[baseValIdx + 4];
+    const be26 = valMatrix[baseValIdx + 5];
+    const be25 = valMatrix[baseValIdx + 6];
+    const c26  = valMatrix[baseValIdx + 7];
+    const c25  = valMatrix[baseValIdx + 8];
+    const cJun = valMatrix[baseValIdx + 9];
 
     gt.mt  += mt;
     gt.mp  += mp;
@@ -315,6 +334,9 @@ function aggregate(indices) {
     gt.jun += jun;
     gt.be26+= be26;
     gt.be25+= be25;
+    gt.c26 += c26;
+    gt.c25 += c25;
+    gt.cJun+= cJun;
 
     if (be26 > 0) {
       gt.v26_eb  += v26;
@@ -328,6 +350,7 @@ function aggregate(indices) {
     if (distId !== -1) {
       const obj = add(dists, distId);
       obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      obj.c26 += c26; obj.c25 += c25; obj.cJun += cJun;
       if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
       if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
     }
@@ -335,6 +358,7 @@ function aggregate(indices) {
     if (coordId !== -1) {
       const obj = add(coordsAgg, coordId);
       obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      obj.c26 += c26; obj.c25 += c25; obj.cJun += cJun;
       if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
       if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
       
@@ -344,6 +368,7 @@ function aggregate(indices) {
     if (filialId !== -1) {
       const obj = add(filiais, filialId);
       obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      obj.c26 += c26; obj.c25 += c25; obj.cJun += cJun;
       if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
       if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
 
@@ -359,6 +384,7 @@ function aggregate(indices) {
     if (grupoId !== -1) {
       const obj = add(grupos, grupoId);
       obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      obj.c26 += c26; obj.c25 += c25; obj.cJun += cJun;
       if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
       if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
     }
@@ -367,6 +393,7 @@ function aggregate(indices) {
       const key = `${grupoId}||${linhaId}`;
       const obj = add(linhas, key);
       obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      obj.c26 += c26; obj.c25 += c25; obj.cJun += cJun;
       if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
       if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
     }
@@ -387,6 +414,9 @@ function aggregate(indices) {
       evol_mom:         varP(v.v26, v.jun),
       pct_ecomm_jul26:  pct(v.v26_eb, v.be26_eb),
       pct_ecomm_jul25:  pct(v.v25_eb, v.be25_eb),
+      cupons_jul26:     round2(v.c26),
+      cupons_jul25:     round2(v.c25),
+      cupons_jun26:     round2(v.cJun)
     };
   }
 

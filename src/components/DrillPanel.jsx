@@ -351,8 +351,9 @@ function FilterSelect({ label, value, options, onChange, disabled }) {
 }
 
 // ── Linha da hierarquia principal ───────────────────────────────────────────
-function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
+function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, viewMode, getMetrics }) {
   const bgRow = depth === 0 ? 'rgba(15,32,80,0.04)' : depth === 1 ? 'rgba(15,32,80,0.015)' : 'transparent';
+  const m = getMetrics(row);
   return (
     <tr
       style={{ borderBottom: '1px solid #e9eef4', background: bgRow, transition: 'background 0.1s' }}
@@ -384,29 +385,42 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
           </span>
         </div>
       </td>
-      <td style={td()}>{fmtR(row.meta_total)}</td>
-      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
-      <td style={td()}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(row.meta_parcial)}</span>
-          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
-        </div>
-      </td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
-      <td style={td()}>{fmtR(row.venda_jul25)}</td>
-      <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
-      <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
-      <td style={{ ...td(), minWidth: 110 }}>
-        <Part pct26={row.pct_ecomm_jul26} pct25={row.pct_ecomm_jul25} labelAno={labelAtualAno} />
-      </td>
+      {viewMode === 'venda' ? (
+        <>
+          <td style={td()}>{fmtR(row.meta_total)}</td>
+          <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
+          <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
+          <td style={td()}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(row.meta_parcial)}</span>
+              <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+            </div>
+          </td>
+          <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
+          <td style={td()}>{fmtR(row.venda_jul25)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
+          <td style={{ ...td(), minWidth: 110 }}>
+            <Part pct26={row.pct_ecomm_jul26} pct25={row.pct_ecomm_jul25} labelAno={labelAtualAno} />
+          </td>
+        </>
+      ) : (
+        <>
+          <td style={td(true)}>{m.fmt(m.val26)}</td>
+          <td style={td()}>{m.fmt(m.val25)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.yoy} /></td>
+          <td style={td()}>{m.fmt(m.valJun)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.mom} /></td>
+        </>
+      )}
     </tr>
   );
 }
 
 // ── Linha de Grupo/Linha (aba Categorias) ───────────────────────────────────
-function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) {
+function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, viewMode, getMetrics }) {
   const bgRow = depth === 0 ? 'rgba(15,32,80,0.04)' : 'transparent';
+  const m = getMetrics(row);
   return (
     <tr
       style={{ borderBottom: '1px solid #e9eef4', background: bgRow, transition: 'background 0.1s' }}
@@ -438,28 +452,37 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno }) 
           </span>
         </div>
       </td>
-      <td style={td()}>{fmtR(row.meta_total)}</td>
-      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
-      <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
-      <td style={td()}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(row.meta_parcial)}</span>
-          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
-        </div>
-      </td>
-      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
-      <td style={td()}>{fmtR(row.venda_jul25)}</td>
-      <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
-      <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
-      <td style={{ ...td(), minWidth: 110 }}>
-        <Part pct26={row.pct_ecomm_jul26} pct25={row.pct_ecomm_jul25} labelAno={labelAtualAno} />
-      </td>
+      {viewMode === 'venda' ? (
+        <>
+          <td style={td()}>{fmtR(row.meta_total)}</td>
+          <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={row.pct_meta_total} /></td>
+          <td style={td(true)}>{fmtR(row.venda_jul26)}</td>
+          <td style={td()}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(row.meta_parcial)}</span>
+              <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+            </div>
+          </td>
+          <td style={{ ...td(), minWidth: 90 }}><Desvio venda={row.venda_jul26} meta={row.meta_parcial} badge /></td>
+          <td style={td()}>{fmtR(row.venda_jul25)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
+        </>
+      ) : (
+        <>
+          <td style={td(true)}>{m.fmt(m.val26)}</td>
+          <td style={td()}>{m.fmt(m.val25)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.yoy} /></td>
+          <td style={td()}>{m.fmt(m.valJun)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.mom} /></td>
+        </>
+      )}
     </tr>
   );
 }
 
 // ── Tabela Hierárquica ──────────────────────────────────────────────────────
-function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTerm }) {
+function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTerm, viewMode, getMetrics }) {
   const [openDist, setOpenDist] = useState(new Set());
   const [openCoord, setOpenCoord] = useState(new Set());
   const tog = (set, setSet, key) =>
@@ -492,13 +515,19 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
     }
   }, [searchTerm, distritais, coordenadores, filiais]);
 
+  const getValForSorting = (item) => {
+    if (viewMode === 'venda') return item.venda_jul26 || 0;
+    if (viewMode === 'cup') return item.cupons_jul26 || 0;
+    return item.cupons_jul26 ? item.venda_jul26 / item.cupons_jul26 : 0;
+  };
+
   const sorted = [...distritais]
     .filter(d => {
       if (matches(d.nome)) return true;
       const cs = coordenadores.filter(c => c.distrital === d.nome);
       return cs.some(c => matches(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matches(f.nome)));
     })
-    .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+    .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
   const rows = [];
 
@@ -511,12 +540,12 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
         const fils = filiais.filter(f => f.coordenador === c.nome);
         return fils.some(f => matches(f.nome));
       })
-      .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+      .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
     rows.push(
       <HRow key={`d-${dist.nome}`} row={dist} depth={0} expanded={isDistOpen}
         hasChildren={coords.length > 0} onToggle={() => tog(openDist, setOpenDist, dist.nome)}
-        labelAtualAno={labelAtualAno} />
+        labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
     );
 
     if (isDistOpen) {
@@ -525,19 +554,19 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
         const fils = filiais
           .filter(f => f.coordenador === coord.nome)
           .filter(f => matches(f.nome) || matches(coord.nome) || matches(dist.nome))
-          .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+          .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
         rows.push(
           <HRow key={`c-${coord.nome}`} row={coord} depth={1} expanded={isCoordOpen}
             hasChildren={fils.length > 0} onToggle={() => tog(openCoord, setOpenCoord, coord.nome)}
-            labelAtualAno={labelAtualAno} />
+            labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
         );
 
         if (isCoordOpen) {
           fils.forEach(fil =>
             rows.push(
               <HRow key={`f-${fil.nome}`} row={fil} depth={2} expanded={false}
-                hasChildren={false} onToggle={null} labelAtualAno={labelAtualAno} />
+                hasChildren={false} onToggle={null} labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
             )
           );
         }
@@ -549,7 +578,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, linhas, labelAtualAno, searchTerm }) {
+function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
   const tog = key =>
     setOpenGrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -570,13 +599,19 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm }) {
     }
   }, [searchTerm, grupos, linhas]);
 
+  const getValForSorting = (item) => {
+    if (viewMode === 'venda') return item.venda_jul26 || 0;
+    if (viewMode === 'cup') return item.cupons_jul26 || 0;
+    return item.cupons_jul26 ? item.venda_jul26 / item.cupons_jul26 : 0;
+  };
+
   const sortedGrupos = [...grupos]
     .filter(g => {
       if (matches(g.nome)) return true;
       const ls = linhas.filter(l => l.grupo === g.nome);
       return ls.some(l => matches(l.nome));
     })
-    .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+    .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
   const rows = [];
 
@@ -585,12 +620,12 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm }) {
     const grupoLinhas = linhas
       .filter(l => l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome)
       .filter(l => matches(l.nome) || matches(grupo.nome))
-      .sort((a, b) => (b.venda_jul26 || 0) - (a.venda_jul26 || 0));
+      .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
     rows.push(
       <CatRow key={`g-${grupo.nome}`} row={grupo} depth={0} expanded={isOpen}
         hasChildren={grupoLinhas.length > 0} onToggle={() => tog(grupo.nome)}
-        labelAtualAno={labelAtualAno} />
+        labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
     );
 
     if (isOpen) {
@@ -598,7 +633,7 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm }) {
         rows.push(
           <CatRow key={`l-${grupo.nome}-${linha.nome}`} row={linha} depth={1}
             expanded={false} hasChildren={false} onToggle={null}
-            labelAtualAno={labelAtualAno} />
+            labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
         )
       );
     }
@@ -616,10 +651,91 @@ export default function DrillPanel({ onUpload }) {
   const [error, setError] = useState(null);
   const [noData, setNoData] = useState(false); // true quando servidor não tem planilha carregada
   const [activeTab, setActiveTab] = useState('hierarquia');
-  const [showChart, setShowChart] = useState(true);
   const [chartMetric, setChartMetric] = useState('desvio');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(true);
+  const [viewMode, setViewMode] = useState('venda'); // venda, cup, tm
+
+  const getMetrics = useCallback((item) => {
+    if (!item) return { val26: 0, val25: 0, valJun: 0, yoy: 0, mom: 0, fmt: (v) => '0' };
+    
+    const fmtCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
+    const fmtInteger = (v) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v || 0);
+    
+    if (viewMode === 'venda') {
+      return {
+        val26: item.venda_jul26 || 0,
+        val25: item.venda_jul25 || 0,
+        valJun: item.venda_jun26 || 0,
+        yoy: item.evol_yoy || 0,
+        mom: item.evol_mom || 0,
+        fmt: fmtCurrency
+      };
+    } else if (viewMode === 'cup') {
+      const c26 = item.cupons_jul26 || 0;
+      const c25 = item.cupons_jul25 || 0;
+      const cJun = item.cupons_jun26 || 0;
+      return {
+        val26: c26,
+        val25: c25,
+        valJun: cJun,
+        yoy: c25 ? ((c26 - c25) / c25) * 100 : 0,
+        mom: cJun ? ((c26 - cJun) / cJun) * 100 : 0,
+        fmt: fmtInteger
+      };
+    } else {
+      const v26 = item.venda_jul26 || 0;
+      const c26 = item.cupons_jul26 || 0;
+      const v25 = item.venda_jul25 || 0;
+      const c25 = item.cupons_jul25 || 0;
+      const vJun = item.venda_jun26 || 0;
+      const cJun = item.cupons_jun26 || 0;
+
+      const tm26 = c26 ? v26 / c26 : 0;
+      const tm25 = c25 ? v25 / c25 : 0;
+      const tmJun = cJun ? vJun / cJun : 0;
+
+      return {
+        val26: tm26,
+        val25: tm25,
+        valJun: tmJun,
+        yoy: tm25 ? ((tm26 - tm25) / tm25) * 100 : 0,
+        mom: tmJun ? ((tm26 - tmJun) / tmJun) * 100 : 0,
+        fmt: fmtCurrency
+      };
+    }
+  }, [viewMode]);
+
+  const chartMetricOptions = useMemo(() => {
+    if (viewMode === 'venda') {
+      return [
+        { key: 'desvio', label: 'Desvio (R$)' },
+        { key: 'venda_meta', label: 'Venda vs Meta' },
+        { key: 'participacao', label: 'Part. Digital (%)' },
+        { key: 'evolucao', label: 'Evolução YoY (%)' },
+        { key: 'crescimento', label: 'Crescimento MoM (%)' },
+      ];
+    } else {
+      const valLabel = viewMode === 'cup' ? 'Total Cupons' : 'Ticket Médio (R$)';
+      return [
+        { key: 'valor', label: valLabel },
+        { key: 'evolucao', label: 'Evolução YoY (%)' },
+        { key: 'crescimento', label: 'Crescimento MoM (%)' },
+      ];
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'venda') {
+      if (chartMetric !== 'evolucao' && chartMetric !== 'crescimento' && chartMetric !== 'valor') {
+        setChartMetric('valor');
+      }
+    } else {
+      if (chartMetric === 'valor') {
+        setChartMetric('desvio');
+      }
+    }
+  }, [viewMode, chartMetric]);
 
   // Filtros
   const [fDist, setFDist] = useState('all');
@@ -950,6 +1066,20 @@ export default function DrillPanel({ onUpload }) {
     'Part. Digital',
   ];
 
+  const activeCols = useMemo(() => {
+    if (viewMode === 'venda') {
+      return activeTab === 'hierarquia' ? COLS_HIER : COLS_CAT;
+    }
+    const label = viewMode === 'cup' ? 'Cupons' : 'T. Médio';
+    return [
+      `${label}\n${labelAtual}`,
+      `${label}\n${labelAtualAno}`,
+      `Evolução\nYoY vs ${labelAtualAno}`,
+      `${label}\n${labelAnt}`,
+      `Crescimento\nMoM vs ${labelAnt}`
+    ];
+  }, [viewMode, activeTab, labelAtual, labelAtualAno, labelAnt]);
+
   return (
     <div style={{ minHeight: '100vh', background: '#f0f4f8', fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* ── Topbar ── */}
@@ -973,6 +1103,42 @@ export default function DrillPanel({ onUpload }) {
               </div>
             </div>
           </div>
+          
+          {/* Seletor de Perspectiva */}
+          <div style={{ 
+            display: 'flex', 
+            gap: 4, 
+            alignItems: 'center', 
+            background: 'rgba(255,255,255,0.06)', 
+            padding: 3, 
+            borderRadius: 8, 
+            border: '1px solid rgba(255,255,255,0.1)' 
+          }}>
+            {[
+              { key: 'venda', label: '💰 Faturamento' },
+              { key: 'cup', label: '🎟️ Cupons' },
+              { key: 'tm', label: '🎫 Ticket Médio' }
+            ].map(item => (
+              <button
+                key={item.key}
+                onClick={() => setViewMode(item.key)}
+                style={{
+                  background: viewMode === item.key ? 'rgba(123,97,255,0.3)' : 'transparent',
+                  border: 'none',
+                  color: viewMode === item.key ? '#fff' : 'rgba(255,255,255,0.6)',
+                  borderRadius: 6,
+                  padding: '5px 14px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button 
               onClick={() => setShowFilters(!showFilters)} 
@@ -1177,34 +1343,30 @@ export default function DrillPanel({ onUpload }) {
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                 {/* Seletor de Métrica */}
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center', background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
-                  {[
-                    { key: 'desvio', label: 'Desvio (R$)' },
-                    { key: 'venda_meta', label: 'Venda vs Meta' },
-                    { key: 'participacao', label: 'Part. Digital (%)' },
-                    { key: 'evolucao', label: 'Evolução YoY (%)' },
-                    { key: 'crescimento', label: 'Crescimento MoM (%)' },
-                  ].map(m => (
-                    <button
-                      key={m.key}
-                      onClick={() => setChartMetric(m.key)}
-                      style={{
-                        background: chartMetric === m.key ? '#fff' : 'transparent',
-                        border: 'none',
-                        color: chartMetric === m.key ? '#0f2050' : '#64748b',
-                        borderRadius: 4,
-                        padding: '4px 10px',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: chartMetric === m.key ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
+                  <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
+                    {chartMetricOptions.map(m => (
+                      <button
+                        key={m.key}
+                        onClick={() => setChartMetric(m.key)}
+                        style={{
+                          background: chartMetric === m.key ? '#fff' : 'transparent',
+                          border: 'none',
+                          color: chartMetric === m.key ? '#0f2050' : '#64748b',
+                          borderRadius: 4,
+                          padding: '4px 10px',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: chartMetric === m.key ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-
+ 
                 <button 
                   onClick={() => setShowChart(false)} 
                   style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}
@@ -1259,7 +1421,11 @@ export default function DrillPanel({ onUpload }) {
                   <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
-                    <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') ? `${v.toFixed(0)}%` : fmtR(v)} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => {
+                      if (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') return `${v.toFixed(0)}%`;
+                      if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
+                      return fmtR(v);
+                    }} tickLine={false} />
                     <Tooltip 
                       formatter={(value, name, props) => {
                         if (name === 'participacao' || name === 'Part. Digital Atual') {
@@ -1270,7 +1436,14 @@ export default function DrillPanel({ onUpload }) {
                         if (name === 'participacao_ant' || name === 'Part. Digital Ano Ant.') {
                           return [`${Number(value).toFixed(1).replace('.', ',')}%`, `Part. Digital Ano Ant. (${labelAtualAno})`];
                         }
-                        if (name === 'venda' || name === 'Venda E-commerce') return [fmtR(value), `Venda E-comm (${labelAtual})`];
+                        if (name === 'venda' || name === 'Venda E-commerce') {
+                          if (viewMode === 'cup') {
+                            return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons (${labelAtual})`];
+                          } else if (viewMode === 'tm') {
+                            return [fmtR(value), `Ticket Médio (${labelAtual})`];
+                          }
+                          return [fmtR(value), `Venda E-comm (${labelAtual})`];
+                        }
                         if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
                         if (name === 'evol_yoy') return [fmtEvol(value), `Evolução YoY (${labelAtualAno})`];
                         if (name === 'evol_mom') return [fmtEvol(value), `Crescimento MoM (${labelAnt})`];
@@ -1288,7 +1461,13 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList content={renderCustomLabel} />
                       </Bar>
                     )}
-
+ 
+                    {chartMetric === 'valor' && (
+                      <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="venda" position="top" formatter={v => viewMode === 'cup' ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v) : fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                      </Bar>
+                    )}
+ 
                     {chartMetric === 'venda_meta' && (
                       <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
                         <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
@@ -1299,7 +1478,7 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
                       </Bar>
                     )}
-
+ 
                     {chartMetric === 'participacao' && (
                       <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
                         <LabelList content={renderCustomPartLabel} />
@@ -1310,7 +1489,7 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                       </Bar>
                     )}
-
+ 
                     {chartMetric === 'evolucao' && (
                       <Bar dataKey="evol_yoy" radius={[4, 4, 0, 0]}>
                         {chartItems.map((entry, index) => (
@@ -1319,7 +1498,7 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList content={renderCustomPctLabel} />
                       </Bar>
                     )}
-
+ 
                     {chartMetric === 'crescimento' && (
                       <Bar dataKey="evol_mom" radius={[4, 4, 0, 0]}>
                         {chartItems.map((entry, index) => (
@@ -1384,6 +1563,7 @@ export default function DrillPanel({ onUpload }) {
               labelAnt={labelAnt}
               onSelectFiliais={setFFilial}
               selectedFiliais={fFilial}
+              viewMode={viewMode}
             />
           )
         ) : (
@@ -1420,7 +1600,7 @@ export default function DrillPanel({ onUpload }) {
                     <th style={th('left', 200)}>
                       {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'}
                     </th>
-                    {(activeTab === 'hierarquia' ? COLS_HIER : COLS_CAT).map((c, i) => (
+                    {activeCols.map((c, i) => (
                       <th key={i} style={th('right')}>
                         {c.split('\n').map((l, j) => <div key={j} style={{ lineHeight: 1.3 }}>{l}</div>)}
                       </th>
@@ -1432,7 +1612,7 @@ export default function DrillPanel({ onUpload }) {
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        {Array.from({ length: activeTab === 'hierarquia' ? 9 : 8 }).map((_, j) => (
+                        {Array.from({ length: 1 + activeCols.length }).map((_, j) => (
                           <td key={j} style={{ padding: 12 }}>
                             <div style={{ height: 13, borderRadius: 3, background: '#f1f5f9', opacity: 0.7 }} />
                           </td>
@@ -1441,7 +1621,7 @@ export default function DrillPanel({ onUpload }) {
                     ))
                   ) : activeTab === 'hierarquia' ? (
                     distritais.length === 0 ? (
-                      <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                      <tr><td colSpan={1 + activeCols.length} style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
                         Nenhum dado disponível. Carregue um arquivo Excel atualizado.
                       </td></tr>
                     ) : (
@@ -1451,13 +1631,22 @@ export default function DrillPanel({ onUpload }) {
                         filiais={filiais}
                         labelAtualAno={labelAtualAno}
                         searchTerm={searchTerm}
+                        viewMode={viewMode}
+                        getMetrics={getMetrics}
                       />
                     )
                   ) : (
                     grupos.length === 0 ? (
-                      <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
+                      <tr><td colSpan={1 + activeCols.length} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>Sem dados de categorias.</td></tr>
                     ) : (
-                      <CatTable grupos={grupos} linhas={linhas} labelAtualAno={labelAtualAno} searchTerm={searchTerm} />
+                      <CatTable 
+                        grupos={grupos} 
+                        linhas={linhas} 
+                        labelAtualAno={labelAtualAno} 
+                        searchTerm={searchTerm} 
+                        viewMode={viewMode}
+                        getMetrics={getMetrics}
+                      />
                     )
                   )}
                 </tbody>
@@ -1469,22 +1658,37 @@ export default function DrillPanel({ onUpload }) {
                       <td style={{ padding: '10px 12px 10px 16px', fontWeight: 800, color: '#0f2050', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         TOTAL GERAL
                       </td>
-                      <td style={td()}>{fmtR(t.meta_total)}</td>
-                      <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={t.pct_meta_total} /></td>
-                      <td style={td(true)}>{fmtR(t.venda_jul26)}</td>
-                      <td style={td()}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(t.meta_parcial)}</span>
-                          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
-                        </div>
-                      </td>
-                      <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_parcial} /></td>
-                      <td style={td()}>{fmtR(t.venda_jul25)}</td>
-                      <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
-                      <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
-                      <td style={{ ...td(), minWidth: 110 }}>
-                        <Part pct26={t.pct_ecomm_jul26} pct25={t.pct_ecomm_jul25} />
-                      </td>
+                      {viewMode === 'venda' ? (
+                        <>
+                          <td style={td()}>{fmtR(t.meta_total)}</td>
+                          <td style={{ ...td(), minWidth: 130 }}><MetaBar pct={t.pct_meta_total} /></td>
+                          <td style={td(true)}>{fmtR(t.venda_jul26)}</td>
+                          <td style={td()}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              <span style={{ fontWeight: 700, fontSize: 12, color: '#334155' }}>{fmtR(t.meta_parcial)}</span>
+                              <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500 }}>parcial</span>
+                            </div>
+                          </td>
+                          <td style={{ ...td(), minWidth: 90 }}><Desvio venda={t.venda_jul26} meta={t.meta_parcial} /></td>
+                          <td style={td()}>{fmtR(t.venda_jul25)}</td>
+                          <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_yoy} /></td>
+                          <td style={{ ...td(), textAlign: 'center' }}><Evol v={t.evol_mom} /></td>
+                          <td style={{ ...td(), minWidth: 110 }}>
+                            <Part pct26={t.pct_ecomm_jul26} pct25={t.pct_ecomm_jul25} />
+                          </td>
+                        </>
+                      ) : (() => {
+                        const m = getMetrics(t);
+                        return (
+                          <>
+                            <td style={td(true)}>{m.fmt(m.val26)}</td>
+                            <td style={td()}>{m.fmt(m.val25)}</td>
+                            <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.yoy} /></td>
+                            <td style={td()}>{m.fmt(m.valJun)}</td>
+                            <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.mom} /></td>
+                          </>
+                        );
+                      })()}
                     </tr>
                   </tfoot>
                 )}
