@@ -17,6 +17,9 @@ const fmtEvol = v => {
   if (v == null) return '—';
   return (v >= 0 ? '+' : '') + Number(v).toFixed(1).replace('.', ',') + '%';
 };
+const fmtCurrency = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
+const fmtCurrency1 = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v || 0);
+const fmtInteger = v => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v || 0);
 
 // ── Cores ───────────────────────────────────────────────────────────────────
 const cEvol = v => v == null ? '#94a3b8' : v >= 0 ? '#059669' : '#dc2626';
@@ -27,7 +30,7 @@ const cMeta = v => {
   return '#dc2626';
 };
 const desvioAbs = (venda, meta) => (venda != null && meta != null) ? venda - meta : null;
-const desvioPct = (venda, meta) => (meta && meta !== 0) ? ((venda - meta) / meta) * 100 : null;
+const desvioPct = (venda, meta) => (venda != null && meta && meta !== 0) ? ((venda - meta) / meta) * 100 : null;
 
 const renderCustomLabel = (props) => {
   const { x, y, width, value } = props;
@@ -660,9 +663,6 @@ export default function DrillPanel({ onUpload }) {
   const getMetrics = useCallback((item) => {
     if (!item) return { val26: 0, val25: 0, valJun: 0, yoy: 0, mom: 0, fmt: (v) => '0' };
     
-    const fmtCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
-    const fmtInteger = (v) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v || 0);
-    
     if (viewMode === 'venda') {
       return {
         val26: item.venda_jul26 || 0,
@@ -702,7 +702,7 @@ export default function DrillPanel({ onUpload }) {
         valJun: tmJun,
         yoy: tm25 ? ((tm26 - tm25) / tm25) * 100 : 0,
         mom: tmJun ? ((tm26 - tmJun) / tmJun) * 100 : 0,
-        fmt: fmtCurrency
+        fmt: fmtCurrency1
       };
     }
   }, [viewMode]);
@@ -1148,25 +1148,25 @@ export default function DrillPanel({ onUpload }) {
       return [
         {
           label: 'Ticket Médio',
-          value: fmtCurrency(tm26),
+          value: fmtCurrency1(tm26),
           evol: yoy,
           evolLabel: 'YoY',
-          sub: `Mês Ant.: ${fmtCurrency(tmJun)} (${fmtEvol(mom)} MoM)`
+          sub: `Mês Ant.: ${fmtCurrency1(tmJun)} (${fmtEvol(mom)} MoM)`
         },
         {
           label: 'T. Médio Ano Anterior',
-          value: fmtCurrency(tm25),
+          value: fmtCurrency1(tm25),
           sub: `Período: ${labelAtualAno}`
         },
         {
           label: 'Crescimento YoY (R$)',
-          value: (diffYoY >= 0 ? '+' : '') + fmtCurrency(diffYoY),
+          value: (diffYoY >= 0 ? '+' : '') + fmtCurrency1(diffYoY),
           sub: `Diferença vs ${labelAtualAno}`,
           highlight: true
         },
         {
           label: 'Crescimento MoM (R$)',
-          value: (diffMoM >= 0 ? '+' : '') + fmtCurrency(diffMoM),
+          value: (diffMoM >= 0 ? '+' : '') + fmtCurrency1(diffMoM),
           sub: `Diferença vs ${labelAnt}`
         }
       ];
@@ -1555,7 +1555,7 @@ export default function DrillPanel({ onUpload }) {
                           if (viewMode === 'cup') {
                             return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons (${labelAtual})`];
                           } else if (viewMode === 'tm') {
-                            return [fmtR(value), `Ticket Médio (${labelAtual})`];
+                            return [fmtCurrency1(value), `Ticket Médio (${labelAtual})`];
                           }
                           return [fmtR(value), `Venda E-comm (${labelAtual})`];
                         }
@@ -1579,7 +1579,11 @@ export default function DrillPanel({ onUpload }) {
  
                     {chartMetric === 'valor' && (
                       <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="venda" position="top" formatter={v => viewMode === 'cup' ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v) : fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                        <LabelList dataKey="venda" position="top" formatter={v => {
+                          if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
+                          if (viewMode === 'tm') return fmtCurrency1(v);
+                          return fmtR(v);
+                        }} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
                       </Bar>
                     )}
  

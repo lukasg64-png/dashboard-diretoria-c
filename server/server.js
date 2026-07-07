@@ -203,6 +203,10 @@ async function readCSVAsync(filePath) {
       const cadastro = filiaisCadastro[filialName] || {};
       const distVal = (C.dist >= 0 ? String(getVal(C.dist) || '').trim() : '') || cadastro.distrital || '';
       const coordVal = (C.coord >= 0 ? String(getVal(C.coord) || '').trim() : '') || cadastro.coordenador || '';
+
+      if (!distVal || !coordVal || distVal.toLowerCase().includes('total') || filialName.toLowerCase().includes('total') || filialName.toLowerCase().includes('geral')) {
+        return;
+      }
  
       const filialId = getStrId(filialName);
       if (cadastro.coords && !coordsCache[filialId]) {
