@@ -294,7 +294,8 @@ function FilterSelect({ label, value, options, onChange, disabled }) {
           position: 'absolute', top: '100%', left: 0, marginTop: 4,
           background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
           boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5)',
-          zIndex: 1000, width: 220, padding: 8, display: 'flex', flexDirection: 'column', gap: 6,
+          zIndex: 1000, width: 250, padding: 10, display: 'flex', flexDirection: 'column', gap: 8,
+          animation: 'fadeIn 0.1s ease-out',
         }}>
           <input
             type="text"
@@ -302,43 +303,45 @@ function FilterSelect({ label, value, options, onChange, disabled }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
-              width: '100%', padding: '5px 8px', fontSize: 11,
+              width: '100%', padding: '6px 10px', fontSize: 12,
               background: '#0f172a', border: '1px solid #475569', borderRadius: 4,
               color: '#fff', outline: 'none', boxSizing: 'border-box'
             }}
           />
-          <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, paddingRight: 2 }}>
+          <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 4 }}>
             <label style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px',
-              borderRadius: 4, cursor: 'pointer', fontSize: 11, color: '#fff',
+              display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+              borderRadius: 4, cursor: 'pointer', fontSize: 12, color: '#fff',
               background: isOptionSelected('all') ? 'rgba(123,97,255,0.15)' : 'transparent',
+              transition: 'background 0.1s ease'
             }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.background = isOptionSelected('all') ? 'rgba(123,97,255,0.15)' : 'transparent'}>
               <input
                 type="checkbox"
                 checked={isOptionSelected('all')}
                 onChange={() => handleToggleOption('all')}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', width: 14, height: 14 }}
               />
               <span>Todos</span>
             </label>
             {filteredOptions.map(o => (
               <label key={o} style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 6px',
-                borderRadius: 4, cursor: 'pointer', fontSize: 11, color: '#fff',
+                display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px',
+                borderRadius: 4, cursor: 'pointer', fontSize: 12, color: '#fff',
                 background: isOptionSelected(o) ? 'rgba(123,97,255,0.2)' : 'transparent',
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                transition: 'background 0.1s ease'
               }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.background = isOptionSelected(o) ? 'rgba(123,97,255,0.2)' : 'transparent'}>
                 <input
                   type="checkbox"
                   checked={isOptionSelected(o)}
                   onChange={() => handleToggleOption(o)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', width: 14, height: 14 }}
                 />
-                <span title={o}>{o}</span>
+                <span title={o} style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{o}</span>
               </label>
             ))}
             {filteredOptions.length === 0 && (
-              <span style={{ fontSize: 10, color: '#64748b', padding: '6px 8px', textAlign: 'center' }}>Nenhum resultado</span>
+              <span style={{ fontSize: 11, color: '#64748b', padding: '8px 10px', textAlign: 'center' }}>Nenhum resultado</span>
             )}
           </div>
         </div>
