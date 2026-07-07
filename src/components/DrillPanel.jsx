@@ -691,7 +691,9 @@ export default function DrillPanel({ onUpload }) {
           meta_parcial: u.mp,
           meta_total: u.mt,
           pct_ecomm_jul26: u.be26 ? (u.v26 / u.be26) * 100 : 0,
-          pct_ecomm_jul25: u.be25 ? (u.v25 / u.be25) * 100 : 0
+          pct_ecomm_jul25: u.be25 ? (u.v25 / u.be25) * 100 : 0,
+          evol_yoy: u.v25 ? ((u.v26 - u.v25) / u.v25) * 100 : 0,
+          evol_mom: u.jun ? ((u.v26 - u.jun) / u.jun) * 100 : 0
         }));
       } else if (fCidade === 'all') {
         // Agrupa filiais por cidade no UF ativo
@@ -717,7 +719,9 @@ export default function DrillPanel({ onUpload }) {
           meta_parcial: c.mp,
           meta_total: c.mt,
           pct_ecomm_jul26: c.be26 ? (c.v26 / c.be26) * 100 : 0,
-          pct_ecomm_jul25: c.be25 ? (c.v25 / c.be25) * 100 : 0
+          pct_ecomm_jul25: c.be25 ? (c.v25 / c.be25) * 100 : 0,
+          evol_yoy: c.v25 ? ((c.v26 - c.v25) / c.v25) * 100 : 0,
+          evol_mom: c.jun ? ((c.v26 - c.jun) / c.jun) * 100 : 0
         }));
       } else {
         // Mostra filiais individuais na cidade ativa
@@ -748,6 +752,8 @@ export default function DrillPanel({ onUpload }) {
           participacao: part26,
           participacao_ant: part25,
           diff_pp: diffPP,
+          evol_yoy: item.evol_yoy != null ? item.evol_yoy : 0,
+          evol_mom: item.evol_mom != null ? item.evol_mom : 0
         };
       });
   }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo, fUF, fCidade]);
