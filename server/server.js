@@ -101,10 +101,35 @@ async function downloadFromGCS(destPath, gcsFileName) {
 
 
 
+// Globais para armazenamento compacto em TypedArrays
+let stringPool = [];
+let stringMap = new Map();
+let recordsCount = 0;
+let idMatrix = null;   // Int32Array contendo [distId, coordId, filialId, grupoId, linhaId, ufId, munId]
+let valMatrix = null;  // Float64Array contendo [mt, mp, v26, v25, jun, be26, be25]
+let coordsCache = {};  // filialId -> coords array
+
+function getStrId(str) {
+  if (str === undefined || str === null) return -1;
+  const s = String(str).trim();
+  let id = stringMap.get(s);
+  if (id === undefined) {
+    id = stringPool.length;
+    stringPool.push(s);
+    stringMap.set(s, id);
+  }
+  return id;
+}
+
+function getStrVal(id) {
+  if (id === -1 || id === undefined || id === null) return '';
+  return stringPool[id] || '';
+}
+
 // ─── Leitura por Stream de CSV (Usa quase 0 de RAM e é 15x mais rápido) ────
 async function readCSVAsync(filePath) {
   return new Promise((resolve, reject) => {
-    const records = [];
+    const tempRecords = [];
     const fileStream = fs.createReadStream(filePath, 'utf8');
     const rl = readline.createInterface({
       input: fileStream,
@@ -115,7 +140,6 @@ async function readCSVAsync(filePath) {
     let C = {};
 
     rl.on('line', (line) => {
-      // Split básico por ponto e vírgula
       const row = line.split(';');
       if (!header) {
         header = row.map(val => val.trim().replace(/^"|"$/g, ''));
@@ -174,28 +198,56 @@ async function readCSVAsync(filePath) {
       const distVal = (C.dist >= 0 ? String(getVal(C.dist) || '').trim() : '') || cadastro.distrital || '';
       const coordVal = (C.coord >= 0 ? String(getVal(C.coord) || '').trim() : '') || cadastro.coordenador || '';
 
-      records.push({
-        dist:   distVal,
-        coord:  coordVal,
-        filial: filialName,
-        grupo:  String(getVal(C.grupo)  || '').trim(),
-        linha:  String(getVal(C.linha)  || '').trim(),
-        mt:     safe(getVal(C.metaTot)),
-        mp:     safe(getVal(C.metaParc)),
-        v26:    safe(getVal(C.vJul26)),
-        v25:    safe(getVal(C.vJul25)),
-        jun:    safe(getVal(C.vJun26)),
-        be26:   safe(getVal(C.beJul26)),
-        be25:   safe(getVal(C.beJul25)),
-        uf:     cadastro.uf || '',
-        mun:    cadastro.municipio || '',
-        coords: cadastro.coords || null
+      const filialId = getStrId(filialName);
+      if (cadastro.coords && !coordsCache[filialId]) {
+        coordsCache[filialId] = cadastro.coords;
+      }
+
+      tempRecords.push({
+        distId:   getStrId(distVal),
+        coordId:  getStrId(coordVal),
+        filialId,
+        grupoId:  getStrId(String(getVal(C.grupo) || '').trim()),
+        linhaId:  getStrId(String(getVal(C.linha) || '').trim()),
+        ufId:     getStrId(cadastro.uf || ''),
+        munId:    getStrId(cadastro.municipio || ''),
+        mt:       safe(getVal(C.metaTot)),
+        mp:       safe(getVal(C.metaParc)),
+        v26:      safe(getVal(C.vJul26)),
+        v25:      safe(getVal(C.vJul25)),
+        jun:      safe(getVal(C.vJun26)),
+        be26:     safe(getVal(C.beJul26)),
+        be25:     safe(getVal(C.beJul25))
       });
     });
 
     rl.on('close', () => {
+      recordsCount = tempRecords.length;
+      idMatrix = new Int32Array(recordsCount * 7);
+      valMatrix = new Float64Array(recordsCount * 7);
+
+      for (let i = 0; i < recordsCount; i++) {
+        const r = tempRecords[i];
+        const baseIdx = i * 7;
+
+        idMatrix[baseIdx + 0] = r.distId;
+        idMatrix[baseIdx + 1] = r.coordId;
+        idMatrix[baseIdx + 2] = r.filialId;
+        idMatrix[baseIdx + 3] = r.grupoId;
+        idMatrix[baseIdx + 4] = r.linhaId;
+        idMatrix[baseIdx + 5] = r.ufId;
+        idMatrix[baseIdx + 6] = r.munId;
+
+        valMatrix[baseIdx + 0] = r.mt;
+        valMatrix[baseIdx + 1] = r.mp;
+        valMatrix[baseIdx + 2] = r.v26;
+        valMatrix[baseIdx + 3] = r.v25;
+        valMatrix[baseIdx + 4] = r.jun;
+        valMatrix[baseIdx + 5] = r.be26;
+        valMatrix[baseIdx + 6] = r.be25;
+      }
+
       resolve({
-        records,
         label_mes_atual: C.labelJul26 || 'Julho/26',
         label_mes_ant:   C.labelJun26 || 'Junho/26',
         arquivo:         path.basename(filePath),
@@ -210,49 +262,51 @@ async function readCSVAsync(filePath) {
 }
 
 // ─── Agregação de registros ──────────────────────────────────────────────────
-function aggregate(records) {
+function aggregate(indices) {
   const dists    = {};
   const coordsAgg = {};
   const grupos   = {};
-  const linhas   = {};  // key = "grupo||linha" para manter relação
+  const linhas   = {};  // key = "grupoId||linhaId" para manter relação
   const filiais  = {};
-  const cdDist   = {};  // coordenador → distrital
-  const flCoord  = {};  // filial → coordenador
-  const flGeo    = {};  // filial → dados geográficos
-  const lgMap    = {};  // linha → grupo (primeiro grupo encontrado)
+  const cdDist   = {};  // coordenadorId → distritalId
+  const flCoord  = {};  // filialId → coordenadorId
+  const flGeo    = {};  // filialId → { uf, mun }
   
   let gt = { 
     mt:0, mp:0, v26:0, v25:0, jun:0, be26:0, be25:0,
     v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0 
   };
 
-  for (const r of records) {
-    const { dist, coord, filial, grupo, linha, mt, mp, v26, v25, jun, be26, be25, uf, mun, coords } = r;
-
-    function add(map, key) {
-      if (!map[key]) {
-        map[key] = { 
-          mt:0, mp:0, v26:0, v25:0, jun:0, be26:0, be25:0,
-          v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0 
-        };
-      }
-      map[key].mt  += mt;
-      map[key].mp  += mp;
-      map[key].v26 += v26;
-      map[key].v25 += v25;
-      map[key].jun += jun;
-      map[key].be26+= be26;
-      map[key].be25+= be25;
-      
-      if (be26 > 0) {
-        map[key].v26_eb  += v26;
-        map[key].be26_eb += be26;
-      }
-      if (be25 > 0) {
-        map[key].v25_eb  += v25;
-        map[key].be25_eb += be25;
-      }
+  function add(map, key) {
+    if (!map[key]) {
+      map[key] = { 
+        mt:0, mp:0, v26:0, v25:0, jun:0, be26:0, be25:0,
+        v26_eb:0, be26_eb:0, v25_eb:0, be25_eb:0 
+      };
     }
+    return map[key];
+  }
+
+  const count = indices ? indices.length : recordsCount;
+  for (let idx = 0; idx < count; idx++) {
+    const i = indices ? indices[idx] : idx;
+    const baseIdx = i * 7;
+    
+    const distId   = idMatrix[baseIdx + 0];
+    const coordId  = idMatrix[baseIdx + 1];
+    const filialId = idMatrix[baseIdx + 2];
+    const grupoId  = idMatrix[baseIdx + 3];
+    const linhaId  = idMatrix[baseIdx + 4];
+    const ufId     = idMatrix[baseIdx + 5];
+    const munId    = idMatrix[baseIdx + 6];
+    
+    const mt   = valMatrix[baseIdx + 0];
+    const mp   = valMatrix[baseIdx + 1];
+    const v26  = valMatrix[baseIdx + 2];
+    const v25  = valMatrix[baseIdx + 3];
+    const jun  = valMatrix[baseIdx + 4];
+    const be26 = valMatrix[baseIdx + 5];
+    const be25 = valMatrix[baseIdx + 6];
 
     gt.mt  += mt;
     gt.mp  += mp;
@@ -271,19 +325,50 @@ function aggregate(records) {
       gt.be25_eb += be25;
     }
 
-    if (dist)   { add(dists,   dist); }
-    if (coord)  { add(coordsAgg, coord); cdDist[coord] = dist; }
-    if (filial) { 
-      add(filiais, filial); 
-      flCoord[filial] = coord;
-      flGeo[filial] = { uf, mun, coords };
+    if (distId !== -1) {
+      const obj = add(dists, distId);
+      obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
+      if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
     }
-    if (grupo)  { add(grupos,  grupo); }
-    // Agrupa linhas por grupo: chave composta para manter relação
-    if (linha) {
-      const linhaKey = grupo ? `${grupo}||${linha}` : linha;
-      add(linhas, linhaKey);
-      if (!lgMap[linhaKey]) lgMap[linhaKey] = grupo || '';
+
+    if (coordId !== -1) {
+      const obj = add(coordsAgg, coordId);
+      obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
+      if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
+      
+      cdDist[coordId] = distId;
+    }
+
+    if (filialId !== -1) {
+      const obj = add(filiais, filialId);
+      obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
+      if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
+
+      flCoord[filialId] = coordId;
+      if (!flGeo[filialId]) {
+        flGeo[filialId] = {
+          uf: ufId,
+          mun: munId
+        };
+      }
+    }
+
+    if (grupoId !== -1) {
+      const obj = add(grupos, grupoId);
+      obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
+      if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
+    }
+
+    if (linhaId !== -1) {
+      const key = `${grupoId}||${linhaId}`;
+      const obj = add(linhas, key);
+      obj.mt += mt; obj.mp += mp; obj.v26 += v26; obj.v25 += v25; obj.jun += jun; obj.be26 += be26; obj.be25 += be25;
+      if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
+      if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
     }
   }
 
@@ -307,32 +392,41 @@ function aggregate(records) {
 
   return {
     total: m(gt),
-    distritoriais: Object.entries(dists).map(([nome, v]) => ({
-      nome, ...m(v),
+    distritoriais: Object.entries(dists).map(([idStr, v]) => ({
+      nome: getStrVal(Number(idStr)), ...m(v),
     })),
-    coordenadores: Object.entries(coordsAgg).map(([nome, v]) => ({
-      nome, distrital: cdDist[nome] || '', ...m(v),
-    })),
-    filiais: Object.entries(filiais).map(([nome, v]) => ({
-      nome, 
-      coordenador: flCoord[nome] || '', 
-      uf: (flGeo[nome] && flGeo[nome].uf) || '',
-      municipio: (flGeo[nome] && flGeo[nome].mun) || '',
-      coords: (flGeo[nome] && flGeo[nome].coords) || null,
+    coordenadores: Object.entries(coordsAgg).map(([idStr, v]) => ({
+      nome: getStrVal(Number(idStr)), 
+      distrital: getStrVal(cdDist[Number(idStr)]), 
       ...m(v),
     })),
-    grupos: Object.entries(grupos).map(([nomeOrig, v]) => ({
-      nome:         nomeOrig.replace(/\(\d+\)$/, '').trim(),
-      nomeOriginal: nomeOrig,
-      ...m(v),
-    })),
+    filiais: Object.entries(filiais).map(([idStr, v]) => {
+      const fid = Number(idStr);
+      return {
+        nome: getStrVal(fid), 
+        coordenador: getStrVal(flCoord[fid]), 
+        uf: getStrVal(flGeo[fid]?.uf),
+        municipio: getStrVal(flGeo[fid]?.mun),
+        coords: coordsCache[fid] || null,
+        ...m(v),
+      };
+    }),
+    grupos: Object.entries(grupos).map(([idStr, v]) => {
+      const gStr = getStrVal(Number(idStr));
+      return {
+        nome: gStr.replace(/\(\d+\)$/, '').trim(),
+        nomeOriginal: gStr,
+        ...m(v),
+      };
+    }),
     linhas: Object.entries(linhas).map(([key, v]) => {
       const sep = key.indexOf('||');
-      const grupoNome = sep >= 0 ? key.substring(0, sep).replace(/\(\d+\)$/, '').trim() : (lgMap[key] || '');
-      const linhaName = sep >= 0 ? key.substring(sep + 2) : key;
+      const gId = Number(key.substring(0, sep));
+      const lId = Number(key.substring(sep + 2));
+      const gStr = getStrVal(gId);
       return {
-        nome: linhaName,
-        grupo: grupoNome,
+        nome: getStrVal(lId),
+        grupo: gStr.replace(/\(\d+\)$/, '').trim(),
         ...m(v),
       };
     }),
@@ -356,26 +450,84 @@ async function getCached() {
 
   const csvFileToRead = loaded ? tmp : CSV_PATH;
   if (!fs.existsSync(csvFileToRead)) {
-    // Não há dados carregados — retornar null para que as rotas mostrem tela de upload
     console.warn(`⚠️ [getCached] CSV não encontrado em: ${csvFileToRead}. Aguardando upload do usuário.`);
     return null;
   }
 
-  const data = await readCSVAsync(csvFileToRead);
+  const meta = await readCSVAsync(csvFileToRead);
 
   if (loaded) {
     try { fs.unlinkSync(tmp); } catch (_) {}
   }
 
-  data.globalAgg = aggregate(data.records);
-  cache = { data, ts: now };
-  console.log(`[cache] dados brutos carregados de ${path.basename(csvFileToRead)} às ${new Date().toLocaleTimeString('pt-BR')} — ${data.records.length} registros`);
-  return data;
+  meta.globalAgg = aggregate();
+  cache = { data: meta, ts: now };
+  console.log(`[cache] dados brutos carregados de ${path.basename(csvFileToRead)} às ${new Date().toLocaleTimeString('pt-BR')} — ${recordsCount} registros.`);
+  return cache.data;
 }
 
-function clearCache() { cache = { data: null, ts: 0 }; }
+function clearCache() {
+  stringPool = [];
+  stringMap.clear();
+  idMatrix = null;
+  valMatrix = null;
+  coordsCache = {};
+  recordsCount = 0;
+  cache = { data: null, ts: 0 };
+}
 
 // ─── Filtro pós-cache ───────────────────────────────────────────────────────
+function getFilteredIndices(filters) {
+  const { distrital, coordenador, filial, grupo, linha, uf, cidade } = filters;
+  
+  if (distrital && distrital !== 'all' && !stringMap.has(distrital)) return [];
+  if (coordenador && coordenador !== 'all' && !stringMap.has(coordenador)) return [];
+  if (filial && filial !== 'all' && !stringMap.has(filial)) return [];
+  if (linha && linha !== 'all' && !stringMap.has(linha)) return [];
+  if (uf && uf !== 'all' && !stringMap.has(uf)) return [];
+  if (cidade && cidade !== 'all' && !stringMap.has(cidade)) return [];
+
+  const distId = distrital && distrital !== 'all' ? stringMap.get(distrital) : -1;
+  const coordId = coordenador && coordenador !== 'all' ? stringMap.get(coordenador) : -1;
+  const filialId = filial && filial !== 'all' ? stringMap.get(filial) : -1;
+  const linhaId = linha && linha !== 'all' ? stringMap.get(linha) : -1;
+  const ufId = uf && uf !== 'all' ? stringMap.get(uf) : -1;
+  const cidadeId = cidade && cidade !== 'all' ? stringMap.get(cidade) : -1;
+
+  let matchingGrupoIds = null;
+  if (grupo && grupo !== 'all') {
+    matchingGrupoIds = new Set();
+    for (let id = 0; id < stringPool.length; id++) {
+      const gStr = stringPool[id];
+      const cleanGStr = gStr.replace(/\(\d+\)$/, '').trim();
+      if (cleanGStr === grupo) {
+        matchingGrupoIds.add(id);
+      }
+    }
+    if (matchingGrupoIds.size === 0) return [];
+  }
+
+  const indices = [];
+  
+  for (let i = 0; i < recordsCount; i++) {
+    const baseIdx = i * 7;
+    
+    if (distId !== -1 && idMatrix[baseIdx + 0] !== distId) continue;
+    if (coordId !== -1 && idMatrix[baseIdx + 1] !== coordId) continue;
+    if (filialId !== -1 && idMatrix[baseIdx + 2] !== filialId) continue;
+    
+    if (matchingGrupoIds !== null && !matchingGrupoIds.has(idMatrix[baseIdx + 3])) continue;
+    
+    if (linhaId !== -1 && idMatrix[baseIdx + 4] !== linhaId) continue;
+    if (ufId !== -1 && idMatrix[baseIdx + 5] !== ufId) continue;
+    if (cidadeId !== -1 && idMatrix[baseIdx + 6] !== cidadeId) continue;
+    
+    indices.push(i);
+  }
+  
+  return indices;
+}
+
 function applyFilters(full, filters) {
   const { distrital, coordenador, filial, grupo, linha, uf, cidade } = filters;
 
@@ -403,36 +555,11 @@ function applyFilters(full, filters) {
     };
   }
 
-  let records = full.records;
-
-  // Filtragem sequencial
-  if (distrital && distrital !== 'all') {
-    records = records.filter(r => r.dist === distrital);
-  }
-  if (coordenador && coordenador !== 'all') {
-    records = records.filter(r => r.coord === coordenador);
-  }
-  if (filial && filial !== 'all') {
-    records = records.filter(r => r.filial === filial);
-  }
-  if (grupo && grupo !== 'all') {
-    records = records.filter(r => r.grupo.replace(/\(\d+\)$/, '').trim() === grupo);
-  }
-  if (linha && linha !== 'all') {
-    records = records.filter(r => r.linha === linha);
-  }
-  if (uf && uf !== 'all') {
-    records = records.filter(r => r.uf === uf);
-  }
-  if (cidade && cidade !== 'all') {
-    records = records.filter(r => r.mun === cidade);
-  }
-
-  const globalAgg = full.globalAgg || aggregate(full.records);
-  const filteredAgg = aggregate(records);
+  const indices = getFilteredIndices(filters);
+  const filteredAgg = aggregate(indices);
 
   return {
-    total:          globalAgg.total,
+    total:          full.globalAgg.total,
     filtered_total: filteredAgg.total,
     distritoriais:  filteredAgg.distritoriais,
     coordenadores:  filteredAgg.coordenadores,
@@ -464,8 +591,6 @@ app.post('/api/upload', (req, res, next) => {
   });
 }, async (req, res) => {
   try {
-    // Limpar cache em memória ANTES de processar o upload para liberar RAM
-    // Isso evita pico de memória que derruba o processo Node.js (causando Erro HTTP 502 no proxy/load balancer)
     clearCache();
     if (global.gc) { try { global.gc(); } catch (_) {} }
 
@@ -483,9 +608,6 @@ app.post('/api/upload', (req, res, next) => {
 
     const localTempPath = req.file.path;
 
-    // O arquivo agora é enviado diretamente como CSV pré-processado pelo navegador!
-    // Isso evita completamente o estouro de memória (OOM / Erro 502) no backend.
-    // Vamos apenas validar se as colunas essenciais estão presentes no CSV.
     try {
       const firstLine = await new Promise((resolve, reject) => {
         const stream = fs.createReadStream(localTempPath, { encoding: 'utf8', start: 0, end: 1024 });
@@ -510,7 +632,6 @@ app.post('/api/upload', (req, res, next) => {
       return res.status(400).json({ status: 'error', error: `Validação do CSV falhou: ${err.message}` });
     }
 
-    // Salvar no GCS se configurado, ou substituir arquivo local
     if (GCS_BUCKET && storageClient) {
       try {
         console.log(`☁️ Enviando CSV para o GCS gs://${GCS_BUCKET}/${FILE_NAME}...`);
@@ -529,7 +650,6 @@ app.post('/api/upload', (req, res, next) => {
       fs.copyFileSync(localTempPath, CSV_PATH);
     }
 
-    // Limpar arquivo temporário
     try { fs.unlinkSync(localTempPath); } catch (_) {}
     
     loadFiliaisCadastro();
@@ -560,8 +680,7 @@ app.get('/api/metas', async (req, res) => {
     };
     const data = applyFilters(full, filters);
 
-    // Calcular as opções globais de filtros e seus relacionamentos
-    const globalAgg = full.globalAgg || aggregate(full.records);
+    const globalAgg = full.globalAgg;
     const options = {
       distritoriais: globalAgg.distritoriais.map(d => ({ nome: d.nome })),
       coordenadores: globalAgg.coordenadores.map(c => ({ nome: c.nome, distrital: c.distrital })),
@@ -609,7 +728,10 @@ app.get('/api/detalhes', async (req, res) => {
 app.get('/api/filtros', async (req, res) => {
   try {
     const full = await getCached();
-    const globalAgg = full.globalAgg || aggregate(full.records);
+    if (!full) {
+      return res.json({ status: 'no_data', msg: 'Nenhuma planilha carregada.' });
+    }
+    const globalAgg = full.globalAgg;
     res.json({
       status:        'ok',
       distritoriais:  globalAgg.distritoriais.map(d => d.nome).sort(),
@@ -622,13 +744,12 @@ app.get('/api/filtros', async (req, res) => {
   }
 });
 
-// Limpar cache + recarregar (para botão de refresh)
 app.post('/api/refresh', async (req, res) => {
   loadFiliaisCadastro();
   clearCache();
   try {
     const full = await getCached();
-    res.json({ status: 'ok', msg: 'Cache limpo e dados recarregados', rows: full.filiais.length });
+    res.json({ status: 'ok', msg: 'Cache limpo e dados recarregados', rows: full.globalAgg.filiais.length });
   } catch (err) {
     res.status(500).json({ status: 'error', error: err.message });
   }
