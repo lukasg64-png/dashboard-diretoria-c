@@ -991,6 +991,7 @@ export default function DrillPanel({ onUpload }) {
         name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
         nomeOriginal: item.nome,
         venda: m.val26,
+        venda_ant: m.val25,
         meta: item.meta_parcial || 0,
         desvio: viewMode === 'venda' ? desvioAbs(m.val26, item.meta_parcial) || 0 : 0,
         participacao: part26,
@@ -1451,8 +1452,20 @@ export default function DrillPanel({ onUpload }) {
         {showChart && !loading && chartItems.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-              <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})
+              <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})</span>
+                {chartMetric === 'valor' && (
+                  <span style={{ fontSize: 9, fontWeight: 500, color: '#64748b', textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
+                    <span><span style={{ color: '#7c3aed', marginRight: 3 }}>●</span>{labelAtual}</span>
+                    <span><span style={{ color: '#94a3b8', marginRight: 3 }}>●</span>{labelAtualAno}</span>
+                  </span>
+                )}
+                {chartMetric === 'venda_meta' && (
+                  <span style={{ fontSize: 9, fontWeight: 500, color: '#64748b', textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
+                    <span><span style={{ color: '#7c3aed', marginRight: 3 }}>●</span>Venda E-comm</span>
+                    <span><span style={{ color: '#94a3b8', marginRight: 3 }}>●</span>Meta Parcial</span>
+                  </span>
+                )}
               </h4>
               
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1559,6 +1572,14 @@ export default function DrillPanel({ onUpload }) {
                           }
                           return [fmtR(value), `Venda E-comm (${labelAtual})`];
                         }
+                        if (name === 'venda_ant') {
+                           if (viewMode === 'cup') {
+                             return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons Anterior (${labelAtualAno})`];
+                           } else if (viewMode === 'tm') {
+                             return [fmtCurrency1(value), `Ticket Médio Anterior (${labelAtualAno})`];
+                           }
+                           return [fmtR(value), `Venda E-comm Anterior (${labelAtualAno})`];
+                         }
                         if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
                         if (name === 'evol_yoy') return [fmtEvol(value), `Evolução YoY (${labelAtualAno})`];
                         if (name === 'evol_mom') return [fmtEvol(value), `Crescimento MoM (${labelAnt})`];
@@ -1584,6 +1605,15 @@ export default function DrillPanel({ onUpload }) {
                           if (viewMode === 'tm') return fmtCurrency1(v);
                           return fmtR(v);
                         }} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                      </Bar>
+                    )}
+                    {chartMetric === 'valor' && (
+                      <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="venda_ant" position="top" formatter={v => {
+                          if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
+                          if (viewMode === 'tm') return fmtCurrency1(v);
+                          return fmtR(v);
+                        }} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                       </Bar>
                     )}
  
