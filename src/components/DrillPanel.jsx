@@ -651,6 +651,7 @@ export default function DrillPanel({ onUpload }) {
   const [error, setError] = useState(null);
   const [noData, setNoData] = useState(false); // true quando servidor não tem planilha carregada
   const [activeTab, setActiveTab] = useState('hierarquia');
+  const [showChart, setShowChart] = useState(true);
   const [chartMetric, setChartMetric] = useState('desvio');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(true);
