@@ -198,6 +198,38 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     return { color, valueStr, label };
   }, [mapMetric]);
 
+  const countsByColor = useMemo(() => {
+    let green = 0;
+    let orange = 0;
+    let red = 0;
+
+    filiais.forEach(f => {
+      if (mapMetric === 'atingimento') {
+        const desvio = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
+        if (desvio < -15) red++;
+        else if (desvio < 0) orange++;
+        else green++;
+      } else if (mapMetric === 'evolucao') {
+        const evol = f.evol_yoy || 0;
+        if (evol < 0) red++;
+        else if (evol < 10) orange++;
+        else green++;
+      } else if (mapMetric === 'crescimento') {
+        const mom = f.evol_mom || 0;
+        if (mom < 0) red++;
+        else if (mom < 5) orange++;
+        else green++;
+      } else if (mapMetric === 'participacao') {
+        const part = f.pct_ecomm_jul26 || 0;
+        if (part < 6) red++;
+        else if (part < 12) orange++;
+        else green++;
+      }
+    });
+
+    return { green, orange, red };
+  }, [filiais, mapMetric]);
+
   useEffect(() => {
     if (!window.L) return;
 
@@ -384,15 +416,15 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                      <span>Meta Batida (&ge; 0% Desvio)</span>
+                      <span>Meta Batida (&ge; 0% Desvio) — <strong>{countsByColor.green} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                      <span>Alerta (-15% a -0,1%)</span>
+                      <span>Alerta (-15% a -0,1%) — <strong>{countsByColor.orange} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                      <span>Queda (&lt; -15% Desvio)</span>
+                      <span>Queda (&lt; -15% Desvio) — <strong>{countsByColor.red} filiais</strong></span>
                     </div>
                   </>
                 )}
@@ -400,15 +432,15 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                      <span>Crescimento (&ge; 10%)</span>
+                      <span>Crescimento (&ge; 10%) — <strong>{countsByColor.green} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                      <span>Estável (0% a 9%)</span>
+                      <span>Estável (0% a 9%) — <strong>{countsByColor.orange} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                      <span>Queda YoY (&lt; 0%)</span>
+                      <span>Queda YoY (&lt; 0%) — <strong>{countsByColor.red} filiais</strong></span>
                     </div>
                   </>
                 )}
@@ -416,15 +448,15 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                      <span>Crescimento MoM (&ge; 5%)</span>
+                      <span>Crescimento MoM (&ge; 5%) — <strong>{countsByColor.green} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                      <span>Estável (0% a 4.9%)</span>
+                      <span>Estável (0% a 4.9%) — <strong>{countsByColor.orange} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                      <span>Queda MoM (&lt; 0%)</span>
+                      <span>Queda MoM (&lt; 0%) — <strong>{countsByColor.red} filiais</strong></span>
                     </div>
                   </>
                 )}
@@ -432,15 +464,15 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                      <span>Part. Alta (&ge; 12%)</span>
+                      <span>Part. Alta (&ge; 12%) — <strong>{countsByColor.green} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-                      <span>Média (6% a 11%)</span>
+                      <span>Média (6% a 11%) — <strong>{countsByColor.orange} filiais</strong></span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                      <span>Baixa Part. (&lt; 6%)</span>
+                      <span>Baixa Part. (&lt; 6%) — <strong>{countsByColor.red} filiais</strong></span>
                     </div>
                   </>
                 )}
