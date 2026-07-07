@@ -1382,6 +1382,8 @@ export default function DrillPanel({ onUpload }) {
               labelAtual={labelAtual}
               labelAtualAno={labelAtualAno}
               labelAnt={labelAnt}
+              onSelectFiliais={setFFilial}
+              selectedFiliais={fFilial}
             />
           )
         ) : (

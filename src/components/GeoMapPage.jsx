@@ -2,12 +2,22 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Plus, Minus } from 'lucide-react';
 
-export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAnt }) {
+export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAnt, onSelectFiliais, selectedFiliais }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layerGroupRef = useRef(null);
   const [mapMetric, setMapMetric] = useState('atingimento'); // atingimento, evolucao, crescimento, participacao
   const [expandedUFs, setExpandedUFs] = useState(new Set());
+
+  const drawingStateRef = useRef({
+    isDrawing: false,
+    center: null,
+    circle: null,
+    locked: false
+  });
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [hasCircleFilter, setHasCircleFilter] = useState(false);
+  const [drawPulseToggle, setDrawPulseToggle] = useState(false);
 
   // Formatação de valores
   const fmtR = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
@@ -230,11 +240,55 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
     return { green, orange, red };
   }, [filiais, mapMetric]);
 
+  const filiaisComCoordsRef = useRef(filiaisComCoords);
+  useEffect(() => {
+    filiaisComCoordsRef.current = filiaisComCoords;
+  }, [filiaisComCoords]);
+
+  // Sincroniza filtro externo de Filial sendo limpo
+  useEffect(() => {
+    if (selectedFiliais === 'all' && hasCircleFilter) {
+      const map = mapInstanceRef.current;
+      const state = drawingStateRef.current;
+      if (state.circle && map) {
+        map.removeLayer(state.circle);
+      }
+      drawingStateRef.current = { isDrawing: false, center: null, circle: null, locked: false };
+      setHasCircleFilter(false);
+    }
+  }, [selectedFiliais, hasCircleFilter]);
+
+  const cancelDrawing = () => {
+    const map = mapInstanceRef.current;
+    const state = drawingStateRef.current;
+    if (state.circle && map) {
+      map.removeLayer(state.circle);
+    }
+    drawingStateRef.current = { isDrawing: false, center: null, circle: null, locked: false };
+    setIsDrawingMode(false);
+    if (mapRef.current) mapRef.current.style.cursor = '';
+  };
+
+  const clearCircleFilter = () => {
+    const map = mapInstanceRef.current;
+    const state = drawingStateRef.current;
+    if (state.circle && map) {
+      map.removeLayer(state.circle);
+    }
+    drawingStateRef.current = { isDrawing: false, center: null, circle: null, locked: false };
+    setIsDrawingMode(false);
+    setHasCircleFilter(false);
+    if (mapRef.current) mapRef.current.style.cursor = '';
+    if (onSelectFiliais) {
+      onSelectFiliais('all');
+    }
+  };
+
+  // Inicialização do Mapa
   useEffect(() => {
     if (!window.L) return;
 
     if (!mapInstanceRef.current && mapRef.current) {
-      // Centro do Sul do Brasil
       const map = window.L.map(mapRef.current, {
         center: [-28.5, -52.5],
         zoom: 6,
@@ -248,27 +302,94 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
 
       mapInstanceRef.current = map;
       layerGroupRef.current = window.L.layerGroup().addTo(map);
+
+      // Eventos de Desenho de Círculo
+      map.on('click', (e) => {
+        const state = drawingStateRef.current;
+        if (!state.isDrawing) return;
+
+        if (!state.center) {
+          state.center = e.latlng;
+          state.circle = window.L.circle(e.latlng, {
+            radius: 10,
+            color: '#e91e63',
+            fillColor: '#e91e63',
+            fillOpacity: 0.15,
+            weight: 2,
+            dashArray: '4, 4'
+          }).addTo(map);
+          setDrawPulseToggle(p => !p);
+        } else {
+          state.isDrawing = false;
+          state.locked = true;
+
+          if (mapRef.current) mapRef.current.style.cursor = '';
+          setIsDrawingMode(false);
+          setHasCircleFilter(true);
+
+          const radius = state.circle.getRadius();
+          const center = state.center;
+
+          const inside = [];
+          filiaisComCoordsRef.current.forEach(f => {
+            const lat = f.coords[1];
+            const lng = f.coords[0];
+            const dist = center.distanceTo([lat, lng]);
+            if (dist <= radius) {
+              inside.push(f.nome);
+            }
+          });
+
+          if (onSelectFiliais) {
+            if (inside.length === 0) {
+              alert("Nenhuma filial encontrada nesta área.");
+              if (state.circle) {
+                map.removeLayer(state.circle);
+              }
+              drawingStateRef.current = { isDrawing: false, center: null, circle: null, locked: false };
+              setHasCircleFilter(false);
+              onSelectFiliais('all');
+            } else {
+              onSelectFiliais(inside.join(','));
+            }
+          }
+        }
+      });
+
+      map.on('mousemove', (e) => {
+        const state = drawingStateRef.current;
+        if (!state.isDrawing || !state.center || !state.circle) return;
+
+        const dist = state.center.distanceTo(e.latlng);
+        state.circle.setRadius(dist);
+      });
     }
 
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        layerGroupRef.current = null;
+      }
+    };
+  }, [onSelectFiliais]);
+
+  // Plotar circleMarkers no mapa
+  useEffect(() => {
     const map = mapInstanceRef.current;
     const layerGroup = layerGroupRef.current;
-
     if (!map || !layerGroup) return;
 
     layerGroup.clearLayers();
 
-    // Plotar circleMarkers no mapa. Eles têm tamanho fixo em PIXELS na tela,
-    // o que faz com que eles fiquem pequenos e se separem visualmente quando o usuário dá zoom!
     filiaisComCoords.forEach(f => {
       const lat = f.coords[1];
       const lng = f.coords[0];
-
       if (isNaN(lat) || isNaN(lng)) return;
 
       const { color } = getMarkerProperties(f);
       const baseVenda = f.venda_jul26 || 0;
       
-      // Raio dinâmico em pixels (Min: 6px, Max: 22px) baseado no faturamento
       const radius = Math.max(6, Math.min(22, Math.sqrt(baseVenda) * 0.022));
       const desvioParcial = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
 
@@ -280,7 +401,6 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         fillOpacity: 0.85
       });
 
-      // Detalha os 4 Pilares da Loja no Popup
       const popupContent = `
         <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #1e293b; padding: 6px; min-width: 220px; line-height: 1.4;">
           <h4 style="margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #0f2050; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
@@ -394,17 +514,120 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: 16, minHeight: 460 }}>
-          <div 
-            ref={mapRef} 
-            style={{ 
-              height: '100%', 
-              minHeight: 450, 
-              width: '100%', 
-              borderRadius: 8, 
-              border: '1px solid #cbd5e1',
-              zIndex: 1
-            }} 
-          />
+          <div style={{ position: 'relative', height: '100%', minHeight: 450, width: '100%' }}>
+            <div 
+              ref={mapRef} 
+              style={{ 
+                height: '100%', 
+                width: '100%', 
+                borderRadius: 8, 
+                border: '1px solid #cbd5e1',
+                zIndex: 1
+              }} 
+            />
+
+            {/* ── Botões de Desenhar Filtro (Círculo) ── */}
+            <div style={{
+              position: 'absolute',
+              top: 10,
+              left: 50,
+              zIndex: 1000,
+              display: 'flex',
+              gap: 6
+            }}>
+              {!isDrawingMode && !hasCircleFilter && (
+                <button
+                  onClick={() => {
+                    setIsDrawingMode(true);
+                    drawingStateRef.current = { isDrawing: true, center: null, circle: null, locked: false };
+                    if (mapRef.current) mapRef.current.style.cursor = 'crosshair';
+                  }}
+                  style={{
+                    background: '#0f2050',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'background 0.15s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#1e3a8a'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#0f2050'}
+                >
+                  <span style={{ fontSize: 13 }}>⭕</span> Desenhar Filtro de Área
+                </button>
+              )}
+
+              {isDrawingMode && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{
+                    background: '#e91e63',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+                    animation: 'pulse 1.5s infinite'
+                  }}>
+                    {drawingStateRef.current.center ? 'Mova o mouse e clique para travar o raio' : 'Clique no mapa para definir o centro'}
+                  </div>
+                  <button
+                    onClick={cancelDrawing}
+                    style={{
+                      background: '#475569',
+                      border: 'none',
+                      color: '#fff',
+                      padding: '6px 12px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              {hasCircleFilter && (
+                <button
+                  onClick={clearCircleFilter}
+                  style={{
+                    background: '#ef4444',
+                    border: 'none',
+                    color: '#fff',
+                    padding: '6px 12px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <span>❌</span> Limpar Filtro de Área
+                </button>
+              )}
+            </div>
+
+            <style>{`
+              @keyframes pulse {
+                0% { opacity: 0.85; }
+                50% { opacity: 1; }
+                100% { opacity: 0.85; }
+              }
+            `}</style>
+          </div>
 
           <div style={{ background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
