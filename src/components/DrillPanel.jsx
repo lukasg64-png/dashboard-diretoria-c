@@ -1823,92 +1823,17 @@ export default function DrillPanel({ onUpload }) {
                   />
                 );
 
-                if (isFlatScroll) {
-                  return (
-                    <BarChart
-                      width={chartW}
-                      height={chartH}
-                      data={chartItems}
-                      margin={{ top: 32, right: 20, left: 10, bottom: bottomMargin }}
-                      onClick={handleChartClick}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      {xAxis}
-                      {yAxis}
-                      {tooltip}
-                      {chartMetric === 'desvio' && (
-                        <Bar dataKey="desvio" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                          {chartItems.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
-                          ))}
-                          <LabelList content={renderCustomLabel} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'valor' && (
-                        <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={36}>
-                          <LabelList dataKey="venda" position="top" formatter={v => {
-                            if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
-                            if (viewMode === 'tm') return fmtCurrency1(v);
-                            return fmtR(v);
-                          }} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'valor' && (
-                        <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={36}>
-                          <LabelList dataKey="venda_ant" position="top" formatter={v => {
-                            if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
-                            if (viewMode === 'tm') return fmtCurrency1(v);
-                            return fmtR(v);
-                          }} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'venda_meta' && (
-                        <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'venda_meta' && (
-                        <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'participacao' && (
-                        <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
-                          <LabelList content={renderCustomPartLabel} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'participacao' && (
-                        <Bar dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'evolucao' && (
-                        <Bar dataKey="evol_yoy" radius={[4, 4, 0, 0]}>
-                          {chartItems.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.evol_yoy >= 0 ? '#10b981' : '#ef4444'} />
-                          ))}
-                          <LabelList content={renderCustomPctLabel} />
-                        </Bar>
-                      )}
-                      {chartMetric === 'crescimento' && (
-                        <Bar dataKey="evol_mom" radius={[4, 4, 0, 0]}>
-                          {chartItems.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.evol_mom >= 0 ? '#10b981' : '#ef4444'} />
-                          ))}
-                          <LabelList content={renderCustomPctLabel} />
-                        </Bar>
-                      )}
-                    </BarChart>
-                  );
-                }
+                // Largura em pixels para forçar o ResponsiveContainer a expandir e rolar horizontalmente
+                const containerStyle = isFlatScroll
+                  ? { width: chartW, height: chartH }
+                  : { width: '100%', minWidth: 640, height: chartH };
 
                 return (
-                  <div style={{ width: '100%', minWidth: 640, height: chartH }}>
+                  <div style={containerStyle}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={chartItems}
-                        margin={{ top: 32, right: 10, left: 10, bottom: bottomMargin }}
+                        margin={{ top: 32, right: isFlatScroll ? 20 : 10, left: 10, bottom: bottomMargin }}
                         onClick={handleChartClick}
                         style={{ cursor: 'pointer' }}
                       >
@@ -1917,7 +1842,7 @@ export default function DrillPanel({ onUpload }) {
                         {yAxis}
                         {tooltip}
                         {chartMetric === 'desvio' && (
-                          <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="desvio" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 40 : undefined}>
                             {chartItems.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
                             ))}
@@ -1925,7 +1850,7 @@ export default function DrillPanel({ onUpload }) {
                           </Bar>
                         )}
                         {chartMetric === 'valor' && (
-                          <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
                             <LabelList dataKey="venda" position="top" formatter={v => {
                               if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                               if (viewMode === 'tm') return fmtCurrency1(v);
@@ -1934,7 +1859,7 @@ export default function DrillPanel({ onUpload }) {
                           </Bar>
                         )}
                         {chartMetric === 'valor' && (
-                          <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
                             <LabelList dataKey="venda_ant" position="top" formatter={v => {
                               if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                               if (viewMode === 'tm') return fmtCurrency1(v);
