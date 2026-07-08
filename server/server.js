@@ -591,7 +591,6 @@ function getFilteredIndices(filters) {
   const distIds = getFilterIds(distrital);
   const coordIds = getFilterIds(coordenador);
   const filialIds = getFilterIds(filial);
-  const subgrupoIds = getFilterIds(subgrupo);
   const linhaIds = getFilterIds(linha);
   const ufIds = getFilterIds(uf);
   const cidadeIds = getFilterIds(cidade);
@@ -613,6 +612,23 @@ function getFilteredIndices(filters) {
     }
   }
 
+  let matchingSubgrupoIds = null;
+  if (subgrupo && subgrupo !== 'all') {
+    matchingSubgrupoIds = new Set();
+    const subgruposSelected = subgrupo.split(',');
+    const subgruposSet = new Set(subgruposSelected);
+    for (let id = 0; id < stringPool.length; id++) {
+      const sStr = stringPool[id];
+      const cleanSStr = sStr.replace(/\(\d+\)$/, '').trim();
+      if (subgruposSet.has(cleanSStr)) {
+        matchingSubgrupoIds.add(id);
+      }
+    }
+    if (matchingSubgrupoIds.size === 0) {
+      matchingSubgrupoIds.add(-9999);
+    }
+  }
+
   const indices = [];
   
   for (let i = 0; i < recordsCount; i++) {
@@ -622,7 +638,7 @@ function getFilteredIndices(filters) {
     if (coordIds && !coordIds.has(idMatrix[baseIdx + 1])) continue;
     if (filialIds && !filialIds.has(idMatrix[baseIdx + 2])) continue;
     if (matchingGrupoIds !== null && !matchingGrupoIds.has(idMatrix[baseIdx + 3])) continue;
-    if (subgrupoIds && !subgrupoIds.has(idMatrix[baseIdx + 4])) continue;
+    if (matchingSubgrupoIds !== null && !matchingSubgrupoIds.has(idMatrix[baseIdx + 4])) continue;
     if (linhaIds && !linhaIds.has(idMatrix[baseIdx + 5])) continue;
     if (ufIds && !ufIds.has(idMatrix[baseIdx + 6])) continue;
     if (cidadeIds && !cidadeIds.has(idMatrix[baseIdx + 7])) continue;

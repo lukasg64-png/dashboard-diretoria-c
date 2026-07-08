@@ -33,14 +33,14 @@ const desvioAbs = (venda, meta) => (venda != null && meta != null) ? venda - met
 const desvioPct = (venda, meta) => (venda != null && meta && meta !== 0) ? ((venda - meta) / meta) * 100 : null;
 
 const renderCustomLabel = (props) => {
-  const { x, y, width, value } = props;
+  const { x, y, width, height, value } = props;
   if (value === 0 || value == null) return null;
-  const yOffset = value >= 0 ? -6 : 12;
+  const yPos = value >= 0 ? y - 6 : y + height - 6;
   const color = value >= 0 ? '#059669' : '#dc2626';
   return (
     <text 
       x={x + width / 2} 
-      y={y + yOffset} 
+      y={yPos} 
       fill={color} 
       textAnchor="middle" 
       style={{ fontSize: 9, fontWeight: 700 }}
@@ -51,14 +51,14 @@ const renderCustomLabel = (props) => {
 };
 
 const renderCustomPctLabel = (props) => {
-  const { x, y, width, value } = props;
+  const { x, y, width, height, value } = props;
   if (value == null) return null;
-  const yOffset = value >= 0 ? -6 : 12;
+  const yPos = value >= 0 ? y - 6 : y + height - 6;
   const color = value >= 0 ? '#059669' : '#dc2626';
   return (
     <text 
       x={x + width / 2} 
-      y={y + yOffset} 
+      y={yPos} 
       fill={color} 
       textAnchor="middle" 
       style={{ fontSize: 9, fontWeight: 700 }}
