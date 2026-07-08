@@ -580,14 +580,11 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, subgrupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics }) {
+function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
-  const [openSubgrupo, setOpenSubgrupo] = useState(new Set());
-  
+
   const togG = key =>
     setOpenGrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
-  const togS = key =>
-    setOpenSubgrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const matches = (name) => !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -595,20 +592,14 @@ function CatTable({ grupos, subgrupos, linhas, labelAtualAno, searchTerm, viewMo
   useEffect(() => {
     if (searchTerm) {
       const gruposToOpen = new Set();
-      const subgruposToOpen = new Set();
-      subgrupos.forEach(s => {
-        const ls = linhas.filter(l => l.grupo === s.grupo && l.subgrupo === s.nome);
-        if (ls.some(l => matches(l.nome)) || matches(s.nome)) {
-          gruposToOpen.add(s.grupo);
-          if (ls.some(l => matches(l.nome))) {
-            subgruposToOpen.add(`${s.grupo}||${s.nome}`);
-          }
+      linhas.forEach(l => {
+        if (matches(l.nome) || matches(l.grupo)) {
+          gruposToOpen.add(l.grupo);
         }
       });
       setOpenGrupo(gruposToOpen);
-      setOpenSubgrupo(subgruposToOpen);
     }
-  }, [searchTerm, grupos, subgrupos, linhas]);
+  }, [searchTerm, grupos, linhas]);
 
   const getValForSorting = (item) => {
     if (viewMode === 'venda') return item.venda_jul26 || 0;
@@ -619,7 +610,7 @@ function CatTable({ grupos, subgrupos, linhas, labelAtualAno, searchTerm, viewMo
   const sortedGrupos = [...grupos]
     .filter(g => {
       if (matches(g.nome)) return true;
-      return subgrupos.some(s => s.grupo === g.nome && (matches(s.nome) || linhas.some(l => l.grupo === g.nome && l.subgrupo === s.nome && matches(l.nome))));
+      return linhas.some(l => (l.grupo === g.nomeOriginal || l.grupo === g.nome) && matches(l.nome));
     })
     .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
@@ -627,42 +618,25 @@ function CatTable({ grupos, subgrupos, linhas, labelAtualAno, searchTerm, viewMo
 
   sortedGrupos.forEach(grupo => {
     const isOpenG = openGrupo.has(grupo.nome);
-    const grupoSubgrupos = subgrupos
-      .filter(s => s.grupo === grupo.nomeOriginal || s.grupo === grupo.nome)
-      .filter(s => matches(s.nome) || matches(grupo.nome) || linhas.some(l => l.grupo === grupo.nome && l.subgrupo === s.nome && matches(l.nome)))
+    const grupoLinhas = linhas
+      .filter(l => l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome)
+      .filter(l => matches(l.nome) || matches(grupo.nome))
       .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
     rows.push(
       <CatRow key={`g-${grupo.nome}`} row={grupo} depth={0} expanded={isOpenG}
-        hasChildren={grupoSubgrupos.length > 0} onToggle={() => togG(grupo.nome)}
+        hasChildren={grupoLinhas.length > 0} onToggle={() => togG(grupo.nome)}
         labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
     );
 
     if (isOpenG) {
-      grupoSubgrupos.forEach(subgrupo => {
-        const subgKey = `${grupo.nome}||${subgrupo.nome}`;
-        const isOpenS = openSubgrupo.has(subgKey);
-        const subgrupoLinhas = linhas
-          .filter(l => (l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome) && (l.subgrupo === subgrupo.nomeOriginal || l.subgrupo === subgrupo.nome))
-          .filter(l => matches(l.nome) || matches(subgrupo.nome) || matches(grupo.nome))
-          .sort((a, b) => getValForSorting(b) - getValForSorting(a));
-
+      grupoLinhas.forEach(linha =>
         rows.push(
-          <CatRow key={`s-${subgKey}`} row={subgrupo} depth={1} expanded={isOpenS}
-            hasChildren={subgrupoLinhas.length > 0} onToggle={() => togS(subgKey)}
+          <CatRow key={`l-${grupo.nome}-${linha.nome}`} row={linha} depth={1}
+            expanded={false} hasChildren={false} onToggle={null}
             labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
-        );
-
-        if (isOpenS) {
-          subgrupoLinhas.forEach(linha =>
-            rows.push(
-              <CatRow key={`l-${subgKey}-${linha.nome}`} row={linha} depth={2}
-                expanded={false} hasChildren={false} onToggle={null}
-                labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
-            )
-          );
-        }
-      });
+        )
+      );
     }
   });
 
@@ -767,20 +741,18 @@ export default function DrillPanel({ onUpload }) {
   const [fCoord, setFCoord] = useState('all');
   const [fFilial, setFFilial] = useState('all');
   const [fGrupo, setFGrupo] = useState('all');
-  const [fSubgrupo, setFSubgrupo] = useState('all');
   const [fLinha, setFLinha] = useState('all');
   const [fUF, setFUF] = useState('all');
   const [fCidade, setFCidade] = useState('all');
 
-  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fSubgrupo !== 'all' || fLinha !== 'all' || fUF !== 'all' || fCidade !== 'all';
-  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fSubgrupo, fLinha, fUF, fCidade].filter(f => f !== 'all').length;
+  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all' || fUF !== 'all' || fCidade !== 'all';
+  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade].filter(f => f !== 'all').length;
 
   const filters = { 
     distrital: fDist, 
     coordenador: fCoord, 
     filial: fFilial, 
     grupo: fGrupo, 
-    subgrupo: fSubgrupo,
     linha: fLinha,
     uf: fUF,
     cidade: fCidade
@@ -802,7 +774,7 @@ export default function DrillPanel({ onUpload }) {
     try {
       // Sempre busca sem filtro para ter as opções de dropdown
       const resAll = await API.getMetas({ 
-        distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', subgrupo: 'all', linha: 'all',
+        distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all',
         uf: 'all', cidade: 'all'
       });
       
@@ -825,7 +797,7 @@ export default function DrillPanel({ onUpload }) {
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [fDist, fCoord, fFilial, fGrupo, fSubgrupo, fLinha, fUF, fCidade]);
+  }, [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -903,23 +875,13 @@ export default function DrillPanel({ onUpload }) {
   const grupoOptions = useMemo(() =>
     [...new Set((rawFull?.grupos || []).map(g => g.nome))].sort(), [rawFull]);
 
-  const subgrupoOptions = useMemo(() => {
-    const allSubgrupos = rawFull?.subgrupos || [];
-    const gruposSelected = fGrupo.split(',');
-    return [...new Set(allSubgrupos
-      .filter(s => fGrupo === 'all' || gruposSelected.includes(s.grupo))
-      .map(s => s.nome))].sort();
-  }, [rawFull, fGrupo]);
-
   const linhaOptions = useMemo(() => {
     const allLinhas = rawFull?.linhas || [];
     const gruposSelected = fGrupo.split(',');
-    const subgruposSelected = fSubgrupo.split(',');
     return [...new Set(allLinhas
       .filter(l => fGrupo === 'all' || gruposSelected.includes(l.grupo))
-      .filter(l => fSubgrupo === 'all' || subgruposSelected.includes(l.subgrupo))
       .map(l => l.nome))].sort();
-  }, [rawFull, fGrupo, fSubgrupo]);
+  }, [rawFull, fGrupo]);
 
   const t = data?.filtered_total || data?.total || {};
   const labelAtual    = data?.label_mes_atual || 'Jul/26';
@@ -930,7 +892,6 @@ export default function DrillPanel({ onUpload }) {
   const coordenadores = data?.coordenadores || [];
   const filiais       = data?.filiais || [];
   const grupos        = data?.grupos || [];
-  const subgrupos     = data?.subgrupos || [];
   const linhas        = data?.linhas || [];
 
   const chartItems = useMemo(() => {
@@ -1013,13 +974,9 @@ export default function DrillPanel({ onUpload }) {
     } else {
       if (fGrupo === 'all') {
         rawList = grupos;
-      } else if (fSubgrupo === 'all') {
-        const gruposSelected = fGrupo.split(',');
-        rawList = subgrupos.filter(s => gruposSelected.includes(s.grupo));
       } else {
         const gruposSelected = fGrupo.split(',');
-        const subgruposSelected = fSubgrupo.split(',');
-        rawList = linhas.filter(l => gruposSelected.includes(l.grupo) && subgruposSelected.includes(l.subgrupo));
+        rawList = linhas.filter(l => gruposSelected.includes(l.grupo));
       }
     }
 
@@ -1046,7 +1003,7 @@ export default function DrillPanel({ onUpload }) {
     return items
       .sort((a, b) => b.venda - a.venda)
       .slice(0, 15);
-  }, [activeTab, distritais, coordenadores, filiais, grupos, subgrupos, linhas, fDist, fCoord, fGrupo, fSubgrupo, fUF, fCidade, getMetrics, viewMode]);
+  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo, fUF, fCidade, getMetrics, viewMode]);
 
   const handleChartClick = useCallback((state) => {
     if (!state || !state.activePayload || state.activePayload.length === 0) return;
@@ -1078,16 +1035,12 @@ export default function DrillPanel({ onUpload }) {
     } else {
       if (fGrupo === 'all') {
         setFGrupo(nome);
-        setFSubgrupo('all');
-        setFLinha('all');
-      } else if (fSubgrupo === 'all') {
-        setFSubgrupo(nome);
         setFLinha('all');
       } else if (fLinha === 'all') {
         setFLinha(nome);
       }
     }
-  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fSubgrupo, fLinha, fUF, fCidade]);
+  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
 
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
@@ -1387,14 +1340,7 @@ export default function DrillPanel({ onUpload }) {
               label="Grupo"
               value={fGrupo}
               options={grupoOptions}
-              onChange={v => { setFGrupo(v); setFSubgrupo('all'); setFLinha('all'); }}
-            />
-            <FilterSelect
-              label="Subgrupo"
-              value={fSubgrupo}
-              options={subgrupoOptions}
-              disabled={subgrupoOptions.length === 0}
-              onChange={v => { setFSubgrupo(v); setFLinha('all'); }}
+              onChange={v => { setFGrupo(v); setFLinha('all'); }}
             />
             <FilterSelect
               label="Linha"
@@ -1405,7 +1351,7 @@ export default function DrillPanel({ onUpload }) {
             />
             {hasFilter && (
               <button
-                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFSubgrupo('all'); setFLinha('all'); setFUF('all'); setFCidade('all'); }}
+                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); setFUF('all'); setFCidade('all'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
@@ -1426,7 +1372,6 @@ export default function DrillPanel({ onUpload }) {
                 {fUF !== 'all' && <span style={chip}>{fUF}</span>}
                 {fCidade !== 'all' && <span style={chip}>{fCidade}</span>}
                 {fGrupo !== 'all' && <span style={chip}>{fGrupo}</span>}
-                {fSubgrupo !== 'all' && <span style={chip}>{fSubgrupo}</span>}
                 {fLinha !== 'all' && <span style={chip}>{fLinha}</span>}
               </div>
             )}
@@ -1843,7 +1788,6 @@ export default function DrillPanel({ onUpload }) {
                     ) : (
                       <CatTable 
                         grupos={grupos} 
-                        subgrupos={subgrupos} 
                         linhas={linhas} 
                         labelAtualAno={labelAtualAno} 
                         searchTerm={searchTerm} 
