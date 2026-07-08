@@ -1746,12 +1746,43 @@ export default function DrillPanel({ onUpload }) {
                 </span>
               </div>
             )}
-            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-              <div style={{ width: '100%', minWidth: 640, height: 210 }}>
+            <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+              {/* Indicador de rolagem lateral quando há muitas barras */}
+              {(viewMode === 'cup' || viewMode === 'tm') && chartItems.length > 12 && (
+                <div style={{ textAlign: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 4, userSelect: 'none' }}>
+                  ← role para ver todas as {chartItems.length} linhas →
+                </div>
+              )}
+              <div style={{
+                // Largura dinâmica: 64px por barra em cup/tm (muitas linhas), mínimo 640
+                width: (viewMode === 'cup' || viewMode === 'tm')
+                  ? Math.max(640, chartItems.length * 64)
+                  : '100%',
+                minWidth: 640,
+                height: 230,
+              }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
+                  <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: (viewMode === 'cup' || viewMode === 'tm') && chartItems.length > 10 ? 60 : 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#64748b" interval={0} tickLine={false} />
+                    <XAxis
+                      dataKey="name"
+                      tick={(viewMode === 'cup' || viewMode === 'tm') && chartItems.length > 10
+                        ? ({ x, y, payload }) => (
+                            <g transform={`translate(${x},${y})`}>
+                              <text
+                                x={0} y={0} dy={4}
+                                textAnchor="end"
+                                transform="rotate(-38)"
+                                style={{ fontSize: 9, fill: '#64748b' }}
+                              >
+                                {payload.value}
+                              </text>
+                            </g>
+                          )
+                        : { fontSize: 9 }
+                      }
+                      stroke="#64748b" interval={0} tickLine={false}
+                    />
                     <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => {
                       if (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') return `${v.toFixed(0)}%`;
                       if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
