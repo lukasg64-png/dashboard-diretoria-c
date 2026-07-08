@@ -503,7 +503,9 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       const { color } = getMarkerProperties(f);
       const mv = getActiveMetricValues(f);
       
-      const radius = Math.max(6, Math.min(22, Math.sqrt(mv.v26) * (viewMode === 'cup' ? 0.3 : viewMode === 'tm' ? 2.0 : 0.022)));
+      // O raio da bola no mapa sempre representa o volume de vendas (f.venda_jul26) para fins de consistência e proporção visual das lojas,
+      // enquanto a cor indica a performance na perspectiva ativa.
+      const radius = Math.max(5, Math.min(20, Math.sqrt(f.venda_jul26 || 0) * 0.020));
       const desvioParcial = f.meta_parcial ? ((f.venda_jul26 / f.meta_parcial) - 1) * 100 : 0;
 
       const marker = window.L.circleMarker([lat, lng], {
