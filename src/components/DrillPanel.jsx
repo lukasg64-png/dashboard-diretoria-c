@@ -420,7 +420,6 @@ function HRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, view
   );
 }
 
-// ── Linha de Grupo/Linha (aba Categorias) ───────────────────────────────────
 function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, viewMode, getMetrics }) {
   const bgRow = depth === 0 ? 'rgba(15,32,80,0.04)' : 'transparent';
   const m = getMetrics(row);
@@ -447,9 +446,9 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, vi
             <span style={{ width: 18, display: 'inline-block', flexShrink: 0 }} />
           )}
           <span style={{
-            fontSize: depth === 0 ? 13 : 12,
-            fontWeight: depth === 0 ? 700 : 400,
-            color: depth === 0 ? '#0f2050' : '#475569',
+            fontSize: depth === 0 ? 13 : depth === 1 ? 12.5 : 12,
+            fontWeight: depth === 0 ? 700 : depth === 1 ? 600 : 400,
+            color: depth === 0 ? '#0f2050' : depth === 1 ? '#1e293b' : '#64748b',
           }}>
             {row.nome}
           </span>
@@ -581,10 +580,14 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics }) {
+function CatTable({ grupos, subgrupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
-  const tog = key =>
+  const [openSubgrupo, setOpenSubgrupo] = useState(new Set());
+  
+  const togG = key =>
     setOpenGrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  const togS = key =>
+    setOpenSubgrupo(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const matches = (name) => !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -592,15 +595,20 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
   useEffect(() => {
     if (searchTerm) {
       const gruposToOpen = new Set();
-      grupos.forEach(g => {
-        const ls = linhas.filter(l => l.grupo === g.nome);
-        if (ls.some(l => matches(l.nome))) {
-          gruposToOpen.add(g.nome);
+      const subgruposToOpen = new Set();
+      subgrupos.forEach(s => {
+        const ls = linhas.filter(l => l.grupo === s.grupo && l.subgrupo === s.nome);
+        if (ls.some(l => matches(l.nome)) || matches(s.nome)) {
+          gruposToOpen.add(s.grupo);
+          if (ls.some(l => matches(l.nome))) {
+            subgruposToOpen.add(`${s.grupo}||${s.nome}`);
+          }
         }
       });
       setOpenGrupo(gruposToOpen);
+      setOpenSubgrupo(subgruposToOpen);
     }
-  }, [searchTerm, grupos, linhas]);
+  }, [searchTerm, grupos, subgrupos, linhas]);
 
   const getValForSorting = (item) => {
     if (viewMode === 'venda') return item.venda_jul26 || 0;
@@ -611,34 +619,50 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
   const sortedGrupos = [...grupos]
     .filter(g => {
       if (matches(g.nome)) return true;
-      const ls = linhas.filter(l => l.grupo === g.nome);
-      return ls.some(l => matches(l.nome));
+      return subgrupos.some(s => s.grupo === g.nome && (matches(s.nome) || linhas.some(l => l.grupo === g.nome && l.subgrupo === s.nome && matches(l.nome))));
     })
     .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
   const rows = [];
 
   sortedGrupos.forEach(grupo => {
-    const isOpen = openGrupo.has(grupo.nome);
-    const grupoLinhas = linhas
-      .filter(l => l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome)
-      .filter(l => matches(l.nome) || matches(grupo.nome))
+    const isOpenG = openGrupo.has(grupo.nome);
+    const grupoSubgrupos = subgrupos
+      .filter(s => s.grupo === grupo.nomeOriginal || s.grupo === grupo.nome)
+      .filter(s => matches(s.nome) || matches(grupo.nome) || linhas.some(l => l.grupo === grupo.nome && l.subgrupo === s.nome && matches(l.nome)))
       .sort((a, b) => getValForSorting(b) - getValForSorting(a));
 
     rows.push(
-      <CatRow key={`g-${grupo.nome}`} row={grupo} depth={0} expanded={isOpen}
-        hasChildren={grupoLinhas.length > 0} onToggle={() => tog(grupo.nome)}
+      <CatRow key={`g-${grupo.nome}`} row={grupo} depth={0} expanded={isOpenG}
+        hasChildren={grupoSubgrupos.length > 0} onToggle={() => togG(grupo.nome)}
         labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
     );
 
-    if (isOpen) {
-      grupoLinhas.forEach(linha =>
+    if (isOpenG) {
+      grupoSubgrupos.forEach(subgrupo => {
+        const subgKey = `${grupo.nome}||${subgrupo.nome}`;
+        const isOpenS = openSubgrupo.has(subgKey);
+        const subgrupoLinhas = linhas
+          .filter(l => (l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome) && (l.subgrupo === subgrupo.nomeOriginal || l.subgrupo === subgrupo.nome))
+          .filter(l => matches(l.nome) || matches(subgrupo.nome) || matches(grupo.nome))
+          .sort((a, b) => getValForSorting(b) - getValForSorting(a));
+
         rows.push(
-          <CatRow key={`l-${grupo.nome}-${linha.nome}`} row={linha} depth={1}
-            expanded={false} hasChildren={false} onToggle={null}
+          <CatRow key={`s-${subgKey}`} row={subgrupo} depth={1} expanded={isOpenS}
+            hasChildren={subgrupoLinhas.length > 0} onToggle={() => togS(subgKey)}
             labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
-        )
-      );
+        );
+
+        if (isOpenS) {
+          subgrupoLinhas.forEach(linha =>
+            rows.push(
+              <CatRow key={`l-${subgKey}-${linha.nome}`} row={linha} depth={2}
+                expanded={false} hasChildren={false} onToggle={null}
+                labelAtualAno={labelAtualAno} viewMode={viewMode} getMetrics={getMetrics} />
+            )
+          );
+        }
+      });
     }
   });
 
@@ -743,18 +767,20 @@ export default function DrillPanel({ onUpload }) {
   const [fCoord, setFCoord] = useState('all');
   const [fFilial, setFFilial] = useState('all');
   const [fGrupo, setFGrupo] = useState('all');
+  const [fSubgrupo, setFSubgrupo] = useState('all');
   const [fLinha, setFLinha] = useState('all');
   const [fUF, setFUF] = useState('all');
   const [fCidade, setFCidade] = useState('all');
 
-  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all' || fUF !== 'all' || fCidade !== 'all';
-  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade].filter(f => f !== 'all').length;
+  const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fSubgrupo !== 'all' || fLinha !== 'all' || fUF !== 'all' || fCidade !== 'all';
+  const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fSubgrupo, fLinha, fUF, fCidade].filter(f => f !== 'all').length;
 
   const filters = { 
     distrital: fDist, 
     coordenador: fCoord, 
     filial: fFilial, 
     grupo: fGrupo, 
+    subgrupo: fSubgrupo,
     linha: fLinha,
     uf: fUF,
     cidade: fCidade
@@ -776,7 +802,7 @@ export default function DrillPanel({ onUpload }) {
     try {
       // Sempre busca sem filtro para ter as opções de dropdown
       const resAll = await API.getMetas({ 
-        distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all',
+        distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', subgrupo: 'all', linha: 'all',
         uf: 'all', cidade: 'all'
       });
       
@@ -799,7 +825,7 @@ export default function DrillPanel({ onUpload }) {
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
+  }, [fDist, fCoord, fFilial, fGrupo, fSubgrupo, fLinha, fUF, fCidade]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -877,13 +903,23 @@ export default function DrillPanel({ onUpload }) {
   const grupoOptions = useMemo(() =>
     [...new Set((rawFull?.grupos || []).map(g => g.nome))].sort(), [rawFull]);
 
+  const subgrupoOptions = useMemo(() => {
+    const allSubgrupos = rawFull?.subgrupos || [];
+    const gruposSelected = fGrupo.split(',');
+    return [...new Set(allSubgrupos
+      .filter(s => fGrupo === 'all' || gruposSelected.includes(s.grupo))
+      .map(s => s.nome))].sort();
+  }, [rawFull, fGrupo]);
+
   const linhaOptions = useMemo(() => {
     const allLinhas = rawFull?.linhas || [];
     const gruposSelected = fGrupo.split(',');
+    const subgruposSelected = fSubgrupo.split(',');
     return [...new Set(allLinhas
       .filter(l => fGrupo === 'all' || gruposSelected.includes(l.grupo))
+      .filter(l => fSubgrupo === 'all' || subgruposSelected.includes(l.subgrupo))
       .map(l => l.nome))].sort();
-  }, [rawFull, fGrupo]);
+  }, [rawFull, fGrupo, fSubgrupo]);
 
   const t = data?.filtered_total || data?.total || {};
   const labelAtual    = data?.label_mes_atual || 'Jul/26';
@@ -894,6 +930,7 @@ export default function DrillPanel({ onUpload }) {
   const coordenadores = data?.coordenadores || [];
   const filiais       = data?.filiais || [];
   const grupos        = data?.grupos || [];
+  const subgrupos     = data?.subgrupos || [];
   const linhas        = data?.linhas || [];
 
   const chartItems = useMemo(() => {
@@ -915,11 +952,11 @@ export default function DrillPanel({ onUpload }) {
         filiais.forEach(f => {
           const uf = f.uf || 'N/I';
           if (!ufMap[uf]) {
-            ufMap[uf] = { nome: uf, mt: 0, mp: 0, venda_jul26: 0, venda_jul25: 0, venda_jun26: 0, base_emp_jul26: 0, base_emp_jul25: 0, cupons_jul26: 0, cupons_jul25: 0, cupons_jun26: 0 };
+            ufMap[uf] = { nome: uf, meta_total: 0, meta_parcial: 0, venda_jul26: 0, venda_jul25: 0, venda_jun26: 0, base_emp_jul26: 0, base_emp_jul25: 0, cupons_jul26: 0, cupons_jul25: 0, cupons_jun26: 0 };
           }
           const u = ufMap[uf];
-          u.mt += f.meta_total || 0;
-          u.mp += f.meta_parcial || 0;
+          u.meta_total += f.meta_total || 0;
+          u.meta_parcial += f.meta_parcial || 0;
           u.venda_jul26 += f.venda_jul26 || 0;
           u.venda_jul25 += f.venda_jul25 || 0;
           u.venda_jun26 += f.venda_jun26 || 0;
@@ -945,11 +982,11 @@ export default function DrillPanel({ onUpload }) {
         filiaisUf.forEach(f => {
           const cid = f.municipio || 'Não Informado';
           if (!cidMap[cid]) {
-            cidMap[cid] = { nome: cid, mt: 0, mp: 0, venda_jul26: 0, venda_jul25: 0, venda_jun26: 0, base_emp_jul26: 0, base_emp_jul25: 0, cupons_jul26: 0, cupons_jul25: 0, cupons_jun26: 0 };
+            cidMap[cid] = { nome: cid, meta_total: 0, meta_parcial: 0, venda_jul26: 0, venda_jul25: 0, venda_jun26: 0, base_emp_jul26: 0, base_emp_jul25: 0, cupons_jul26: 0, cupons_jul25: 0, cupons_jun26: 0 };
           }
           const c = cidMap[cid];
-          c.mt += f.meta_total || 0;
-          c.mp += f.meta_parcial || 0;
+          c.meta_total += f.meta_total || 0;
+          c.meta_parcial += f.meta_parcial || 0;
           c.venda_jul26 += f.venda_jul26 || 0;
           c.venda_jul25 += f.venda_jul25 || 0;
           c.venda_jun26 += f.venda_jun26 || 0;
@@ -976,9 +1013,13 @@ export default function DrillPanel({ onUpload }) {
     } else {
       if (fGrupo === 'all') {
         rawList = grupos;
+      } else if (fSubgrupo === 'all') {
+        const gruposSelected = fGrupo.split(',');
+        rawList = subgrupos.filter(s => gruposSelected.includes(s.grupo));
       } else {
         const gruposSelected = fGrupo.split(',');
-        rawList = linhas.filter(l => gruposSelected.includes(l.grupo));
+        const subgruposSelected = fSubgrupo.split(',');
+        rawList = linhas.filter(l => gruposSelected.includes(l.grupo) && subgruposSelected.includes(l.subgrupo));
       }
     }
 
@@ -1005,7 +1046,7 @@ export default function DrillPanel({ onUpload }) {
     return items
       .sort((a, b) => b.venda - a.venda)
       .slice(0, 15);
-  }, [activeTab, distritais, coordenadores, filiais, grupos, linhas, fDist, fCoord, fGrupo, fUF, fCidade, getMetrics, viewMode]);
+  }, [activeTab, distritais, coordenadores, filiais, grupos, subgrupos, linhas, fDist, fCoord, fGrupo, fSubgrupo, fUF, fCidade, getMetrics, viewMode]);
 
   const handleChartClick = useCallback((state) => {
     if (!state || !state.activePayload || state.activePayload.length === 0) return;
@@ -1037,12 +1078,16 @@ export default function DrillPanel({ onUpload }) {
     } else {
       if (fGrupo === 'all') {
         setFGrupo(nome);
+        setFSubgrupo('all');
+        setFLinha('all');
+      } else if (fSubgrupo === 'all') {
+        setFSubgrupo(nome);
         setFLinha('all');
       } else if (fLinha === 'all') {
         setFLinha(nome);
       }
     }
-  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
+  }, [activeTab, fDist, fCoord, fFilial, fGrupo, fSubgrupo, fLinha, fUF, fCidade]);
 
   const tDesvio   = desvioAbs(t.venda_jul26, t.meta_parcial);
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
@@ -1342,7 +1387,14 @@ export default function DrillPanel({ onUpload }) {
               label="Grupo"
               value={fGrupo}
               options={grupoOptions}
-              onChange={v => { setFGrupo(v); setFLinha('all'); }}
+              onChange={v => { setFGrupo(v); setFSubgrupo('all'); setFLinha('all'); }}
+            />
+            <FilterSelect
+              label="Subgrupo"
+              value={fSubgrupo}
+              options={subgrupoOptions}
+              disabled={subgrupoOptions.length === 0}
+              onChange={v => { setFSubgrupo(v); setFLinha('all'); }}
             />
             <FilterSelect
               label="Linha"
@@ -1353,7 +1405,7 @@ export default function DrillPanel({ onUpload }) {
             />
             {hasFilter && (
               <button
-                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFLinha('all'); setFUF('all'); setFCidade('all'); }}
+                onClick={() => { setFDist('all'); setFCoord('all'); setFFilial('all'); setFGrupo('all'); setFSubgrupo('all'); setFLinha('all'); setFUF('all'); setFCidade('all'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
@@ -1374,6 +1426,7 @@ export default function DrillPanel({ onUpload }) {
                 {fUF !== 'all' && <span style={chip}>{fUF}</span>}
                 {fCidade !== 'all' && <span style={chip}>{fCidade}</span>}
                 {fGrupo !== 'all' && <span style={chip}>{fGrupo}</span>}
+                {fSubgrupo !== 'all' && <span style={chip}>{fSubgrupo}</span>}
                 {fLinha !== 'all' && <span style={chip}>{fLinha}</span>}
               </div>
             )}
@@ -1453,7 +1506,7 @@ export default function DrillPanel({ onUpload }) {
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span>📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})</span>
+                <span>📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : activeTab === 'mapa' ? 'Geolocalização (Estados/Cidades)' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})</span>
                 {chartMetric === 'valor' && (
                   <span style={{ fontSize: 9, fontWeight: 500, color: '#64748b', textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
                     <span><span style={{ color: '#7c3aed', marginRight: 3 }}>●</span>{labelAtual}</span>
@@ -1790,6 +1843,7 @@ export default function DrillPanel({ onUpload }) {
                     ) : (
                       <CatTable 
                         grupos={grupos} 
+                        subgrupos={subgrupos} 
                         linhas={linhas} 
                         labelAtualAno={labelAtualAno} 
                         searchTerm={searchTerm} 

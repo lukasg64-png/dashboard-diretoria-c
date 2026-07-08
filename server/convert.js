@@ -7,7 +7,6 @@ const csvPath = path.join(__dirname, '..', 'base_dashboard.csv');
 
 console.log('Reading Excel file:', xlsxPath);
 const wb = XLSX.readFile(xlsxPath, {
-  sheets: ['BASE DASHBOARD'],
   dense: true,
   cellDates: false,
   cellNF: false,
@@ -15,7 +14,8 @@ const wb = XLSX.readFile(xlsxPath, {
   cellStyles: false
 });
 
-const ws = wb.Sheets['BASE DASHBOARD'];
+const sheetName = wb.SheetNames.includes('BASE DASHBOARD') ? 'BASE DASHBOARD' : wb.SheetNames[0];
+const ws = wb.Sheets[sheetName];
 console.log('Writing CSV file:', csvPath);
 
 const stream = fs.createWriteStream(csvPath, 'utf8');

@@ -38,7 +38,6 @@ function App() {
       // Ler o workbook na aba correta com opções de alta performance
       const wb = window.XLSX.read(fileData, {
         type: 'array',
-        sheets: ['BASE DASHBOARD'],
         dense: true,
         cellDates: false,
         cellNF: false,
@@ -46,9 +45,10 @@ function App() {
         cellStyles: false
       });
 
-      const ws = wb.Sheets['BASE DASHBOARD'];
+      const sheetName = wb.SheetNames.includes('BASE DASHBOARD') ? 'BASE DASHBOARD' : wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
       if (!ws) {
-        throw new Error('Aba "BASE DASHBOARD" não encontrada no arquivo Excel enviado.');
+        throw new Error('Nenhuma aba encontrada no arquivo Excel enviado.');
       }
 
       // Converter aba para CSV usando delimitador ponto e vírgula
