@@ -313,6 +313,10 @@ function aggregate(indices) {
     return map[key];
   }
 
+  // Para grupos: mapa grupoId → lista de TMs de linha (ponderados pela venda)
+  // Linha-level TMs serão calculados depois do loop principal
+  const grupoLinhaMap = {}; // grupoId → [ { v26, c26, v25, c25, jun, cJun } ]
+
   const count = indices ? indices.length : recordsCount;
   for (let idx = 0; idx < count; idx++) {
     const i = indices ? indices[idx] : idx;
@@ -408,10 +412,52 @@ function aggregate(indices) {
       obj.c26 += c26; obj.c25 += c25; obj.cJun += cJun;
       if (be26 > 0) { obj.v26_eb += v26; obj.be26_eb += be26; }
       if (be25 > 0) { obj.v25_eb += v25; obj.be25_eb += be25; }
+
+      // Registrar esta linha para cálculo de TM ponderado no grupo
+      if (grupoId !== -1) {
+        if (!grupoLinhaMap[grupoId]) grupoLinhaMap[grupoId] = [];
+        grupoLinhaMap[grupoId].push({ v26, c26, v25, c25, jun, cJun });
+      }
     }
   }
 
-  function m(v) {
+  // ── Calcular TM ponderado por grupo (média ponderada dos TMs de linha, peso = venda) ──
+  // TM_grupo = Σ(TM_linha_i × Venda_linha_i) / Σ(Venda_linha_i)
+  // onde TM_linha_i = Venda_linha_i / Cupons_linha_i  (nível atômico da base)
+  // Isso equivale a: TM_grupo = Σ(Venda_linha_i) / Σ(Cupons_linha_i)
+  // MAS calculamos via média ponderada para deixar explícito o conceito e poder exibir
+  // o TM do grupo sem depender dos cupons inflados de grupo.
+  // Na prática: TM_grupo_pond = Σ(v_i) / Σ(c_i) = venda_grupo / cupons_linha_soma
+  // A diferença: cupons_linha_soma ≤ cupons_grupo (grupo soma linhas únicas, não cross)
+  for (const [gId, entries] of Object.entries(grupoLinhaMap)) {
+    let sumV26 = 0, sumC26 = 0, sumV25 = 0, sumC25 = 0, sumJun = 0, sumCJun = 0;
+    for (const e of entries) {
+      sumV26  += e.v26;  sumC26  += e.c26;
+      sumV25  += e.v25;  sumC25  += e.c25;
+      sumJun  += e.jun;  sumCJun += e.cJun;
+    }
+    const obj = grupos[gId];
+    if (obj) {
+      // Armazenar soma de vendas e cupons por linha (sem dupla-contagem entre linhas do mesmo grupo)
+      obj.tm_v26 = sumV26; obj.tm_c26 = sumC26;
+      obj.tm_v25 = sumV25; obj.tm_c25 = sumC25;
+      obj.tm_jun = sumJun; obj.tm_cJun = sumCJun;
+    }
+  }
+
+  // TM base: v / c (sem ajuste de dupla-contagem; usado em linhas e hierarquia)
+  function tm(v26, c26) { return c26 > 0 ? round2(v26 / c26) : 0; }
+
+  function m(v, isFlatLine) {
+    // Para grupos: usar os campos tm_* calculados com soma de linhas (sem inflação)
+    // Para linhas (isFlatLine=true) e hierarquia: usar c26 diretamente (são dados brutos da linha)
+    const cup26  = isFlatLine ? v.c26  : (v.tm_c26  ?? v.c26);
+    const cup25  = isFlatLine ? v.c25  : (v.tm_c25  ?? v.c25);
+    const cupJun = isFlatLine ? v.cJun : (v.tm_cJun ?? v.cJun);
+    const vnd26  = isFlatLine ? v.v26  : (v.tm_v26  ?? v.v26);
+    const vnd25  = isFlatLine ? v.v25  : (v.tm_v25  ?? v.v25);
+    const vndJun = isFlatLine ? v.jun  : (v.tm_jun  ?? v.jun);
+
     return {
       meta_total:       round2(v.mt),
       meta_parcial:     round2(v.mp),
@@ -426,9 +472,16 @@ function aggregate(indices) {
       evol_mom:         varP(v.v26, v.jun),
       pct_ecomm_jul26:  pct(v.v26_eb, v.be26_eb),
       pct_ecomm_jul25:  pct(v.v25_eb, v.be25_eb),
+      // Cupons brutos (mostrar na tabela de linhas; nos grupos são inflados)
       cupons_jul26:     round2(v.c26),
       cupons_jul25:     round2(v.c25),
-      cupons_jun26:     round2(v.cJun)
+      cupons_jun26:     round2(v.cJun),
+      // Ticket Médio calculado com denominador correto:
+      // - linha/hierarquia: venda / cupons da própria linha (direto da base)
+      // - grupo: venda_linhas / cupons_linhas (soma das linhas, sem dupla-contagem entre linhas do grupo)
+      tm_jul26: tm(vnd26, cup26),
+      tm_jul25: tm(vnd25, cup25),
+      tm_jun26: tm(vndJun, cupJun),
     };
   }
 
@@ -465,7 +518,7 @@ function aggregate(indices) {
         return {
           nome: gStr.replace(/\(\d+\)$/, '').trim(),
           nomeOriginal: gStr,
-          ...m(v),
+          ...m(v, false), // false = grupo, usa tm_* para TM mais correto
         };
       })
       .filter(g => g.nome && g.nome.trim() !== ''),
@@ -478,7 +531,7 @@ function aggregate(indices) {
         return {
           nome: getStrVal(lId),
           grupo: gStr.replace(/\(\d+\)$/, '').trim(),
-          ...m(v),
+          ...m(v, true), // true = linha, usa c26 direto
         };
       })
       .filter(l => l.nome && l.nome.trim() !== ''),

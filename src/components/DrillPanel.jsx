@@ -773,6 +773,10 @@ export default function DrillPanel({ onUpload }) {
         fmt: fmtInteger
       };
     } else {
+      // Ticket Médio: preferir campo pré-calculado pelo servidor (grupos: TM corrigido sem dupla-contagem)
+      // Para hierarquia/filiais que não têm tm_*, calcular na hora (venda / cupons)
+      const hasTmField = item.tm_jul26 != null;
+
       const v26 = item.venda_jul26 || 0;
       const c26 = item.cupons_jul26 || 0;
       const v25 = item.venda_jul25 || 0;
@@ -780,9 +784,9 @@ export default function DrillPanel({ onUpload }) {
       const vJun = item.venda_jun26 || 0;
       const cJun = item.cupons_jun26 || 0;
 
-      const tm26 = c26 ? v26 / c26 : 0;
-      const tm25 = c25 ? v25 / c25 : 0;
-      const tmJun = cJun ? vJun / cJun : 0;
+      const tm26  = hasTmField ? (item.tm_jul26  || 0) : (c26  ? v26  / c26  : 0);
+      const tm25  = hasTmField ? (item.tm_jul25  || 0) : (c25  ? v25  / c25  : 0);
+      const tmJun = hasTmField ? (item.tm_jun26  || 0) : (cJun ? vJun / cJun : 0);
 
       return {
         val26: tm26,
@@ -1261,6 +1265,8 @@ export default function DrillPanel({ onUpload }) {
       ];
     } else {
       // viewMode === 'tm'
+      const hasTm = t.tm_jul26 != null;
+
       const v26 = t.venda_jul26 || 0;
       const c26 = t.cupons_jul26 || 0;
       const v25 = t.venda_jul25 || 0;
@@ -1268,9 +1274,9 @@ export default function DrillPanel({ onUpload }) {
       const vJun = t.venda_jun26 || 0;
       const cJun = t.cupons_jun26 || 0;
 
-      const tm26 = c26 ? v26 / c26 : 0;
-      const tm25 = c25 ? v25 / c25 : 0;
-      const tmJun = cJun ? vJun / cJun : 0;
+      const tm26  = hasTm ? (t.tm_jul26  || 0) : (c26  ? v26  / c26  : 0);
+      const tm25  = hasTm ? (t.tm_jul25  || 0) : (c25  ? v25  / c25  : 0);
+      const tmJun = hasTm ? (t.tm_jun26  || 0) : (cJun ? vJun / cJun : 0);
 
       const yoy = tm25 ? ((tm26 - tm25) / tm25) * 100 : 0;
       const mom = tmJun ? ((tm26 - tmJun) / tmJun) * 100 : 0;
