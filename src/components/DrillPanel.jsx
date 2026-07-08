@@ -1145,7 +1145,16 @@ export default function DrillPanel({ onUpload }) {
         rawList = filiais.filter(f => ufsSelected.includes(f.uf) && cidadesSelected.includes(f.municipio));
       }
     } else {
-      if (fGrupo === 'all') {
+      // Em cup/tm: usar sempre linhas (dados atômicos, sem dupla-contagem de grupos)
+      // Em venda com grupo selecionado: usar linhas do grupo
+      // Em venda sem filtro: usar grupos
+      if (viewMode === 'cup' || viewMode === 'tm') {
+        // Sempre linhas em cup/tm (evita cupons inflados nos grupos)
+        const gruposSelected = fGrupo !== 'all' ? fGrupo.split(',') : null;
+        rawList = gruposSelected
+          ? linhas.filter(l => gruposSelected.includes(l.grupo))
+          : linhas;
+      } else if (fGrupo === 'all') {
         rawList = grupos;
       } else {
         const gruposSelected = fGrupo.split(',');
@@ -1153,13 +1162,19 @@ export default function DrillPanel({ onUpload }) {
       }
     }
 
+    const isFlatCupTm = (viewMode === 'cup' || viewMode === 'tm') && activeTab === 'categorias';
+
     const items = rawList.map(item => {
       const m = getMetrics(item);
       const part26 = item.pct_ecomm_jul26 != null ? item.pct_ecomm_jul26 : 0;
       const part25 = item.pct_ecomm_jul25 != null ? item.pct_ecomm_jul25 : 0;
       const diffPP = (item.pct_ecomm_jul26 != null && item.pct_ecomm_jul25 != null) ? (item.pct_ecomm_jul26 - item.pct_ecomm_jul25) : 0;
+      // Em modo flat cup/tm: mostrar grupo como prefixo para identificar a linha no gráfico
+      const displayName = isFlatCupTm && item.grupo
+        ? `${item.grupo.substring(0, 8)}… ${item.nome}`
+        : item.nome;
       return {
-        name: item.nome.length > 18 ? item.nome.substring(0, 16) + '…' : item.nome,
+        name: displayName.length > 20 ? displayName.substring(0, 18) + '…' : displayName,
         nomeOriginal: item.nome,
         venda: m.val26,
         venda_ant: m.val25,
@@ -1641,7 +1656,7 @@ export default function DrillPanel({ onUpload }) {
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span>📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : activeTab === 'mapa' ? 'Geolocalização (Estados/Cidades)' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})</span>
+                <span>📊 Análise Gráfica — {activeTab === 'hierarquia' ? 'Estrutura Organizacional' : activeTab === 'mapa' ? 'Geolocalização (Estados/Cidades)' : (viewMode === 'cup' || viewMode === 'tm') ? 'Linhas de Produto' : 'Categorias & Linhas'} (Top 15 por {viewMode === 'venda' ? 'Venda' : viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'})</span>
                 {chartMetric === 'valor' && (
                   <span style={{ fontSize: 9, fontWeight: 500, color: '#64748b', textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 4 }}>
                     <span><span style={{ color: '#7c3aed', marginRight: 3 }}>●</span>{labelAtual}</span>
