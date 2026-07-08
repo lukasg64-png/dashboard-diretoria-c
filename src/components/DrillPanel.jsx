@@ -741,6 +741,13 @@ export default function DrillPanel({ onUpload }) {
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('venda'); // venda, cup, tm
 
+  // Quando muda para cup/tm, hierarquia não faz sentido → redirecionar para categorias
+  useEffect(() => {
+    if ((viewMode === 'cup' || viewMode === 'tm') && activeTab === 'hierarquia') {
+      setActiveTab('categorias');
+    }
+  }, [viewMode, activeTab]);
+
   const getMetrics = useCallback((item) => {
     if (!item) return { val26: 0, val25: 0, valJun: 0, yoy: 0, mom: 0, fmt: (v) => '0' };
     
@@ -1798,19 +1805,28 @@ export default function DrillPanel({ onUpload }) {
               { key: 'hierarquia', label: 'Hierarquia — Distrital · Coord. · Filial' },
               { key: 'categorias', label: 'Grupos / Categorias → Linhas' },
               { key: 'mapa', label: '🗺️ Mapa de Vendas & Metas' },
-            ].map(tab => (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-                padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                background: activeTab === tab.key ? '#fff' : 'rgba(255,255,255,0.5)',
-                border: '1px solid #e2e8f0',
-                borderBottom: activeTab === tab.key ? '1px solid #fff' : '1px solid #e2e8f0',
-                borderRadius: '6px 6px 0 0',
-                color: activeTab === tab.key ? '#0f2050' : '#64748b',
-                position: 'relative', bottom: -1,
-              }}>
-                {tab.label}
-              </button>
-            ))}
+            ].map(tab => {
+              const disabledByViewMode = (viewMode === 'cup' || viewMode === 'tm') && tab.key === 'hierarquia';
+              return (
+                <button key={tab.key}
+                  onClick={() => !disabledByViewMode && setActiveTab(tab.key)}
+                  title={disabledByViewMode ? 'Colunas de Cupons e Ticket Médio não são válidas na visão hierárquica. Use a aba de Categorias.' : undefined}
+                  style={{
+                    padding: '8px 18px', fontSize: 12, fontWeight: 600,
+                    cursor: disabledByViewMode ? 'not-allowed' : 'pointer',
+                    background: activeTab === tab.key ? '#fff' : disabledByViewMode ? 'rgba(255,245,180,0.35)' : 'rgba(255,255,255,0.5)',
+                    border: disabledByViewMode ? '1px solid #fbbf24' : '1px solid #e2e8f0',
+                    borderBottom: activeTab === tab.key ? '1px solid #fff' : disabledByViewMode ? '1px solid #fbbf24' : '1px solid #e2e8f0',
+                    borderRadius: '6px 6px 0 0',
+                    color: activeTab === tab.key ? '#0f2050' : disabledByViewMode ? '#92400e' : '#64748b',
+                    position: 'relative', bottom: -1,
+                    opacity: disabledByViewMode ? 0.65 : 1,
+                  }}
+                >
+                  {tab.label}{disabledByViewMode ? ' ⚠️' : ''}
+                </button>
+              );
+            })}
           </div>
           {!showChart && (
             <button 
@@ -1843,6 +1859,29 @@ export default function DrillPanel({ onUpload }) {
         ) : (
           /* ── Tabela ── */
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+
+            {/* ── Aviso de Limitação de Dados para Cupons / Ticket Médio ── */}
+            {(viewMode === 'cup' || viewMode === 'tm') && (
+              <div style={{
+                background: '#fffbeb',
+                borderBottom: '1px solid #fcd34d',
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+              }}>
+                <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>⚠️</span>
+                <div style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+                  <strong>Limitação de dados — {viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'}:</strong>{' '}
+                  A base do QlikSense registra cupons <em>por categoria/linha de produto</em>. Um mesmo cupom pode conter itens de múltiplas categorias (ex: Dermo + Infantil + Medicamentos), portanto ao agregar Grupos o volume de cupons é superestimado e o Ticket Médio subestimado.
+                  {' '}<strong>Os dados são confiáveis apenas a nível de {' '}<em>Linha de Produto</em></strong> (expanda o grupo e veja linha por linha).
+                  {activeTab === 'hierarquia' && (
+                    <>{' '}<span style={{ color: '#b45309', fontWeight: 700 }}>A aba Hierarquia está desabilitada nesta perspectiva</span> — use a aba <strong>Grupos / Categorias</strong> e abra os grupos até nível de Linha.</>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
                 {activeTab === 'hierarquia' ? 'Desempenho E-Commerce — Hierarquia Organizacional' : 'Desempenho E-Commerce — Grupos e Linhas de Produtos'}
