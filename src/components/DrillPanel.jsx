@@ -623,7 +623,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics, sortField, sortOrder }) {
+function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics, sortField, sortOrder, flatMode }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
 
   const togG = key =>
@@ -690,6 +690,41 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
     return sortOrder === 'asc' ? cmp : -cmp;
   };
 
+  // ── Modo flat: apenas linhas (cup/tm) ──
+  if (flatMode) {
+    const filteredLinhas = linhas
+      .filter(l => !searchTerm || matches(l.nome) || matches(l.grupo))
+      .sort(sortComparator);
+
+    return <>{filteredLinhas.map(linha => {
+      const m = getMetrics(linha);
+      return (
+        <tr key={`fl-${linha.grupo}-${linha.nome}`}
+          style={{ borderBottom: '1px solid #e9eef4', background: 'transparent', transition: 'background 0.1s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', minWidth: 260 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontSize: 9, fontWeight: 700, color: '#7c3aed',
+                background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
+                borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap', flexShrink: 0,
+              }}>{linha.grupo}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1e293b' }}>{linha.nome}</span>
+            </div>
+          </td>
+          <td style={td(true)}>{m.fmt(m.val26)}</td>
+          <td style={td()}>{m.fmt(m.val25)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.yoy} /></td>
+          <td style={td()}>{m.fmt(m.valJun)}</td>
+          <td style={{ ...td(), textAlign: 'center' }}><Evol v={m.mom} /></td>
+        </tr>
+      );
+    })}</>;
+  }
+
+  // ── Modo agrupado (venda) ──
   const sortedGrupos = [...grupos]
     .filter(g => {
       if (matches(g.nome)) return true;
@@ -1521,28 +1556,43 @@ export default function DrillPanel({ onUpload }) {
 
       <div style={{ padding: '16px 24px', maxWidth: 1700, margin: '0 auto' }}>
 
-        {/* ── KPIs ── */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ padding: '6px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', textAlign: 'right' }}>
-            Período: <strong style={{ color: '#0f2050' }}>{labelAtual}</strong>
-            &nbsp;·&nbsp; vs Ano Ant.: <strong>{labelAtualAno}</strong>
-            &nbsp;·&nbsp; vs Mês Ant.: <strong>{labelAnt}</strong>
-            {hasFilter && <span style={{ marginLeft: 12, color: '#7c3aed', fontWeight: 700 }}>• Dados filtrados</span>}
+        {/* ── KPIs — apenas para venda (cup/tm têm dupla contagem no total) ── */}
+        {viewMode === 'venda' ? (
+          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+            <div style={{ padding: '6px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', textAlign: 'right' }}>
+              Período: <strong style={{ color: '#0f2050' }}>{labelAtual}</strong>
+              &nbsp;·&nbsp; vs Ano Ant.: <strong>{labelAtualAno}</strong>
+              &nbsp;·&nbsp; vs Mês Ant.: <strong>{labelAnt}</strong>
+              {hasFilter && <span style={{ marginLeft: 12, color: '#7c3aed', fontWeight: 700 }}>• Dados filtrados</span>}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+              {kpiBlocks.map((b, idx) => (
+                <KpiBlock 
+                  key={idx}
+                  label={b.label} 
+                  value={b.value} 
+                  evol={b.evol} 
+                  evolLabel={b.evolLabel}
+                  sub={b.sub}
+                  highlight={b.highlight} 
+                />
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            {kpiBlocks.map((b, idx) => (
-              <KpiBlock 
-                key={idx}
-                label={b.label} 
-                value={b.value} 
-                evol={b.evol} 
-                evolLabel={b.evolLabel}
-                sub={b.sub}
-                highlight={b.highlight} 
-              />
-            ))}
+        ) : (
+          /* cup/tm: KPIs do total geral não são confiáveis (dupla contagem de cupons) */
+          <div style={{
+            background: '#fffbeb', borderRadius: 8, border: '1px solid #fcd34d',
+            padding: '10px 18px', marginBottom: 16,
+            display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: '#92400e'
+          }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+            <span>
+              <strong>KPIs de total geral desativados para {viewMode === 'cup' ? 'Cupons' : 'Ticket Médio'}.</strong>
+              {' '}A soma total de cupons conta o mesmo cupom várias vezes (um por linha de produto). Analise os dados <strong>linha a linha</strong> na tabela abaixo.
+            </span>
           </div>
-        </div>
+        )}
 
         {/* ── Erro ── */}
         {error && (
@@ -1907,7 +1957,9 @@ export default function DrillPanel({ onUpload }) {
                 <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>
                   {activeTab === 'hierarquia'
                     ? `${distritais.length} distritais`
-                    : `${grupos.length} grupos`}
+                    : (viewMode === 'cup' || viewMode === 'tm')
+                      ? `${linhas.length} linhas`
+                      : `${grupos.length} grupos`}
                 </span>
               </div>
             </div>
@@ -1920,7 +1972,12 @@ export default function DrillPanel({ onUpload }) {
                       onClick={() => handleHeaderClick('nome')}
                       style={{ ...th('left', 200), cursor: 'pointer', userSelect: 'none' }}
                     >
-                      {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'} {sortField === 'nome' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                      {activeTab === 'hierarquia'
+                        ? 'Distrital / Coordenador / Filial'
+                        : (viewMode === 'cup' || viewMode === 'tm')
+                          ? 'Grupo • Linha'
+                          : 'Grupo / Linha'
+                      } {sortField === 'nome' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
                     </th>
                     {activeCols.map((c, i) => {
                       const field = getSortFieldFromIndex(i, viewMode);
@@ -1986,6 +2043,7 @@ export default function DrillPanel({ onUpload }) {
                         getMetrics={getMetrics}
                         sortField={sortField}
                         sortOrder={sortOrder}
+                        flatMode={viewMode === 'cup' || viewMode === 'tm'}
                       />
                     )
                   )}
