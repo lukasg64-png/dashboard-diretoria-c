@@ -469,6 +469,9 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, vi
           <td style={td()}>{fmtR(row.venda_jul25)}</td>
           <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_yoy} /></td>
           <td style={{ ...td(), textAlign: 'center' }}><Evol v={row.evol_mom} /></td>
+          <td style={{ ...td(), minWidth: 110 }}>
+            <Part pct26={row.pct_ecomm_jul26} pct25={row.pct_ecomm_jul25} labelAno={labelAtualAno} />
+          </td>
         </>
       ) : (
         <>
@@ -484,7 +487,7 @@ function CatRow({ row, depth, expanded, hasChildren, onToggle, labelAtualAno, vi
 }
 
 // ── Tabela Hierárquica ──────────────────────────────────────────────────────
-function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTerm, viewMode, getMetrics }) {
+function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTerm, viewMode, getMetrics, sortField, sortOrder }) {
   const [openDist, setOpenDist] = useState(new Set());
   const [openCoord, setOpenCoord] = useState(new Set());
   const tog = (set, setSet, key) =>
@@ -517,10 +520,50 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
     }
   }, [searchTerm, distritais, coordenadores, filiais]);
 
-  const getValForSorting = (item) => {
-    if (viewMode === 'venda') return item.venda_jul26 || 0;
-    if (viewMode === 'cup') return item.cupons_jul26 || 0;
-    return item.cupons_jul26 ? item.venda_jul26 / item.cupons_jul26 : 0;
+  const getRowSortValue = (row, field) => {
+    if (field === 'nome') {
+      return row.nome || '';
+    }
+    if (viewMode === 'venda') {
+      switch (field) {
+        case 'meta_total': return row.meta_total || 0;
+        case 'pct_meta_total': return row.pct_meta_total || 0;
+        case 'venda_jul26': return row.venda_jul26 || 0;
+        case 'meta_parcial': return row.meta_parcial || 0;
+        case 'desvio': return (row.venda_jul26 || 0) - (row.meta_parcial || 0);
+        case 'venda_jul25': return row.venda_jul25 || 0;
+        case 'evol_yoy': return row.evol_yoy || 0;
+        case 'evol_mom': return row.evol_mom || 0;
+        case 'part_digital': return row.pct_ecomm_jul26 || 0;
+        default: return 0;
+      }
+    } else {
+      const m = getMetrics(row);
+      switch (field) {
+        case 'val26': return m.val26 || 0;
+        case 'val25': return m.val25 || 0;
+        case 'yoy': return m.yoy || 0;
+        case 'valJun': return m.valJun || 0;
+        case 'mom': return m.mom || 0;
+        default: return 0;
+      }
+    }
+  };
+
+  const sortComparator = (a, b) => {
+    const va = getRowSortValue(a, sortField);
+    const vb = getRowSortValue(b, sortField);
+    if (va === vb) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    
+    let cmp;
+    if (typeof va === 'string') {
+      cmp = va.localeCompare(vb);
+    } else {
+      cmp = va - vb;
+    }
+    return sortOrder === 'asc' ? cmp : -cmp;
   };
 
   const sorted = [...distritais]
@@ -529,7 +572,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
       const cs = coordenadores.filter(c => c.distrital === d.nome);
       return cs.some(c => matches(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matches(f.nome)));
     })
-    .sort((a, b) => getValForSorting(b) - getValForSorting(a));
+    .sort(sortComparator);
 
   const rows = [];
 
@@ -542,7 +585,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
         const fils = filiais.filter(f => f.coordenador === c.nome);
         return fils.some(f => matches(f.nome));
       })
-      .sort((a, b) => getValForSorting(b) - getValForSorting(a));
+      .sort(sortComparator);
 
     rows.push(
       <HRow key={`d-${dist.nome}`} row={dist} depth={0} expanded={isDistOpen}
@@ -556,7 +599,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
         const fils = filiais
           .filter(f => f.coordenador === coord.nome)
           .filter(f => matches(f.nome) || matches(coord.nome) || matches(dist.nome))
-          .sort((a, b) => getValForSorting(b) - getValForSorting(a));
+          .sort(sortComparator);
 
         rows.push(
           <HRow key={`c-${coord.nome}`} row={coord} depth={1} expanded={isCoordOpen}
@@ -580,7 +623,7 @@ function HierTable({ distritais, coordenadores, filiais, labelAtualAno, searchTe
 }
 
 // ── Tabela Grupos → Linhas ──────────────────────────────────────────────────
-function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics }) {
+function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetrics, sortField, sortOrder }) {
   const [openGrupo, setOpenGrupo] = useState(new Set());
 
   const togG = key =>
@@ -601,10 +644,50 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
     }
   }, [searchTerm, grupos, linhas]);
 
-  const getValForSorting = (item) => {
-    if (viewMode === 'venda') return item.venda_jul26 || 0;
-    if (viewMode === 'cup') return item.cupons_jul26 || 0;
-    return item.cupons_jul26 ? item.venda_jul26 / item.cupons_jul26 : 0;
+  const getRowSortValue = (row, field) => {
+    if (field === 'nome') {
+      return row.nome || '';
+    }
+    if (viewMode === 'venda') {
+      switch (field) {
+        case 'meta_total': return row.meta_total || 0;
+        case 'pct_meta_total': return row.pct_meta_total || 0;
+        case 'venda_jul26': return row.venda_jul26 || 0;
+        case 'meta_parcial': return row.meta_parcial || 0;
+        case 'desvio': return (row.venda_jul26 || 0) - (row.meta_parcial || 0);
+        case 'venda_jul25': return row.venda_jul25 || 0;
+        case 'evol_yoy': return row.evol_yoy || 0;
+        case 'evol_mom': return row.evol_mom || 0;
+        case 'part_digital': return row.pct_ecomm_jul26 || 0;
+        default: return 0;
+      }
+    } else {
+      const m = getMetrics(row);
+      switch (field) {
+        case 'val26': return m.val26 || 0;
+        case 'val25': return m.val25 || 0;
+        case 'yoy': return m.yoy || 0;
+        case 'valJun': return m.valJun || 0;
+        case 'mom': return m.mom || 0;
+        default: return 0;
+      }
+    }
+  };
+
+  const sortComparator = (a, b) => {
+    const va = getRowSortValue(a, sortField);
+    const vb = getRowSortValue(b, sortField);
+    if (va === vb) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    
+    let cmp;
+    if (typeof va === 'string') {
+      cmp = va.localeCompare(vb);
+    } else {
+      cmp = va - vb;
+    }
+    return sortOrder === 'asc' ? cmp : -cmp;
   };
 
   const sortedGrupos = [...grupos]
@@ -612,7 +695,7 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
       if (matches(g.nome)) return true;
       return linhas.some(l => (l.grupo === g.nomeOriginal || l.grupo === g.nome) && matches(l.nome));
     })
-    .sort((a, b) => getValForSorting(b) - getValForSorting(a));
+    .sort(sortComparator);
 
   const rows = [];
 
@@ -621,7 +704,7 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
     const grupoLinhas = linhas
       .filter(l => l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome)
       .filter(l => matches(l.nome) || matches(grupo.nome))
-      .sort((a, b) => getValForSorting(b) - getValForSorting(a));
+      .sort(sortComparator);
 
     rows.push(
       <CatRow key={`g-${grupo.nome}`} row={grupo} depth={0} expanded={isOpenG}
@@ -744,6 +827,50 @@ export default function DrillPanel({ onUpload }) {
   const [fLinha, setFLinha] = useState('all');
   const [fUF, setFUF] = useState('all');
   const [fCidade, setFCidade] = useState('all');
+
+  // Ordenação
+  const [sortField, setSortField] = useState(viewMode === 'venda' ? 'venda_jul26' : 'val26');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const handleHeaderClick = (field) => {
+    if (sortField === field) {
+      setSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const getSortFieldFromIndex = (index, viewMode) => {
+    if (viewMode === 'venda') {
+      const fields = [
+        'meta_total',
+        'pct_meta_total',
+        'venda_jul26',
+        'meta_parcial',
+        'desvio',
+        'venda_jul25',
+        'evol_yoy',
+        'evol_mom',
+        'part_digital'
+      ];
+      return fields[index];
+    } else {
+      const fields = [
+        'val26',
+        'val25',
+        'yoy',
+        'valJun',
+        'mom'
+      ];
+      return fields[index];
+    }
+  };
+
+  useEffect(() => {
+    setSortField(viewMode === 'venda' ? 'venda_jul26' : 'val26');
+    setSortOrder('desc');
+  }, [viewMode]);
 
   const hasFilter = fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all' || fGrupo !== 'all' || fLinha !== 'all' || fUF !== 'all' || fCidade !== 'all';
   const activeFiltersCount = [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade].filter(f => f !== 'all').length;
@@ -1743,15 +1870,32 @@ export default function DrillPanel({ onUpload }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={th('left', 200)}>
-                      {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'}
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontWeight: 700 }}>
+                    <th 
+                      onClick={() => handleHeaderClick('nome')}
+                      style={{ ...th('left', 200), cursor: 'pointer', userSelect: 'none' }}
+                    >
+                      {activeTab === 'hierarquia' ? 'Distrital / Coordenador / Filial' : 'Grupo / Linha'} {sortField === 'nome' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
                     </th>
-                    {activeCols.map((c, i) => (
-                      <th key={i} style={th('right')}>
-                        {c.split('\n').map((l, j) => <div key={j} style={{ lineHeight: 1.3 }}>{l}</div>)}
-                      </th>
-                    ))}
+                    {activeCols.map((c, i) => {
+                      const field = getSortFieldFromIndex(i, viewMode);
+                      return (
+                        <th 
+                          key={i} 
+                          onClick={() => handleHeaderClick(field)}
+                          style={{ ...th('right'), cursor: 'pointer', userSelect: 'none' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                            <div>
+                              {c.split('\n').map((l, j) => <div key={j} style={{ lineHeight: 1.3 }}>{l}</div>)}
+                            </div>
+                            <span>
+                              {sortField === field ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                            </span>
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
 
@@ -1780,6 +1924,8 @@ export default function DrillPanel({ onUpload }) {
                         searchTerm={searchTerm}
                         viewMode={viewMode}
                         getMetrics={getMetrics}
+                        sortField={sortField}
+                        sortOrder={sortOrder}
                       />
                     )
                   ) : (
@@ -1793,6 +1939,8 @@ export default function DrillPanel({ onUpload }) {
                         searchTerm={searchTerm} 
                         viewMode={viewMode}
                         getMetrics={getMetrics}
+                        sortField={sortField}
+                        sortOrder={sortOrder}
                       />
                     )
                   )}

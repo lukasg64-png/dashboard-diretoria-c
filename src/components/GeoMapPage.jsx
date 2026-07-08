@@ -8,6 +8,17 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
   const layerGroupRef = useRef(null);
   const [mapMetric, setMapMetric] = useState('atingimento'); // atingimento, evolucao, crescimento, participacao
   const [expandedUFs, setExpandedUFs] = useState(new Set());
+  const [sortField, setSortField] = useState('venda');
+  const [sortOrder, setSortOrder] = useState('desc');
+
+  const handleHeaderClick = (field) => {
+    if (sortField === field) {
+      setSortOrder(o => o === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
 
   const drawingStateRef = useRef({
     isDrawing: false,
@@ -178,6 +189,20 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
       return x.cupons_mes_anterior ? x.venda_mes_anterior / x.cupons_mes_anterior : 0;
     };
 
+    const sortComparator = (a, b, field) => {
+      let va = a[field];
+      let vb = b[field];
+      if (field === 'uf' || field === 'cidade') {
+        va = a.uf || a.cidade || '';
+        vb = b.uf || b.cidade || '';
+        return sortOrder === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      }
+      if (va === vb) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      return sortOrder === 'asc' ? va - vb : vb - va;
+    };
+
     return Object.values(ufMap).map(u => {
       const cidadesList = Object.values(u.cidades).map(c => {
         const cVal26 = getVal26(c);
@@ -193,7 +218,7 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           evol_mom: cValJun ? ((cVal26 - cValJun) / cValJun) * 100 : 0,
           part_digital: c.be_atual ? (c.venda / c.be_atual) * 100 : 0
         };
-      }).sort((a, b) => b.val26 - a.val26);
+      }).sort((a, b) => sortComparator(a, b, sortField));
 
       const uVal26 = getVal26(u);
       const uVal25 = getVal25(u);
@@ -210,8 +235,8 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
         evol_mom: uValJun ? ((uVal26 - uValJun) / uValJun) * 100 : 0,
         part_digital: u.be_atual ? (u.venda / u.be_atual) * 100 : 0
       };
-    }).sort((a, b) => b.val26 - a.val26);
-  }, [filiais, viewMode]);
+    }).sort((a, b) => sortComparator(a, b, sortField));
+  }, [filiais, viewMode, sortField, sortOrder]);
 
   // Cidade options para o gráfico (Top 10 cidades por métrica ativa)
   const dadosPorCidadeGrafico = useMemo(() => {
@@ -880,14 +905,54 @@ export default function GeoMapPage({ filiais, labelAtual, labelAtualAno, labelAn
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, textAlign: 'left' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontWeight: 700 }}>
-                <th style={{ padding: '10px 12px' }}>Estado (UF) / Cidade</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Qtd. Filiais</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Venda E-comm</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Meta Total</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Desvio M. Parcial (P1)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Part. Digital (P4)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Evolução YoY (P2)</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Crescimento MoM (P3)</th>
+                <th 
+                  onClick={() => handleHeaderClick('uf')} 
+                  style={{ padding: '10px 12px', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Estado (UF) / Cidade {sortField === 'uf' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('lojas')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Qtd. Filiais {sortField === 'lojas' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('venda')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Venda E-comm {sortField === 'venda' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('meta')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Meta Total {sortField === 'meta' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('desvio_parcial')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Desvio M. Parcial (P1) {sortField === 'desvio_parcial' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('part_digital')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Part. Digital (P4) {sortField === 'part_digital' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('evol_yoy')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Evolução YoY (P2) {sortField === 'evol_yoy' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
+                <th 
+                  onClick={() => handleHeaderClick('evol_mom')} 
+                  style={{ padding: '10px 12px', textAlign: 'right', cursor: 'pointer', userSelect: 'none' }}
+                >
+                  Crescimento MoM (P3) {sortField === 'evol_mom' ? (sortOrder === 'asc' ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
+                </th>
               </tr>
             </thead>
             <tbody>
