@@ -1747,93 +1747,94 @@ export default function DrillPanel({ onUpload }) {
               </div>
             )}
             <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
-              {/* Indicador de rolagem lateral quando há muitas barras */}
               {(viewMode === 'cup' || viewMode === 'tm') && chartItems.length > 12 && (
                 <div style={{ textAlign: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 4, userSelect: 'none' }}>
                   ← role para ver todas as {chartItems.length} linhas →
                 </div>
               )}
-              <div style={{
-                // Largura dinâmica: 64px por barra em cup/tm (muitas linhas), mínimo 640
-                width: (viewMode === 'cup' || viewMode === 'tm')
-                  ? Math.max(640, chartItems.length * 64)
-                  : '100%',
-                minWidth: 640,
-                height: 230,
-              }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartItems} margin={{ top: 32, right: 10, left: 10, bottom: (viewMode === 'cup' || viewMode === 'tm') && chartItems.length > 10 ? 60 : 5 }} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis
-                      dataKey="name"
-                      tick={(viewMode === 'cup' || viewMode === 'tm') && chartItems.length > 10
-                        ? ({ x, y, payload }) => (
-                            <g transform={`translate(${x},${y})`}>
-                              <text
-                                x={0} y={0} dy={4}
-                                textAnchor="end"
-                                transform="rotate(-38)"
-                                style={{ fontSize: 9, fill: '#64748b' }}
-                              >
-                                {payload.value}
-                              </text>
-                            </g>
-                          )
-                        : { fontSize: 9 }
+              {(() => {
+                // Em cup/tm: BarChart com largura fixa em px (scroll real sem ResponsiveContainer)
+                // Em venda: ResponsiveContainer normal
+                const isFlatScroll = viewMode === 'cup' || viewMode === 'tm';
+                const chartW = isFlatScroll ? Math.max(700, chartItems.length * 72) : undefined;
+                const chartH = 240;
+                const bottomMargin = isFlatScroll && chartItems.length > 10 ? 70 : 10;
+
+                const xAxis = (
+                  <XAxis
+                    dataKey="name"
+                    tick={isFlatScroll
+                      ? ({ x, y, payload }) => (
+                          <g transform={`translate(${x},${y})`}>
+                            <text
+                              x={0} y={0} dy={6}
+                              textAnchor="end"
+                              transform="rotate(-40)"
+                              style={{ fontSize: 9.5, fill: '#475569', fontWeight: 500 }}
+                            >
+                              {payload.value}
+                            </text>
+                          </g>
+                        )
+                      : { fontSize: 9 }
+                    }
+                    stroke="#64748b"
+                    interval={0}
+                    tickLine={false}
+                  />
+                );
+
+                const yAxis = (
+                  <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => {
+                    if (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') return `${v.toFixed(0)}%`;
+                    if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
+                    return fmtR(v);
+                  }} tickLine={false} />
+                );
+
+                const tooltip = (
+                  <Tooltip
+                    formatter={(value, name, props) => {
+                      if (name === 'participacao' || name === 'Part. Digital Atual') {
+                        const diff = props?.payload?.diff_pp;
+                        const diffTxt = diff != null ? ` (${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp vs ano ant.)` : '';
+                        return [`${Number(value).toFixed(1).replace('.', ',')}%${diffTxt}`, `Part. Digital (${labelAtual})`];
                       }
-                      stroke="#64748b" interval={0} tickLine={false}
-                    />
-                    <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => {
-                      if (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') return `${v.toFixed(0)}%`;
-                      if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
-                      return fmtR(v);
-                    }} tickLine={false} />
-                    <Tooltip 
-                      formatter={(value, name, props) => {
-                        if (name === 'participacao' || name === 'Part. Digital Atual') {
-                          const diff = props?.payload?.diff_pp;
-                          const diffTxt = diff != null ? ` (${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp vs ano ant.)` : '';
-                          return [`${Number(value).toFixed(1).replace('.', ',')}%${diffTxt}`, `Part. Digital (${labelAtual})`];
-                        }
-                        if (name === 'participacao_ant' || name === 'Part. Digital Ano Ant.') {
-                          return [`${Number(value).toFixed(1).replace('.', ',')}%`, `Part. Digital Ano Ant. (${labelAtualAno})`];
-                        }
-                        if (name === 'venda' || name === 'Venda E-commerce') {
-                          if (viewMode === 'cup') {
-                            return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons (${labelAtual})`];
-                          } else if (viewMode === 'tm') {
-                            return [fmtCurrency1(value), `Ticket Médio (${labelAtual})`];
-                          }
-                          return [fmtR(value), `Venda E-comm (${labelAtual})`];
-                        }
-                        if (name === 'venda_ant') {
-                           if (viewMode === 'cup') {
-                             return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons Anterior (${labelAtualAno})`];
-                           } else if (viewMode === 'tm') {
-                             return [fmtCurrency1(value), `Ticket Médio Anterior (${labelAtualAno})`];
-                           }
-                           return [fmtR(value), `Venda E-comm Anterior (${labelAtualAno})`];
-                         }
-                        if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
-                        if (name === 'evol_yoy') return [fmtEvol(value), `Evolução YoY (${labelAtualAno})`];
-                        if (name === 'evol_mom') return [fmtEvol(value), `Crescimento MoM (${labelAnt})`];
-                        return [fmtR(value), 'Desvio da Meta Parcial'];
-                      }}
-                      contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
-                      labelStyle={{ color: '#94a3b8', fontWeight: 700 }}
-                    />
-                    
+                      if (name === 'participacao_ant' || name === 'Part. Digital Ano Ant.') {
+                        return [`${Number(value).toFixed(1).replace('.', ',')}%`, `Part. Digital Ano Ant. (${labelAtualAno})`];
+                      }
+                      if (name === 'venda' || name === 'Venda E-commerce') {
+                        if (viewMode === 'cup') return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons (${labelAtual})`];
+                        if (viewMode === 'tm') return [fmtCurrency1(value), `Ticket Médio (${labelAtual})`];
+                        return [fmtR(value), `Venda E-comm (${labelAtual})`];
+                      }
+                      if (name === 'venda_ant') {
+                        if (viewMode === 'cup') return [new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(value), `Cupons Anterior (${labelAtualAno})`];
+                        if (viewMode === 'tm') return [fmtCurrency1(value), `Ticket Médio Anterior (${labelAtualAno})`];
+                        return [fmtR(value), `Venda E-comm Anterior (${labelAtualAno})`];
+                      }
+                      if (name === 'meta' || name === 'Meta Parcial') return [fmtR(value), 'Meta Parcial'];
+                      if (name === 'evol_yoy') return [fmtEvol(value), `Evolução YoY (${labelAtualAno})`];
+                      if (name === 'evol_mom') return [fmtEvol(value), `Crescimento MoM (${labelAnt})`];
+                      return [fmtR(value), 'Desvio da Meta Parcial'];
+                    }}
+                    contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 10, color: '#fff' }}
+                    labelStyle={{ color: '#94a3b8', fontWeight: 700 }}
+                  />
+                );
+
+                const bars = (
+                  <>
                     {chartMetric === 'desvio' && (
-                      <Bar dataKey="desvio" radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="desvio" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 40 : undefined}>
                         {chartItems.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
                         ))}
                         <LabelList content={renderCustomLabel} />
                       </Bar>
                     )}
- 
                     {chartMetric === 'valor' && (
-                      <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
                         <LabelList dataKey="venda" position="top" formatter={v => {
                           if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                           if (viewMode === 'tm') return fmtCurrency1(v);
@@ -1842,7 +1843,7 @@ export default function DrillPanel({ onUpload }) {
                       </Bar>
                     )}
                     {chartMetric === 'valor' && (
-                      <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
                         <LabelList dataKey="venda_ant" position="top" formatter={v => {
                           if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                           if (viewMode === 'tm') return fmtCurrency1(v);
@@ -1850,7 +1851,6 @@ export default function DrillPanel({ onUpload }) {
                         }} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                       </Bar>
                     )}
- 
                     {chartMetric === 'venda_meta' && (
                       <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
                         <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
@@ -1861,7 +1861,6 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
                       </Bar>
                     )}
- 
                     {chartMetric === 'participacao' && (
                       <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
                         <LabelList content={renderCustomPartLabel} />
@@ -1872,7 +1871,6 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                       </Bar>
                     )}
- 
                     {chartMetric === 'evolucao' && (
                       <Bar dataKey="evol_yoy" radius={[4, 4, 0, 0]}>
                         {chartItems.map((entry, index) => (
@@ -1881,7 +1879,6 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList content={renderCustomPctLabel} />
                       </Bar>
                     )}
- 
                     {chartMetric === 'crescimento' && (
                       <Bar dataKey="evol_mom" radius={[4, 4, 0, 0]}>
                         {chartItems.map((entry, index) => (
@@ -1890,10 +1887,49 @@ export default function DrillPanel({ onUpload }) {
                         <LabelList content={renderCustomPctLabel} />
                       </Bar>
                     )}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                  </>
+                );
+
+                if (isFlatScroll) {
+                  return (
+                    <BarChart
+                      width={chartW}
+                      height={chartH}
+                      data={chartItems}
+                      margin={{ top: 32, right: 20, left: 10, bottom: bottomMargin }}
+                      onClick={handleChartClick}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      {xAxis}
+                      {yAxis}
+                      {tooltip}
+                      {bars}
+                    </BarChart>
+                  );
+                }
+
+                return (
+                  <div style={{ width: '100%', minWidth: 640, height: chartH }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartItems}
+                        margin={{ top: 32, right: 10, left: 10, bottom: bottomMargin }}
+                        onClick={handleChartClick}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        {xAxis}
+                        {yAxis}
+                        {tooltip}
+                        {bars}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
             </div>
+
             <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4, fontWeight: 500 }}>
               💡 Dica: clique em qualquer barra do gráfico para aplicar o filtro correspondente.
             </div>
