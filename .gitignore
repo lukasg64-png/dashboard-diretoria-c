@@ -1,0 +1,4 @@
+node_modules
+.env
+data/vtex_orders_cache.json
+data/vtex_orders_cache.json.tmp

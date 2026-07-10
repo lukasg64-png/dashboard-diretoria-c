@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>São João — Monitor de Lojas Offline</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <i data-lucide="activity"></i>
+        </div>
+        <div class="brand-info">
+          <h1>Monitor de Saúde de Lojas</h1>
+          <p>Farmácias São João • E-commerce Offline Tracker</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="sync-status" class="sync-status">
+          <span class="pulse-indicator status-green"></span>
+          <span id="sync-status-text">Carregando dados...</span>
+        </div>
+        <div id="sync-progress-container" class="sync-progress-container hide" style="width: 100px; height: 5px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; display: flex;">
+          <div id="sync-progress-fill" style="width: 0%; height: 100%; background: var(--color-blue); transition: width 0.3s ease;"></div>
+        </div>
+        <button id="btn-sync-trigger" class="btn-secondary" style="padding: 8px 12px;" title="Disparar sincronização manual com VTEX">
+          <i data-lucide="play"></i>
+          Sinc. VTEX
+        </button>
+        <button id="btn-info" class="btn-secondary" style="padding: 8px 12px;">
+          <i data-lucide="help-circle"></i>
+          Ajuda
+        </button>
+        <button id="btn-refresh" class="btn-primary">
+          <i data-lucide="refresh-cw"></i>
+          Atualizar
+        </button>
+      </div>
+    </header>
+
+    <main class="app-content" id="tab-monitor">
+      <!-- Global Status Banner -->
+      <section class="global-status-banner" id="global-status-banner">
+        <div class="status-banner-header">
+          <h2 id="global-status-title">Termômetro de Estresse Operacional: CALCULANDO...</h2>
+          <p id="global-status-desc">Avaliando volume de lojas sem faturamento vs histórico...</p>
+        </div>
+        <div class="status-clusters-container">
+          <div class="cluster-step" id="cluster-excelente">
+            <div class="cluster-indicator"></div>
+            <span>Excelente</span>
+          </div>
+          <div class="cluster-step" id="cluster-normal">
+            <div class="cluster-indicator"></div>
+            <span>Normal</span>
+          </div>
+          <div class="cluster-step" id="cluster-atencao">
+            <div class="cluster-indicator"></div>
+            <span>Atenção</span>
+          </div>
+          <div class="cluster-step" id="cluster-critico">
+            <div class="cluster-indicator"></div>
+            <span>Crítico</span>
+          </div>
+          <div class="cluster-step" id="cluster-severo">
+            <div class="cluster-indicator"></div>
+            <span>Incidente / Severo</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI Cards Summary -->
+      <!-- KPI Cards Summary -->
+      <section class="kpi-grid">
+        <!-- Total Orders Card -->
+        <div class="kpi-card border-blue" id="card-total-orders">
+          <div class="kpi-header">
+            <span class="kpi-label">Pedidos Hoje</span>
+            <i data-lucide="shopping-cart"></i>
+          </div>
+          <div class="kpi-main">
+            <span id="kpi-total-orders" class="kpi-value">--</span>
+          </div>
+          <div class="kpi-footer" id="kpi-orders-compare">Carregando...</div>
+        </div>
+
+        <!-- System Health Card -->
+        <div class="kpi-card border-green" id="card-health">
+          <div class="kpi-header">
+            <span class="kpi-label">Saúde Operacional</span>
+            <i data-lucide="activity"></i>
+          </div>
+          <div class="kpi-main">
+            <span id="kpi-health-score" class="kpi-value text-green">--%</span>
+            <span class="kpi-sub">das filiais faturando</span>
+          </div>
+          <div class="kpi-footer" id="kpi-health-footer">Monitoradas: -- | Inativas: --</div>
+        </div>
+
+        <!-- Offline Stores Card -->
+        <div class="kpi-card border-red interactive-card" id="card-offline" onclick="filterByStatus('OFFLINE')">
+          <div class="kpi-header">
+            <span class="kpi-label">Lojas Offline</span>
+            <i data-lucide="wifi-off"></i>
+          </div>
+          <div class="kpi-main">
+            <span id="kpi-offline-count" class="kpi-value text-red">--</span>
+          </div>
+          <div class="kpi-footer" id="kpi-offline-compare">Carregando...</div>
+        </div>
+
+        <!-- Critical Stores Card -->
+        <div class="kpi-card border-orange interactive-card" id="card-critical" onclick="filterByStatus('CRITICO')">
+          <div class="kpi-header">
+            <span class="kpi-label">Inatividade Crítica</span>
+            <i data-lucide="alert-octagon"></i>
+          </div>
+          <div class="kpi-main">
+            <span id="kpi-critical-count" class="kpi-value text-orange">--</span>
+          </div>
+          <div class="kpi-footer">Ativas hoje, mas travadas > 2h</div>
+        </div>
+
+        <!-- Alert Stores Card -->
+        <div class="kpi-card border-yellow interactive-card" id="card-alert" onclick="filterByStatus('ALERTA')">
+          <div class="kpi-header">
+            <span class="kpi-label">Lojas em Atenção</span>
+            <i data-lucide="alert-triangle"></i>
+          </div>
+          <div class="kpi-main">
+            <span id="kpi-alert-count" class="kpi-value text-yellow">--</span>
+          </div>
+          <div class="kpi-footer">Faturamento abaixo da curva normal</div>
+        </div>
+
+        <!-- Avg Idle Time Card -->
+        <div class="kpi-card border-green" id="card-avg-idle">
+          <div class="kpi-header">
+            <span class="kpi-label">Ócio Médio Geral</span>
+            <i data-lucide="clock"></i>
+          </div>
+          <div class="kpi-main">
+            <span id="kpi-avg-idle" class="kpi-value text-green">--</span>
+          </div>
+          <div class="kpi-footer">Tempo médio desde a última venda</div>
+        </div>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="charts-section" style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+        <!-- Status Distribution Doughnut Chart -->
+        <div class="chart-container">
+          <h3 class="section-title"><i data-lucide="pie-chart"></i> Distribuição de Status</h3>
+          <div class="chart-wrapper" style="height: 250px;">
+            <canvas id="status-pie-chart"></canvas>
+          </div>
+        </div>
+        <!-- Impact by Coordinator Chart (Drilldown) -->
+        <div class="chart-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 class="section-title" id="chart-drill-title" style="margin-bottom: 0;"><i data-lucide="bar-chart-2"></i> Impacto por Diretor</h3>
+            <button id="btn-chart-drill-back" class="btn-secondary" style="padding: 6px 12px; font-size: 0.75rem; display: none; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer;">
+              <i data-lucide="arrow-left" style="width: 12px; height: 12px;"></i> Voltar
+            </button>
+          </div>
+          <div class="chart-wrapper" style="height: 250px;">
+            <canvas id="coordinator-bar-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="charts-section" style="display: flex; flex-direction: column; gap: 24px; margin-top: 24px;">
+        <!-- Comparative Hourly Offline Stores Chart -->
+        <div class="chart-container" style="width: 100%;">
+          <h3 class="section-title"><i data-lucide="line-chart"></i> Lojas Sem Venda por Hora — Hoje × Ontem × Semana Passada</h3>
+          <div class="chart-wrapper" style="height: 250px;">
+            <canvas id="zero-sales-comparison-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Cumulative Orders Chart -->
+        <div class="chart-container" style="width: 100%;">
+          <h3 class="section-title"><i data-lucide="trending-up"></i> Pedidos Acumulados por Hora — Hoje × Ontem × Semana Passada</h3>
+          <div class="chart-wrapper" style="height: 250px;">
+            <canvas id="cumulative-orders-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Hourly System Status Deviation Chart -->
+        <div class="chart-container" style="width: 100%;">
+          <h3 class="section-title"><i data-lucide="activity"></i> Histórico de Desvio Operacional (Hoje)</h3>
+          <div class="chart-wrapper" style="height: 200px;">
+            <canvas id="status-history-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analytics Section -->
+      <section class="analytics-grid">
+
+        <div class="panel-card">
+          <h2>
+            <i data-lucide="map-pin"></i>
+            Ócio por Estado (UF)
+          </h2>
+          <div class="table-container-scroll">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>UF</th>
+                  <th class="text-center">Offline</th>
+                  <th class="text-center">Crítico</th>
+                  <th class="text-center">Alerta</th>
+                  <th class="text-center">Online</th>
+                  <th class="text-center">Ócio Médio</th>
+                </tr>
+              </thead>
+              <tbody id="state-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- City Anomaly Table -->
+        <div class="panel-card">
+          <h2>
+            <i data-lucide="map"></i>
+            Cidades mais Afetadas
+          </h2>
+          <div class="table-container-scroll">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>Cidade</th>
+                  <th class="text-center">Offline</th>
+                  <th class="text-center">Crítico</th>
+                  <th class="text-center">Ócio Médio</th>
+                </tr>
+              </thead>
+              <tbody id="city-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Distrital Anomaly Table -->
+        <div class="panel-card full-width-tablet">
+          <h2>
+            <i data-lucide="users"></i>
+            Distritais com Mais Lojas Afetadas
+          </h2>
+          <div class="table-container-scroll">
+            <table class="compact-table">
+              <thead>
+                <tr>
+                  <th>Distrital</th>
+                  <th class="text-center">Offline</th>
+                  <th class="text-center">Crítico</th>
+                  <th class="text-center">Alerta</th>
+                  <th class="text-center">Total</th>
+                </tr>
+              </thead>
+              <tbody id="coordinator-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters Panel -->
+      <section class="filters-panel">
+        <h2>Filtros Operacionais</h2>
+        <div class="filters-grid">
+          <!-- Search -->
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="search-input" placeholder="Buscar por loja, cidade ou coord...">
+          </div>
+
+          <!-- Status Buttons -->
+          <div class="status-btn-group">
+            <button class="btn-status active" data-status="ALL">Todos</button>
+            <button class="btn-status" data-status="OFFLINE">🔴 Offline</button>
+            <button class="btn-status" data-status="CRITICO">🟠 Crítico</button>
+            <button class="btn-status" data-status="ALERTA">🟡 Alerta</button>
+            <button class="btn-status" data-status="ONLINE">🟢 Online</button>
+            <button class="btn-status" data-status="INATIVA">⚫ Inativas</button>
+          </div>
+
+          <!-- Director Select -->
+          <select id="select-director" class="custom-select">
+            <option value="">Diretor: Todos</option>
+          </select>
+
+          <!-- Distrital Select -->
+          <select id="select-distrital" class="custom-select">
+            <option value="">Distrital: Todos</option>
+          </select>
+
+          <!-- Coordinator Select -->
+          <select id="select-coordinator" class="custom-select">
+            <option value="">Coordenador: Todos</option>
+          </select>
+
+          <!-- State Select -->
+          <select id="select-state" class="custom-select">
+            <option value="">Estado: Todos</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Stores Health Table -->
+      <section class="panel-card stores-panel">
+        <div class="panel-header">
+          <h2>
+            <i data-lucide="layout-grid"></i>
+            Listagem de Lojas Monitoradas
+          </h2>
+          <span id="stores-count-label" class="stores-count-label">-- lojas encontradas</span>
+        </div>
+        <div class="table-responsive">
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th>Filial</th>
+                <th>Cidade/UF</th>
+                <th class="text-center">Vendas Hoje</th>
+                <th class="text-center">Esperado</th>
+                <th class="text-center">Intervalo Médio</th>
+                <th class="text-center">Última Venda</th>
+                <th>Coordenador / Distrital</th>
+                <th>Status</th>
+                <th>Diagnóstico</th>
+              </tr>
+            </thead>
+            <tbody id="stores-table-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+        <div class="load-more-container">
+          <button id="btn-load-more" class="btn-secondary">Carregar mais 50 filiais</button>
+        </div>
+    </main>
+
+  </div>
+
+  <!-- Store Detail Modal -->
+  <div id="store-modal" class="modal-overlay hide">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-store-name">Nome da Loja</h2>
+          <p id="modal-store-region" class="modal-store-region">Cidade - UF | Coordenador: --</p>
+        </div>
+        <button id="btn-close-modal" class="btn-close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-meta-grid">
+          <div class="meta-item">
+            <span class="meta-lbl">Status</span>
+            <span id="modal-store-status" class="status-badge">ONLINE</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Vendas Hoje</span>
+            <span id="modal-store-sales" class="meta-val">0</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Vendas Esperadas (Até agora)</span>
+            <span id="modal-store-expected" class="meta-val">0</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Última Venda</span>
+            <span id="modal-store-last" class="meta-val">--</span>
+          </div>
+        </div>
+        
+        <div class="chart-container-modal">
+          <h3>Curva Horária de Vendas (Pedidos por Hora)</h3>
+          <div class="chart-wrapper">
+            <canvas id="store-hourly-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Explanation Modal -->
+  <div id="info-modal" class="modal-overlay hide">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <div>
+          <h2>Entendendo o Monitoramento</h2>
+          <p>Como funciona o diagnóstico operacional de filiais</p>
+        </div>
+        <button id="btn-close-info" class="btn-close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="line-height: 1.6; font-size: 0.9rem;">
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div>
+            <h3 style="color:var(--color-blue); margin-bottom:6px; font-size:1rem; font-weight:700;">Como funciona o monitoramento?</h3>
+            <p>O monitor compara continuamente as vendas de <strong>Hoje</strong> com a curva histórica da própria filial, baseada na média de <strong>Ontem</strong> e de <strong>7 Dias Atrás</strong>. A comparação é feita minuto a minuto (proporcional ao horário decorrido do dia) para evitar falsos positivos.</p>
+          </div>
+          
+          <div>
+            <h3 style="color:var(--color-blue); margin-bottom:6px; font-size:1rem; font-weight:700;">O que significam os Status?</h3>
+            <ul style="list-style-type:none; display:flex; flex-direction:column; gap:10px; padding: 0; margin-top:8px;">
+              <li style="display:flex; gap:8px;">
+                <span class="status-badge badge-green" style="height:fit-content; width:80px; justify-content:center;">ONLINE</span>
+                <span>A filial está operando e faturando dentro do ritmo de vendas esperado para o horário.</span>
+              </li>
+              <li style="display:flex; gap:8px;">
+                <span class="status-badge badge-red" style="height:fit-content; width:80px; justify-content:center;">OFFLINE</span>
+                <span>A filial possui histórico relevante de vendas online, mas registrou <strong>zero vendas hoje</strong>, embora o esperado para o horário seja de pelo menos 1.2 pedidos. Sinaliza possível perda de sinal do PDV, falha de API ou loja fechada.</span>
+              </li>
+              <li style="display:flex; gap:8px;">
+                <span class="status-badge badge-orange" style="height:fit-content; width:80px; justify-content:center;">CRÍTICO</span>
+                <span>A filial já vendeu hoje, mas está há <strong>mais de 2 horas</strong> (e pelo menos 3x seu intervalo normal) sem faturar nada. Indica uma interrupção repentina de comunicação durante a operação.</span>
+              </li>
+              <li style="display:flex; gap:8px;">
+                <span class="status-badge badge-yellow" style="height:fit-content; width:80px; justify-content:center;">ALERTA</span>
+                <span>Silêncio de vendas acima de 1 hora, ou faturamento acumulado hoje abaixo de 40% da curva de referência.</span>
+              </li>
+              <li style="display:flex; gap:8px;">
+                <span class="status-badge badge-grey" style="height:fit-content; width:80px; justify-content:center;">INATIVA</span>
+                <span>Filiais com histórico extremamente baixo de vendas online (vendas ocasionais). Não acionam alertas automáticos.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 style="color:var(--color-blue); margin-bottom:6px; font-size:1rem; font-weight:700;">Frequência de Sincronização</h3>
+            <p>O servidor faz uma varredura automática na API VTEX <strong>a cada 1 hora</strong> (no minuto 20 de cada hora) buscando novos pedidos. O painel também se atualiza automaticamente a cada 60 segundos.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Initialize Lucide Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+  <!-- App Controller -->
+  <script src="app.js"></script>
+</body>
+</html>
