@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: monitor-offline-lojas
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: VTEX_ACCOUNT
+        value: sjdigital
+      - key: VTEX_APP_KEY
+        sync: false
+      - key: VTEX_APP_TOKEN
+        sync: false
