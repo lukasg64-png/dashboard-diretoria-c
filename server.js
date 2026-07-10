@@ -848,8 +848,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, () => {
   console.log(`🚀 Standalone Store Health Monitor running on http://localhost:${PORT}`);
   
-  // Trigger startup sync
-  vtexSync.syncVtexData().catch(err => console.error('[Init Sync] Failed:', err.message));
+  // Only sync on startup if the cache file is missing
+  if (!fs.existsSync(CACHE_FILE)) {
+    console.log('[Init Sync] Cache file missing. Running startup sync...');
+    vtexSync.syncVtexData().catch(err => console.error('[Init Sync] Failed:', err.message));
+  } else {
+    console.log('[Init Sync] Cache file found. Startup sync skipped to prevent rate limits.');
+  }
   
   // Set sync interval every 20 minutes
   setInterval(() => {
