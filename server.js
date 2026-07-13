@@ -435,6 +435,8 @@ function processStoreHealth() {
       revenueToday: 0,
       revenueYesterday: 0,
       revenue7DaysAgo: 0,
+      canceledToday: 0,
+      pendingToday: 0,
       lastOrderDate: null,
       lastOrderSecondsYesterday: null,
       lastOrderSeconds7DaysAgo: null,
@@ -448,10 +450,8 @@ function processStoreHealth() {
   for (const o of orders) {
     const status = (o.status || '').toLowerCase();
     
-    // Skip canceled and pending orders for faturamento
     const isCanceled = status === 'canceled' || status === 'cancel';
     const isPending = status === 'payment-pending';
-    if (isCanceled || isPending) continue;
 
     if (!o.sellers || o.sellers.length === 0) continue;
 
@@ -489,6 +489,8 @@ function processStoreHealth() {
           revenueToday: 0,
           revenueYesterday: 0,
           revenue7DaysAgo: 0,
+          canceledToday: 0,
+          pendingToday: 0,
           lastOrderDate: null,
           lastOrderSecondsYesterday: null,
           lastOrderSeconds7DaysAgo: null,
@@ -500,6 +502,22 @@ function processStoreHealth() {
 
       const stats = storeStats[storeKey];
       if (!stats.id) stats.id = s.id;
+
+      if (stats.canceledToday === undefined) stats.canceledToday = 0;
+      if (stats.pendingToday === undefined) stats.pendingToday = 0;
+
+      if (dayStr === todayStr) {
+        if (isCanceled) {
+          stats.canceledToday++;
+          return;
+        }
+        if (isPending) {
+          stats.pendingToday++;
+          return;
+        }
+      } else {
+        if (isCanceled || isPending) return;
+      }
 
       const orderTime = creationDate.getTime();
       if (!stats.lastOrderDate || orderTime > stats.lastOrderDate.getTime()) {

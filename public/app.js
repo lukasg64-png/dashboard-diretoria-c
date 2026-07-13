@@ -61,6 +61,8 @@ const modalStoreStatus = document.getElementById('modal-store-status');
 const modalStoreSales = document.getElementById('modal-store-sales');
 const modalStoreExpected = document.getElementById('modal-store-expected');
 const modalStoreLast = document.getElementById('modal-store-last');
+const modalStoreCanceled = document.getElementById('modal-store-canceled');
+const modalStorePending = document.getElementById('modal-store-pending');
 const btnCloseModal = document.getElementById('btn-close-modal');
 
 const btnInfo = document.getElementById('btn-info');
@@ -417,7 +419,7 @@ function exportFilteredCSV() {
     return;
   }
 
-  const headers = ['Filial', 'Cidade', 'UF', 'Vendas Hoje', 'Esperado', 'Intervalo Médio (min)', 'Última Venda', 'Tempo Inativo (min)', 'Coordenador', 'Distrital', 'Diretor', 'Status', 'Diagnóstico'];
+  const headers = ['Filial', 'Cidade', 'UF', 'Vendas Hoje', 'Esperado', 'Intervalo Médio (min)', 'Última Venda', 'Tempo Inativo (min)', 'Coordenador', 'Distrital', 'Diretor', 'Status', 'Cancelados Hoje', 'Pendentes Hoje', 'Diagnóstico'];
   
   const rows = filteredStores.map(s => [
     `"${(s.name || '').replace(/"/g, '""')}"`,
@@ -432,6 +434,8 @@ function exportFilteredCSV() {
     `"${(s.distrital || '').replace(/"/g, '""')}"`,
     `"${(s.diretor || '').replace(/"/g, '""')}"`,
     s.status,
+    s.canceledToday || 0,
+    s.pendingToday || 0,
     `"${(s.details || '').replace(/"/g, '""')}"`
   ]);
 
@@ -1337,6 +1341,12 @@ function renderStoresTable() {
         </td>
         <td style="font-size:0.8rem; color:var(--text-secondary); max-width:240px; white-space:normal;">
           ${s.details}
+          ${(s.canceledToday > 0 || s.pendingToday > 0) ? `
+            <div style="margin-top: 4px; font-size: 0.72rem; color: var(--color-yellow); display: flex; align-items: center; gap: 4px;">
+              <i data-lucide="alert-triangle" style="width:12px; height:12px; flex-shrink:0;"></i>
+              <span>${s.canceledToday > 0 ? `${s.canceledToday} cancelado${s.canceledToday > 1 ? 's' : ''}` : ''}${s.canceledToday > 0 && s.pendingToday > 0 ? ', ' : ''}${s.pendingToday > 0 ? `${s.pendingToday} pendente${s.pendingToday > 1 ? 's' : ''}` : ''} hoje</span>
+            </div>
+          ` : ''}
         </td>
       </tr>
     `;
@@ -1371,6 +1381,8 @@ function openStoreDetails(storeName) {
   modalStoreSales.textContent = store.salesToday;
   modalStoreExpected.textContent = store.expectedSalesSoFar;
   modalStoreLast.textContent = store.lastOrderTimeStr + (store.minutesSinceLastOrder != null ? ` (${formatIdleTime(store.minutesSinceLastOrder)} atrás)` : '');
+  modalStoreCanceled.textContent = store.canceledToday || 0;
+  modalStorePending.textContent = store.pendingToday || 0;
 
   // Render Chart.js line chart for hourly sales
   const ctx = document.getElementById('store-hourly-chart').getContext('2d');
