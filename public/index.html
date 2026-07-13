@@ -463,6 +463,11 @@
             <h3 style="color:var(--color-blue); margin-bottom:6px; font-size:1rem; font-weight:700;">Frequência de Sincronização</h3>
             <p>O servidor faz uma varredura automática na API VTEX <strong>a cada 20 minutos</strong> buscando novos pedidos. O painel também se atualiza automaticamente a cada 60 segundos.</p>
           </div>
+
+          <div>
+            <h3 style="color:var(--color-blue); margin-bottom:6px; font-size:1rem; font-weight:700;">Como evitamos Alarmes Falsos?</h3>
+            <p>Para evitar alertas falsos decorrentes do intervalo de sincronização (efeito dente de serra), o monitor calcula o ócio das filiais utilizando o horário da <strong>última sincronização bem-sucedida com a VTEX</strong> como referência, e não o relógio atual do seu computador. Se a sincronização falhar ou atrasar por mais de 45 minutos, o sistema passa a utilizar o horário real para alertar que os dados estão desatualizados.</p>
+          </div>
         </div>
       </div>
     </div>

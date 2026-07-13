@@ -385,18 +385,28 @@ function processStoreHealth() {
   }
 
   // 2. Determine reference date and time timezone safe
-  const calendarNowBrt = getBrtTimeDetails(new Date());
+  const syncState = vtexSync.getSyncState();
+  let refDate = new Date();
+  if (syncState.lastSyncTime) {
+    const lastSync = new Date(syncState.lastSyncTime);
+    // If the last sync was within 45 minutes, use it to avoid false alarms due to sync delay
+    if (Date.now() - lastSync.getTime() < 45 * 60 * 1000) {
+      refDate = lastSync;
+    }
+  }
+
+  const calendarNowBrt = getBrtTimeDetails(refDate);
 
   const todayStr = calendarNowBrt.dateStr;
   const currentHour = calendarNowBrt.hour;
   const currentMinute = calendarNowBrt.minute;
   const currentSecond = calendarNowBrt.second;
 
-  const tDate = new Date();
+  const tDate = new Date(refDate.getTime());
   tDate.setDate(tDate.getDate() - 1);
   const yesterdayStr = getBrtTimeDetails(tDate).dateStr;
 
-  const sDate = new Date();
+  const sDate = new Date(refDate.getTime());
   sDate.setDate(sDate.getDate() - 7);
   const sevenDaysStr = getBrtTimeDetails(sDate).dateStr;
 
@@ -526,7 +536,7 @@ function processStoreHealth() {
 
   // Classify and structure results
   const storeList = Object.values(storeStats);
-  const nowMs = Date.now();
+  const nowMs = refDate.getTime();
 
   const processedStores = storeList.map(s => {
     let minutesSinceLastOrder = null;
