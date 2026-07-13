@@ -929,11 +929,32 @@ app.post('/api/sync/trigger', async (req, res) => {
   res.json({ status: 'success', message: 'Sincronização iniciada no plano de fundo.' });
 });
 
+// Ping endpoint for heartbeat
+app.get('/ping', (req, res) => {
+  res.send('pong');
+});
+
 // Serve static
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
   console.log(`🚀 Standalone Store Health Monitor running on http://localhost:${PORT}`);
+
+  // Self-ping heartbeat to prevent Render sleep on free tier
+  const selfUrl = process.env.RENDER_EXTERNAL_URL;
+  if (selfUrl) {
+    console.log(`[Heartbeat] Active. Self-pinging URL: ${selfUrl}/ping every 10 minutes.`);
+    setInterval(async () => {
+      try {
+        const response = await fetch(`${selfUrl}/ping`);
+        console.log(`[Heartbeat] Ping sent successfully. Status: ${response.status}`);
+      } catch (err) {
+        console.error(`[Heartbeat] Ping failed:`, err.message);
+      }
+    }, 10 * 60 * 1000);
+  } else {
+    console.log('[Heartbeat] RENDER_EXTERNAL_URL not defined. Self-ping skipped.');
+  }
   
   // Only sync on startup if the cache file is missing
   if (!fs.existsSync(CACHE_FILE)) {
