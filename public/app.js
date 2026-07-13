@@ -27,10 +27,15 @@ const syncStatusText = document.getElementById('sync-status-text');
 const btnRefresh = document.getElementById('btn-refresh');
 const kpiHealthScore = document.getElementById('kpi-health-score');
 const kpiHealthFooter = document.getElementById('kpi-health-footer');
+const kpiHealthCompare = document.getElementById('kpi-health-compare');
 const kpiOfflineCount = document.getElementById('kpi-offline-count');
+const kpiOfflineCompare = document.getElementById('kpi-offline-compare');
 const kpiCriticalCount = document.getElementById('kpi-critical-count');
+const kpiCriticalCompare = document.getElementById('kpi-critical-compare');
 const kpiAlertCount = document.getElementById('kpi-alert-count');
+const kpiAlertCompare = document.getElementById('kpi-alert-compare');
 const kpiAvgIdle = document.getElementById('kpi-avg-idle');
+const kpiAvgIdleCompare = document.getElementById('kpi-avg-idle-compare');
 
 
 const stateTableBody = document.getElementById('state-table-body');
@@ -123,8 +128,6 @@ function updateKPIs(summary, refDate, refTime) {
   kpiCriticalCount.textContent = summary.criticalCount;
   kpiAlertCount.textContent = summary.alertCount;
   
-
-  
   if (summary.avgIdleMinutesGlobal != null) {
     kpiAvgIdle.textContent = formatIdleTime(summary.avgIdleMinutesGlobal);
   } else {
@@ -132,7 +135,8 @@ function updateKPIs(summary, refDate, refTime) {
   }
 
   // ── Comparative KPIs ──
-  // Total orders today
+  
+  // 1. Total orders today
   const kpiTotalOrders = document.getElementById('kpi-total-orders');
   const kpiOrdersCompare = document.getElementById('kpi-orders-compare');
   if (kpiTotalOrders) {
@@ -144,53 +148,118 @@ function updateKPIs(summary, refDate, refTime) {
     kpiOrdersCompare.innerHTML = `${formatDelta(deltaYest, 'pedidos', true)} vs Ontem &nbsp;|&nbsp; ${formatDelta(deltaWeek, 'pedidos', true)} vs Semana`;
   }
 
-  // Offline stores comparison
-  const kpiOfflineCompare = document.getElementById('kpi-offline-compare');
-  if (kpiOfflineCompare && summary.zeroSalesYesterday != null) {
-    const deltaYest = summary.zeroSalesToday - summary.zeroSalesYesterday;
-    const deltaWeek = summary.zeroSalesToday - summary.zeroSalesLastWeek;
+  // 2. Health Score comparison
+  if (kpiHealthCompare && summary.healthScoreYesterday != null) {
+    const deltaYest = summary.healthScore - summary.healthScoreYesterday;
+    const deltaWeek = summary.healthScore - summary.healthScoreLastWeek;
+    kpiHealthCompare.innerHTML = `${formatDelta(deltaYest, '%', true)} vs Ontem &nbsp;|&nbsp; ${formatDelta(deltaWeek, '%', true)} vs Semana`;
+  }
+
+  // 3. Offline stores comparison
+  if (kpiOfflineCompare && summary.offlineCountYesterday != null) {
+    const deltaYest = summary.offlineCount - summary.offlineCountYesterday;
+    const deltaWeek = summary.offlineCount - summary.offlineCountLastWeek;
     kpiOfflineCompare.innerHTML = `${formatDelta(deltaYest, 'lojas', false)} vs Ontem &nbsp;|&nbsp; ${formatDelta(deltaWeek, 'lojas', false)} vs Semana`;
   }
 
+  // 4. Critical stores comparison
+  if (kpiCriticalCompare && summary.criticalCountYesterday != null) {
+    const deltaYest = summary.criticalCount - summary.criticalCountYesterday;
+    const deltaWeek = summary.criticalCount - summary.criticalCountLastWeek;
+    kpiCriticalCompare.innerHTML = `${formatDelta(deltaYest, 'lojas', false)} vs Ontem &nbsp;|&nbsp; ${formatDelta(deltaWeek, 'lojas', false)} vs Semana`;
+  }
+
+  // 5. Alert stores comparison
+  if (kpiAlertCompare && summary.alertCountYesterday != null) {
+    const deltaYest = summary.alertCount - summary.alertCountYesterday;
+    const deltaWeek = summary.alertCount - summary.alertCountLastWeek;
+    kpiAlertCompare.innerHTML = `${formatDelta(deltaYest, 'lojas', false)} vs Ontem &nbsp;|&nbsp; ${formatDelta(deltaWeek, 'lojas', false)} vs Semana`;
+  }
+
+  // 6. Average idle time comparison
+  if (kpiAvgIdleCompare && summary.avgIdleMinutesGlobal != null && summary.avgIdleMinutesYesterday != null) {
+    const deltaYest = summary.avgIdleMinutesGlobal - summary.avgIdleMinutesYesterday;
+    const deltaWeek = summary.avgIdleMinutesGlobal - summary.avgIdleMinutesLastWeek;
+    kpiAvgIdleCompare.innerHTML = `${formatDelta(deltaYest, 'min', false)} vs Ontem &nbsp;|&nbsp; ${formatDelta(deltaWeek, 'min', false)} vs Semana`;
+  } else if (kpiAvgIdleCompare) {
+    kpiAvgIdleCompare.innerHTML = `<span style="color:#8b949e;">= 0</span> vs Ontem &nbsp;|&nbsp; <span style="color:#8b949e;">= 0</span> vs Semana`;
+  }
+
   // ── Global Status Banner ──
-  updateGlobalStatusBanner(summary.zeroSalesToday, summary.zeroSalesYesterday, summary.zeroSalesLastWeek);
+  updateGlobalStatusBanner(summary);
 }
 
-function updateGlobalStatusBanner(zeroToday, zeroYesterday, zeroLastWeek) {
+function updateGlobalStatusBanner(summary) {
   const banner = document.getElementById('global-status-banner');
   const title = document.getElementById('global-status-title');
   const desc = document.getElementById('global-status-desc');
   
-  if (!banner || zeroYesterday == null) return;
+  if (!banner || !summary || summary.zeroSalesYesterday == null) return;
 
-  const baseline = (zeroYesterday + zeroLastWeek) / 2;
-  // If baseline is 0, just assume 1 to avoid division by zero
-  const ratio = zeroToday / Math.max(baseline, 1);
+  const zeroToday = summary.zeroSalesToday;
+  const zeroYesterday = summary.zeroSalesYesterday;
+  const zeroLastWeek = summary.zeroSalesLastWeek;
 
-  let cluster = 'normal';
+  const criticalToday = summary.criticalCount;
+  const criticalYesterday = summary.criticalCountYesterday;
+  const criticalLastWeek = summary.criticalCountLastWeek;
+
+  // 1. Calculate Zero Sales stress level
+  const baselineZero = (zeroYesterday + zeroLastWeek) / 2;
+  const ratioZero = zeroToday / Math.max(baselineZero, 1);
+  let levelZero = 1; // Default normal
+  if (ratioZero <= 0.85) levelZero = 0; // Excelente
+  else if (ratioZero <= 1.15) levelZero = 1; // Normal
+  else if (ratioZero <= 1.4) levelZero = 2; // Atenção
+  else if (ratioZero <= 2.0) levelZero = 3; // Crítico
+  else levelZero = 4; // Severo
+
+  // 2. Calculate Critical Inactivity stress level
+  const baselineCrit = (criticalYesterday + criticalLastWeek) / 2;
+  const ratioCrit = criticalToday / Math.max(baselineCrit, 5); // Base min of 5 to avoid noise
+  let levelCrit = 1; // Default normal
+  if (ratioCrit <= 0.85) levelCrit = 0; // Excelente
+  else if (ratioCrit <= 1.2) levelCrit = 1; // Normal
+  else if (ratioCrit <= 1.5) levelCrit = 2; // Atenção
+  else if (ratioCrit <= 2.2) levelCrit = 3; // Crítico
+  else levelCrit = 4; // Severo
+
+  // Final level is the maximum of both
+  const finalLevel = Math.max(levelZero, levelCrit);
+
+  const clusters = ['excelente', 'normal', 'atencao', 'critico', 'severo'];
+  const cluster = clusters[finalLevel];
+
   let titleText = '';
   let descText = '';
 
-  if (ratio <= 0.85) {
-    cluster = 'excelente';
+  if (finalLevel === 0) {
     titleText = 'Termômetro Operacional: EXCELENTE';
-    descText = `Temos significativamente menos lojas paradas do que a média histórica (${zeroToday} vs média de ${Math.round(baseline)}). Operação muito saudável!`;
-  } else if (ratio > 0.85 && ratio <= 1.15) {
-    cluster = 'normal';
+    descText = 'Volume de lojas sem faturamento e inatividade recente estão abaixo da média histórica. Operação muito saudável!';
+  } else if (finalLevel === 1) {
     titleText = 'Termômetro Operacional: NORMAL';
-    descText = `Volume de lojas sem faturamento (${zeroToday}) está dentro da média histórica (${Math.round(baseline)}). Nada fora do comum.`;
-  } else if (ratio > 1.15 && ratio <= 1.4) {
-    cluster = 'atencao';
+    descText = 'Operação dentro da normalidade histórica. Lojas paradas e inatividade recente sob controle.';
+  } else if (finalLevel === 2) {
     titleText = 'Termômetro Operacional: ATENÇÃO';
-    descText = `Volume de lojas sem faturamento está acima do esperado (${zeroToday} vs média de ${Math.round(baseline)}). Fique de olho.`;
-  } else if (ratio > 1.4 && ratio <= 2.0) {
-    cluster = 'critico';
+    if (levelCrit > levelZero) {
+      descText = `Alerta de Inatividade Recente: Há um aumento de lojas ativas que pararam de vender nas últimas 2h (${criticalToday} vs média de ${Math.round(baselineCrit)}).`;
+    } else {
+      descText = `Volume de lojas sem venda hoje está acima do esperado (${zeroToday} vs média de ${Math.round(baselineZero)}). Fique de olho.`;
+    }
+  } else if (finalLevel === 3) {
     titleText = 'Termômetro Operacional: CRÍTICO';
-    descText = `Muitas lojas paradas em comparação com o histórico (${zeroToday} vs média de ${Math.round(baseline)}). Possível instabilidade sistêmica em andamento.`;
-  } else {
-    cluster = 'severo';
+    if (levelCrit > levelZero) {
+      descText = `Desvio Operacional Grave: Pico anômalo de lojas em inatividade crítica (${criticalToday} vs média de ${Math.round(baselineCrit)}). Várias filiais pararam de faturar nas últimas 2 horas! Sugerimos verificar integrações de TI.`;
+    } else {
+      descText = `Muitas lojas paradas em comparação com o histórico (${zeroToday} vs média de ${Math.round(baselineZero)}). Possível instabilidade sistêmica em andamento.`;
+    }
+  } else if (finalLevel === 4) {
     titleText = 'Termômetro Operacional: INCIDENTE / SEVERO';
-    descText = `Volume massivo de lojas sem venda hoje (${zeroToday} vs média de ${Math.round(baseline)}). Desvio grave na operação!`;
+    if (levelCrit > levelZero) {
+      descText = `INCIDENTE GRAVE DETECTADO: Interrupção repentina de faturamento em massa! ${criticalToday} lojas em inatividade crítica (média histórica para o horário: ${Math.round(baselineCrit)}). Acione imediatamente os times de T.I. e Infraestrutura!`;
+    } else {
+      descText = `Volume massivo de lojas sem venda hoje (${zeroToday} vs média de ${Math.round(baselineZero)}). Desvio grave na operação!`;
+    }
   }
 
   // Update classes
@@ -199,7 +268,6 @@ function updateGlobalStatusBanner(zeroToday, zeroYesterday, zeroLastWeek) {
   desc.textContent = descText;
 
   // Update clusters UI
-  const clusters = ['excelente', 'normal', 'atencao', 'critico', 'severo'];
   clusters.forEach(c => {
     const el = document.getElementById(`cluster-${c}`);
     if (el) {
@@ -212,6 +280,16 @@ function updateGlobalStatusBanner(zeroToday, zeroYesterday, zeroLastWeek) {
   });
 }
 
+function formatIdleTimeDelta(mins) {
+  const absMins = Math.abs(mins);
+  const sign = mins > 0 ? '+' : '-';
+  if (absMins < 60) return `${sign}${absMins}m`;
+  const hrs = Math.floor(absMins / 60);
+  const remMins = absMins % 60;
+  if (remMins === 0) return `${sign}${hrs}h`;
+  return `${sign}${hrs}h ${remMins}m`;
+}
+
 /**
  * Format a delta value with arrow and color.
  * @param {number} delta - The difference (positive = increase)
@@ -219,12 +297,23 @@ function updateGlobalStatusBanner(zeroToday, zeroYesterday, zeroLastWeek) {
  * @param {boolean} positiveIsGood - If true, positive delta is green (more orders = good). If false, positive is red (more offline = bad).
  */
 function formatDelta(delta, unit, positiveIsGood) {
-  if (delta === 0) return `<span style="color:#8b949e;">= 0</span>`;
+  if (delta === 0 || delta === null) return `<span style="color:#8b949e;">= 0</span>`;
   const arrow = delta > 0 ? '▲' : '▼';
   const isGood = positiveIsGood ? delta > 0 : delta < 0;
   const color = isGood ? '#10b981' : '#ef4444';
-  const sign = delta > 0 ? '+' : '';
-  return `<span style="color:${color}; font-weight:700;">${arrow} ${sign}${delta}</span>`;
+  
+  let formattedValue = '';
+  if (unit === '%') {
+    const sign = delta > 0 ? '+' : '-';
+    formattedValue = `${sign}${Math.abs(delta)}%`;
+  } else if (unit === 'min') {
+    formattedValue = formatIdleTimeDelta(delta);
+  } else {
+    const sign = delta > 0 ? '+' : '-';
+    formattedValue = `${sign}${Math.abs(delta)}`;
+  }
+  
+  return `<span style="color:${color}; font-weight:700;">${arrow} ${formattedValue}</span>`;
 }
 
 // Regional Rankings Tables
@@ -267,8 +356,11 @@ function updateRegionTables(stateArr, cityArr, coordArr, distritalArr) {
 }
 
 function updateAnalyticsCharts(storesList) {
+  // Define allNonInactive for downstream charts (such as Cumulative Orders)
+  const allNonInactive = storesList.filter(s => s.status !== 'INATIVA');
+
   // 1. Calculate status distribution for status-pie-chart
-  const activeMonitored = storesList.filter(s => s.status !== 'INATIVA');
+  const activeMonitored = allNonInactive;
   const onlineCount = activeMonitored.filter(s => s.status === 'ONLINE').length;
   const alertCount = activeMonitored.filter(s => s.status === 'ALERTA').length;
   const criticalCount = activeMonitored.filter(s => s.status === 'CRITICO').length;
@@ -575,15 +667,110 @@ function updateAnalyticsCharts(storesList) {
     }
   });
 
+// Helper to calculate a store's status at a specific hour in the frontend
+function getStoreStatusAtHour(s, h, dayType) {
+  let hourlySales;
+  if (dayType === 'today') hourlySales = s.hourlySales || [];
+  else if (dayType === 'yesterday') hourlySales = s.hourlySalesYesterday || [];
+  else hourlySales = s.hourlySales7DaysAgo || [];
+
+  const salesH = hourlySales.slice(0, h + 1).reduce((a, b) => a + b, 0);
+  
+  const salesYesterdayH = (s.hourlySalesYesterday || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
+  const sales7DaysAgoH = (s.hourlySales7DaysAgo || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
+  const expectedSalesH = (salesYesterdayH + sales7DaysAgoH) / 2;
+
+  const expectedSalesFull = ((s.salesYesterdayFull || 0) + (s.sales7DaysAgoFull || 0)) / 2;
+  const activeMinutes = 720;
+  const expectedInterval = expectedSalesFull > 0 ? activeMinutes / expectedSalesFull : 0;
+
+  let lastSaleHour = null;
+  for (let hr = h; hr >= 0; hr--) {
+    if (hourlySales[hr] > 0) {
+      lastSaleHour = hr;
+      break;
+    }
+  }
+
+  let minutesSinceLastOrder = null;
+  if (lastSaleHour !== null) {
+    minutesSinceLastOrder = (h - lastSaleHour) * 60;
+  }
+
+  if (expectedSalesFull <= 0.6) {
+    return salesH === 0 ? 'INATIVA' : 'ONLINE';
+  }
+
+  if (salesH === 0) {
+    return expectedSalesH >= 1.2 ? 'OFFLINE' : 'ALERTA';
+  }
+
+  if (minutesSinceLastOrder !== null && expectedInterval > 0) {
+    const deviation = minutesSinceLastOrder / expectedInterval;
+    if (minutesSinceLastOrder > 120 && deviation > 3.0) {
+      return 'CRITICO';
+    }
+    if (minutesSinceLastOrder > 60 && deviation > 2.0) {
+      return 'ALERTA';
+    }
+  }
+
+  if (salesH < expectedSalesH * 0.4) {
+    return 'ALERTA';
+  }
+
+  return 'ONLINE';
+}
+
   // ────────────────────────────────────────────────────────────────────
-  // 4. COMPARATIVE: Stores with ZERO sales per hour — Today × Yesterday × Last Week
+  // 4. COMPARATIVE: Hourly Status/Sales Curve — Today × Yesterday × Last Week
   // ────────────────────────────────────────────────────────────────────
   const zeroCtx = document.getElementById('zero-sales-comparison-chart').getContext('2d');
   if (zeroSalesChartInstance) zeroSalesChartInstance.destroy();
 
-  // For each hour 0..refHour, count stores with cumulative sales == 0
-  // Only consider stores that have a meaningful historical average (not INATIVA)
-  const allNonInactive = storesList.filter(s => s.status !== 'INATIVA');
+  // Dynamic Chart Title based on Selected Status
+  const chartTitleEl = document.getElementById('zero-sales-chart-title');
+  let currentMetricName = 'lojas sem venda';
+  if (chartTitleEl) {
+    let titleText = 'Lojas Sem Venda por Hora';
+    if (currentStatusFilter === 'OFFLINE') {
+      titleText = 'Lojas Offline por Hora';
+      currentMetricName = 'lojas offline';
+    } else if (currentStatusFilter === 'CRITICO') {
+      titleText = 'Lojas em Inatividade Crítica por Hora';
+      currentMetricName = 'lojas críticas';
+    } else if (currentStatusFilter === 'ALERTA') {
+      titleText = 'Lojas em Atenção por Hora';
+      currentMetricName = 'lojas em alerta';
+    } else if (currentStatusFilter === 'ONLINE') {
+      titleText = 'Lojas Online por Hora';
+      currentMetricName = 'lojas online';
+    }
+    
+    chartTitleEl.innerHTML = `<i data-lucide="line-chart"></i> ${titleText} — Hoje × Ontem × Semana Passada`;
+    lucide.createIcons();
+  }
+
+  // Filter stores using director, distrital, coordinator, state, and search, but NOT by status filter
+  const storesForChart = allStores.filter(s => {
+    if (currentDirector && s.diretor !== currentDirector) return false;
+    if (currentDistrital && s.distrital !== currentDistrital) return false;
+    if (currentCoordinator && s.coordenador !== currentCoordinator) return false;
+    if (currentState && s.state !== currentState) return false;
+    if (currentSearchQuery) {
+      const q = currentSearchQuery.toLowerCase();
+      const match = 
+        s.name.toLowerCase().includes(q) ||
+        s.city.toLowerCase().includes(q) ||
+        (s.coordenador && s.coordenador.toLowerCase().includes(q)) ||
+        (s.distrital && s.distrital.toLowerCase().includes(q)) ||
+        (s.diretor && s.diretor.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  const allNonInactiveForChart = storesForChart.filter(s => s.status !== 'INATIVA');
 
   const zeroToday = [];
   const zeroYesterday = [];
@@ -595,14 +782,20 @@ function updateAnalyticsCharts(storesList) {
 
     let countToday = 0, countYesterday = 0, countLastWeek = 0;
 
-    allNonInactive.forEach(s => {
-      const cumToday = s.hourlySales.slice(0, h + 1).reduce((a, b) => a + b, 0);
-      const cumYesterday = s.hourlySalesYesterday.slice(0, h + 1).reduce((a, b) => a + b, 0);
-      const cumLastWeek = s.hourlySales7DaysAgo.slice(0, h + 1).reduce((a, b) => a + b, 0);
+    allNonInactiveForChart.forEach(s => {
+      if (currentStatusFilter === 'ALL') {
+        const cumToday = (s.hourlySales || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
+        const cumYesterday = (s.hourlySalesYesterday || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
+        const cumLastWeek = (s.hourlySales7DaysAgo || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
 
-      if (cumToday === 0) countToday++;
-      if (cumYesterday === 0) countYesterday++;
-      if (cumLastWeek === 0) countLastWeek++;
+        if (cumToday === 0) countToday++;
+        if (cumYesterday === 0) countYesterday++;
+        if (cumLastWeek === 0) countLastWeek++;
+      } else {
+        if (getStoreStatusAtHour(s, h, 'today') === currentStatusFilter) countToday++;
+        if (getStoreStatusAtHour(s, h, 'yesterday') === currentStatusFilter) countYesterday++;
+        if (getStoreStatusAtHour(s, h, 'lastWeek') === currentStatusFilter) countLastWeek++;
+      }
     });
 
     zeroToday.push(countToday);
@@ -610,13 +803,15 @@ function updateAnalyticsCharts(storesList) {
     zeroLastWeek.push(countLastWeek);
   }
 
+  const todayLabel = currentStatusFilter === 'ALL' ? '🔴 Hoje (sem venda)' : `🔴 Hoje (${currentStatusFilter})`;
+
   zeroSalesChartInstance = new Chart(zeroCtx, {
     type: 'line',
     data: {
       labels: zeroLabels,
       datasets: [
         {
-          label: '🔴 Hoje (sem venda)',
+          label: todayLabel,
           data: zeroToday,
           borderColor: '#ef4444',
           backgroundColor: 'rgba(239, 68, 68, 0.08)',
@@ -669,7 +864,7 @@ function updateAnalyticsCharts(storesList) {
           cornerRadius: 8,
           callbacks: {
             label: function(ctx) {
-              return ` ${ctx.dataset.label}: ${ctx.parsed.y} lojas sem venda`;
+              return ` ${ctx.dataset.label}: ${ctx.parsed.y} ${currentMetricName}`;
             }
           }
         }

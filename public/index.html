@@ -107,11 +107,12 @@
             <span id="kpi-health-score" class="kpi-value text-green">--%</span>
             <span class="kpi-sub">das filiais faturando</span>
           </div>
-          <div class="kpi-footer" id="kpi-health-footer">Monitoradas: -- | Inativas: --</div>
+          <div class="kpi-footer" id="kpi-health-compare">Carregando...</div>
+          <div class="kpi-footer" id="kpi-health-footer" style="margin-top: 2px; font-size: 0.68rem; opacity: 0.8;">Monitoradas: -- | Inativas: --</div>
         </div>
 
         <!-- Offline Stores Card -->
-        <div class="kpi-card border-red interactive-card" id="card-offline" onclick="filterByStatus('OFFLINE')">
+        <div class="kpi-card border-red interactive-card" id="card-offline" data-filter="OFFLINE">
           <div class="kpi-header">
             <span class="kpi-label">Lojas Offline</span>
             <i data-lucide="wifi-off"></i>
@@ -123,27 +124,29 @@
         </div>
 
         <!-- Critical Stores Card -->
-        <div class="kpi-card border-orange interactive-card" id="card-critical" onclick="filterByStatus('CRITICO')">
+        <div class="kpi-card border-orange interactive-card" id="card-critical" data-filter="CRITICO">
           <div class="kpi-header">
             <span class="kpi-label">Inatividade Crítica</span>
             <i data-lucide="alert-octagon"></i>
           </div>
           <div class="kpi-main">
             <span id="kpi-critical-count" class="kpi-value text-orange">--</span>
+            <span class="kpi-sub">travadas &gt; 2h</span>
           </div>
-          <div class="kpi-footer">Ativas hoje, mas travadas > 2h</div>
+          <div class="kpi-footer" id="kpi-critical-compare">Carregando...</div>
         </div>
 
         <!-- Alert Stores Card -->
-        <div class="kpi-card border-yellow interactive-card" id="card-alert" onclick="filterByStatus('ALERTA')">
+        <div class="kpi-card border-yellow interactive-card" id="card-alert" data-filter="ALERTA">
           <div class="kpi-header">
             <span class="kpi-label">Lojas em Atenção</span>
             <i data-lucide="alert-triangle"></i>
           </div>
           <div class="kpi-main">
             <span id="kpi-alert-count" class="kpi-value text-yellow">--</span>
+            <span class="kpi-sub">abaixo da curva</span>
           </div>
-          <div class="kpi-footer">Faturamento abaixo da curva normal</div>
+          <div class="kpi-footer" id="kpi-alert-compare">Carregando...</div>
         </div>
 
         <!-- Avg Idle Time Card -->
@@ -154,8 +157,9 @@
           </div>
           <div class="kpi-main">
             <span id="kpi-avg-idle" class="kpi-value text-green">--</span>
+            <span class="kpi-sub">desde última venda</span>
           </div>
-          <div class="kpi-footer">Tempo médio desde a última venda</div>
+          <div class="kpi-footer" id="kpi-avg-idle-compare">Carregando...</div>
         </div>
       </section>
 
@@ -185,7 +189,7 @@
       <section class="charts-section" style="display: flex; flex-direction: column; gap: 24px; margin-top: 24px;">
         <!-- Comparative Hourly Offline Stores Chart -->
         <div class="chart-container" style="width: 100%;">
-          <h3 class="section-title"><i data-lucide="line-chart"></i> Lojas Sem Venda por Hora — Hoje × Ontem × Semana Passada</h3>
+          <h3 class="section-title" id="zero-sales-chart-title"><i data-lucide="line-chart"></i> Lojas Sem Venda por Hora — Hoje × Ontem × Semana Passada</h3>
           <div class="chart-wrapper" style="height: 250px;">
             <canvas id="zero-sales-comparison-chart"></canvas>
           </div>

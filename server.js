@@ -321,6 +321,40 @@ function getBrtTimeDetails(date) {
   return { hour, minute, second, dateStr };
 }
 
+// Helper to evaluate store status
+function evaluateStoreStatus(sales, expectedSalesSoFar, expectedSalesFull, expectedInterval, minutesSinceLastOrder) {
+  if (expectedSalesFull <= 0.6) {
+    if (sales === 0) {
+      return 'INATIVA';
+    } else {
+      return 'ONLINE';
+    }
+  } else {
+    if (sales === 0) {
+      if (expectedSalesSoFar >= 1.2) {
+        return 'OFFLINE';
+      } else {
+        return 'ALERTA';
+      }
+    } else {
+      if (minutesSinceLastOrder !== null && expectedInterval > 0) {
+        const deviation = minutesSinceLastOrder / expectedInterval;
+        if (minutesSinceLastOrder > 120 && deviation > 3.0) {
+          return 'CRITICO';
+        } else if (minutesSinceLastOrder > 60 && deviation > 2.0) {
+          return 'ALERTA';
+        } else if (sales < expectedSalesSoFar * 0.4) {
+          return 'ALERTA';
+        } else {
+          return 'ONLINE';
+        }
+      } else {
+        return 'ONLINE';
+      }
+    }
+  }
+}
+
 // Main processing logic
 function processStoreHealth() {
   const storesBase = loadStoresBase();
@@ -392,6 +426,8 @@ function processStoreHealth() {
       revenueYesterday: 0,
       revenue7DaysAgo: 0,
       lastOrderDate: null,
+      lastOrderSecondsYesterday: null,
+      lastOrderSeconds7DaysAgo: null,
       hourlySales: Array(24).fill(0),
       hourlySalesYesterday: Array(24).fill(0),
       hourlySales7DaysAgo: Array(24).fill(0)
@@ -444,6 +480,8 @@ function processStoreHealth() {
           revenueYesterday: 0,
           revenue7DaysAgo: 0,
           lastOrderDate: null,
+          lastOrderSecondsYesterday: null,
+          lastOrderSeconds7DaysAgo: null,
           hourlySales: Array(24).fill(0),
           hourlySalesYesterday: Array(24).fill(0),
           hourlySales7DaysAgo: Array(24).fill(0)
@@ -468,6 +506,9 @@ function processStoreHealth() {
         if (orderSeconds <= currentSeconds) {
           stats.salesYesterday++;
           stats.revenueYesterday += value;
+          if (stats.lastOrderSecondsYesterday === null || orderSeconds > stats.lastOrderSecondsYesterday) {
+            stats.lastOrderSecondsYesterday = orderSeconds;
+          }
         }
       } else if (dayStr === sevenDaysStr) {
         stats.sales7DaysAgoFull++;
@@ -475,6 +516,9 @@ function processStoreHealth() {
         if (orderSeconds <= currentSeconds) {
           stats.sales7DaysAgo++;
           stats.revenue7DaysAgo += value;
+          if (stats.lastOrderSeconds7DaysAgo === null || orderSeconds > stats.lastOrderSeconds7DaysAgo) {
+            stats.lastOrderSeconds7DaysAgo = orderSeconds;
+          }
         }
       }
     });
@@ -485,10 +529,7 @@ function processStoreHealth() {
   const nowMs = Date.now();
 
   const processedStores = storeList.map(s => {
-    let status = 'ONLINE';
-    let details = 'Operando normalmente';
     let minutesSinceLastOrder = null;
-
     if (s.lastOrderDate) {
       const lastOrderTime = s.lastOrderDate.getTime();
       minutesSinceLastOrder = Math.round((nowMs - lastOrderTime) / (60 * 1000));
@@ -504,45 +545,41 @@ function processStoreHealth() {
     const activeMinutes = 720;
     const expectedInterval = expectedSalesFull > 0 ? activeMinutes / expectedSalesFull : 0;
 
-    if (expectedSalesFull <= 0.6) {
+    // Evaluate Today's Status
+    const status = evaluateStoreStatus(s.salesToday, expectedSalesSoFar, expectedSalesFull, expectedInterval, minutesSinceLastOrder);
+
+    // Set details text for Today
+    let details = 'Operando normalmente';
+    if (status === 'INATIVA') {
+      details = 'Sem histórico de vendas online recente';
+    } else if (status === 'OFFLINE') {
+      details = `Sem faturamento hoje. Esperado para o horário: ${expectedSalesSoFar.toFixed(1)} pedidos.`;
+    } else if (status === 'ALERTA') {
       if (s.salesToday === 0) {
-        status = 'INATIVA';
-        details = 'Sem histórico de vendas online recente';
+        details = `Sem faturamento hoje. Baixo volume esperado: ${expectedSalesSoFar.toFixed(1)} pedidos.`;
+      } else if (minutesSinceLastOrder !== null && expectedInterval > 0 && minutesSinceLastOrder > 60 && minutesSinceLastOrder / expectedInterval > 2.0) {
+        details = `Alerta de silêncio: ${minutesSinceLastOrder} min sem vendas (esperado: cada ${Math.round(expectedInterval)} min).`;
       } else {
-        status = 'ONLINE';
-        details = 'Venda eventual registrada';
+        details = `Faturamento abaixo da curva: ${s.salesToday} pedidos (esperado: ${expectedSalesSoFar.toFixed(1)} pedidos).`;
       }
-    } else {
-      if (s.salesToday === 0) {
-        if (expectedSalesSoFar >= 1.2) {
-          status = 'OFFLINE';
-          details = `Sem faturamento hoje. Esperado para o horário: ${expectedSalesSoFar.toFixed(1)} pedidos.`;
-        } else {
-          status = 'ALERTA';
-          details = `Sem faturamento hoje. Baixo volume esperado: ${expectedSalesSoFar.toFixed(1)} pedidos.`;
-        }
-      } else {
-        if (minutesSinceLastOrder !== null && expectedInterval > 0) {
-          const deviation = minutesSinceLastOrder / expectedInterval;
-          if (minutesSinceLastOrder > 120 && deviation > 3.0) {
-            status = 'CRITICO';
-            details = `Inatividade prolongada: ${minutesSinceLastOrder} min sem vendas (esperado: cada ${Math.round(expectedInterval)} min). Desvio de ${deviation.toFixed(1)}x.`;
-          } else if (minutesSinceLastOrder > 60 && deviation > 2.0) {
-            status = 'ALERTA';
-            details = `Alerta de silêncio: ${minutesSinceLastOrder} min sem vendas (esperado: cada ${Math.round(expectedInterval)} min).`;
-          } else if (s.salesToday < expectedSalesSoFar * 0.4) {
-            status = 'ALERTA';
-            details = `Faturamento abaixo da curva: ${s.salesToday} pedidos (esperado: ${expectedSalesSoFar.toFixed(1)} pedidos).`;
-          } else {
-            status = 'ONLINE';
-            details = 'Operando dentro da curva esperada';
-          }
-        } else {
-          status = 'ONLINE';
-          details = 'Operando dentro da curva esperada';
-        }
-      }
+    } else if (status === 'CRITICO') {
+      const deviation = minutesSinceLastOrder / expectedInterval;
+      details = `Inatividade prolongada: ${minutesSinceLastOrder} min sem vendas (esperado: cada ${Math.round(expectedInterval)} min). Desvio de ${deviation.toFixed(1)}x.`;
     }
+
+    // Evaluate Yesterday's Status
+    let minutesSinceLastOrderYesterday = null;
+    if (s.lastOrderSecondsYesterday !== null) {
+      minutesSinceLastOrderYesterday = Math.round((currentSeconds - s.lastOrderSecondsYesterday) / 60);
+    }
+    const statusYesterday = evaluateStoreStatus(s.salesYesterday, expectedSalesSoFar, expectedSalesFull, expectedInterval, minutesSinceLastOrderYesterday);
+
+    // Evaluate Last Week's Status
+    let minutesSinceLastOrder7DaysAgo = null;
+    if (s.lastOrderSeconds7DaysAgo !== null) {
+      minutesSinceLastOrder7DaysAgo = Math.round((currentSeconds - s.lastOrderSeconds7DaysAgo) / 60);
+    }
+    const status7DaysAgo = evaluateStoreStatus(s.sales7DaysAgo, expectedSalesSoFar, expectedSalesFull, expectedInterval, minutesSinceLastOrder7DaysAgo);
 
     // Format last order time in BRT
     let lastOrderTimeStr = 'N/A';
@@ -570,8 +607,12 @@ function processStoreHealth() {
       expectedSalesSoFar: +expectedSalesSoFar.toFixed(1),
       expectedIntervalMinutes: expectedInterval > 0 ? Math.round(expectedInterval) : null,
       minutesSinceLastOrder: minutesSinceLastOrder >= 0 ? minutesSinceLastOrder : null,
+      minutesSinceLastOrderYesterday: minutesSinceLastOrderYesterday >= 0 ? minutesSinceLastOrderYesterday : null,
+      minutesSinceLastOrder7DaysAgo: minutesSinceLastOrder7DaysAgo >= 0 ? minutesSinceLastOrder7DaysAgo : null,
       lastOrderTimeStr,
       status,
+      statusYesterday,
+      status7DaysAgo,
       details,
       hourlySales: s.hourlySales,
       hourlySalesYesterday: s.hourlySalesYesterday,
@@ -770,7 +811,6 @@ function processStoreHealth() {
       else if (status === 'INATIVA') hourlyStatusHistory[h].inative++;
     });
   }
-
   // ── Comparative aggregation (Today vs Yesterday vs Last Week at current hour) ──
   let totalOrdersToday = 0, totalOrdersYesterday = 0, totalOrdersLastWeek = 0;
   let zeroSalesToday = 0, zeroSalesYesterday = 0, zeroSalesLastWeek = 0;
@@ -791,6 +831,38 @@ function processStoreHealth() {
     if (cumLastWeek === 0) zeroSalesLastWeek++;
   });
 
+  // ── Yesterday's aggregations ──
+  const activeMonitoredYesterday = processedStores.filter(s => s.statusYesterday !== 'INATIVA');
+  const totalMonitoredYesterday = activeMonitoredYesterday.length;
+  const offlineCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'OFFLINE').length;
+  const criticalCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'CRITICO').length;
+  const alertCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'ALERTA').length;
+  const onlineCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'ONLINE').length;
+  
+  const activeWithIdleYesterday = activeMonitoredYesterday.filter(s => s.minutesSinceLastOrderYesterday !== null);
+  const avgIdleMinutesYesterday = activeWithIdleYesterday.length > 0
+    ? Math.round(activeWithIdleYesterday.reduce((sum, s) => sum + s.minutesSinceLastOrderYesterday, 0) / activeWithIdleYesterday.length)
+    : null;
+  const healthScoreYesterday = totalMonitoredYesterday > 0
+    ? Math.round(((onlineCountYesterday + alertCountYesterday * 0.5) / totalMonitoredYesterday) * 100)
+    : 100;
+
+  // ── Last week's aggregations ──
+  const activeMonitoredLastWeek = processedStores.filter(s => s.status7DaysAgo !== 'INATIVA');
+  const totalMonitoredLastWeek = activeMonitoredLastWeek.length;
+  const offlineCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'OFFLINE').length;
+  const criticalCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'CRITICO').length;
+  const alertCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'ALERTA').length;
+  const onlineCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'ONLINE').length;
+
+  const activeWithIdleLastWeek = activeMonitoredLastWeek.filter(s => s.minutesSinceLastOrder7DaysAgo !== null);
+  const avgIdleMinutesLastWeek = activeWithIdleLastWeek.length > 0
+    ? Math.round(activeWithIdleLastWeek.reduce((sum, s) => sum + s.minutesSinceLastOrder7DaysAgo, 0) / activeWithIdleLastWeek.length)
+    : null;
+  const healthScoreLastWeek = totalMonitoredLastWeek > 0
+    ? Math.round(((onlineCountLastWeek + alertCountLastWeek * 0.5) / totalMonitoredLastWeek) * 100)
+    : 100;
+
   return {
     referenceDate: todayStr,
     referenceTime: refTimeStr,
@@ -803,7 +875,22 @@ function processStoreHealth() {
       inativeCount,
       avgIdleMinutesGlobal,
       healthScore: totalMonitored > 0 ? Math.round(((onlineCount + alertCount * 0.5) / totalMonitored) * 100) : 100,
-      // Comparative KPIs
+      
+      // Yesterday stats
+      offlineCountYesterday,
+      criticalCountYesterday,
+      alertCountYesterday,
+      avgIdleMinutesYesterday,
+      healthScoreYesterday,
+
+      // Last Week stats
+      offlineCountLastWeek,
+      criticalCountLastWeek,
+      alertCountLastWeek,
+      avgIdleMinutesLastWeek,
+      healthScoreLastWeek,
+
+      // Comparative KPIs (original variables)
       totalOrdersToday,
       totalOrdersYesterday,
       totalOrdersLastWeek,
