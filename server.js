@@ -436,13 +436,18 @@ function processStoreHealth() {
       revenueYesterday: 0,
       revenue7DaysAgo: 0,
       canceledToday: 0,
+      canceledYesterday: 0,
+      canceled7DaysAgo: 0,
       pendingToday: 0,
       lastOrderDate: null,
       lastOrderSecondsYesterday: null,
       lastOrderSeconds7DaysAgo: null,
       hourlySales: Array(24).fill(0),
       hourlySalesYesterday: Array(24).fill(0),
-      hourlySales7DaysAgo: Array(24).fill(0)
+      hourlySales7DaysAgo: Array(24).fill(0),
+      hourlyCanceled: Array(24).fill(0),
+      hourlyCanceledYesterday: Array(24).fill(0),
+      hourlyCanceled7DaysAgo: Array(24).fill(0)
     };
   });
 
@@ -490,13 +495,18 @@ function processStoreHealth() {
           revenueYesterday: 0,
           revenue7DaysAgo: 0,
           canceledToday: 0,
+          canceledYesterday: 0,
+          canceled7DaysAgo: 0,
           pendingToday: 0,
           lastOrderDate: null,
           lastOrderSecondsYesterday: null,
           lastOrderSeconds7DaysAgo: null,
           hourlySales: Array(24).fill(0),
           hourlySalesYesterday: Array(24).fill(0),
-          hourlySales7DaysAgo: Array(24).fill(0)
+          hourlySales7DaysAgo: Array(24).fill(0),
+          hourlyCanceled: Array(24).fill(0),
+          hourlyCanceledYesterday: Array(24).fill(0),
+          hourlyCanceled7DaysAgo: Array(24).fill(0)
         };
       }
 
@@ -504,19 +514,37 @@ function processStoreHealth() {
       if (!stats.id) stats.id = s.id;
 
       if (stats.canceledToday === undefined) stats.canceledToday = 0;
+      if (stats.canceledYesterday === undefined) stats.canceledYesterday = 0;
+      if (stats.canceled7DaysAgo === undefined) stats.canceled7DaysAgo = 0;
       if (stats.pendingToday === undefined) stats.pendingToday = 0;
+      if (!stats.hourlyCanceled) stats.hourlyCanceled = Array(24).fill(0);
+      if (!stats.hourlyCanceledYesterday) stats.hourlyCanceledYesterday = Array(24).fill(0);
+      if (!stats.hourlyCanceled7DaysAgo) stats.hourlyCanceled7DaysAgo = Array(24).fill(0);
 
       if (dayStr === todayStr) {
         if (isCanceled) {
           stats.canceledToday++;
+          stats.hourlyCanceled[hour]++;
           return;
         }
         if (isPending) {
           stats.pendingToday++;
           return;
         }
-      } else {
-        if (isCanceled || isPending) return;
+      } else if (dayStr === yesterdayStr) {
+        if (isCanceled) {
+          stats.canceledYesterday++;
+          stats.hourlyCanceledYesterday[hour]++;
+          return;
+        }
+        if (isPending) return;
+      } else if (dayStr === sevenDaysStr) {
+        if (isCanceled) {
+          stats.canceled7DaysAgo++;
+          stats.hourlyCanceled7DaysAgo[hour]++;
+          return;
+        }
+        if (isPending) return;
       }
 
       const orderTime = creationDate.getTime();

@@ -71,7 +71,17 @@
       </button>
     </div>
 
-    <main class="app-content" id="tab-monitor">
+    <!-- Tabs Navigation Bar -->
+    <div class="tabs-nav" style="padding: 0 24px; margin-top: 16px;">
+      <button class="btn-tab active" data-tab="tab-monitor">
+        <i data-lucide="monitor"></i> Monitor de Inatividade
+      </button>
+      <button class="btn-tab" data-tab="tab-orders">
+        <i data-lucide="shopping-bag"></i> Status e Cancelamentos
+      </button>
+    </div>
+
+    <main class="app-content tab-content" id="tab-monitor">
       <!-- Global Status Banner -->
       <section class="global-status-banner" id="global-status-banner">
         <div class="status-banner-header">
@@ -366,6 +376,101 @@
         </div>
         <div class="load-more-container">
           <button id="btn-load-more" class="btn-secondary">Carregar mais 50 filiais</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Orders Tab Content -->
+    <main class="app-content tab-content hide" id="tab-orders">
+      <!-- KPI Panel for Orders -->
+      <section class="kpi-panel">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Total de Pedidos</span>
+            <div class="kpi-value-container">
+              <span id="kpi-orders-total" class="kpi-val">0</span>
+            </div>
+            <span id="kpi-orders-total-desc" class="kpi-desc">Confirmados + Cancelados + Pendentes</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Faturados / Integrados</span>
+            <div class="kpi-value-container">
+              <span id="kpi-orders-invoiced" class="kpi-val" style="color:var(--color-green);">0</span>
+            </div>
+            <span id="kpi-orders-invoiced-desc" class="kpi-desc">-- ontem</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Pedidos Cancelados</span>
+            <div class="kpi-value-container">
+              <span id="kpi-orders-canceled" class="kpi-val" style="color:var(--color-red);">0</span>
+            </div>
+            <span id="kpi-orders-canceled-desc" class="kpi-desc">-- ontem</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Pendentes de Pagamento</span>
+            <div class="kpi-value-container">
+              <span id="kpi-orders-pending" class="kpi-val" style="color:var(--color-yellow);">0</span>
+            </div>
+            <span id="kpi-orders-pending-desc" class="kpi-desc">Aguardando aprovação</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Taxa de Cancelamento</span>
+            <div class="kpi-value-container">
+              <span id="kpi-orders-cancel-rate" class="kpi-val">0%</span>
+            </div>
+            <span id="kpi-orders-cancel-rate-desc" class="kpi-desc">Média histórica: --</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Charts Section for Orders -->
+      <section class="analytics-charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Distribuição de Status de Pedidos (Hoje)</h3>
+          </div>
+          <div class="chart-wrapper" style="height: 280px; position: relative;">
+            <canvas id="orders-pie-chart"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Curva de Pedidos Cancelados (Hora a Hora)</h3>
+          </div>
+          <div class="chart-wrapper" style="height: 280px; position: relative;">
+            <canvas id="orders-canceled-chart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ranking of critical stores by cancel rate -->
+      <section class="stores-panel">
+        <div class="stores-panel-header">
+          <h2>
+            <i data-lucide="alert-triangle"></i>
+            Ranking de Filiais com Maior Cancelamento (Hoje)
+          </h2>
+          <span id="orders-ranking-count-label" class="stores-count-label">-- filiais listadas</span>
+        </div>
+        <div class="table-responsive">
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th>Filial</th>
+                <th>Cidade/UF</th>
+                <th class="text-center">Vendas Hoje</th>
+                <th class="text-center">Cancelados Hoje</th>
+                <th class="text-center">Pendentes Hoje</th>
+                <th class="text-center">Taxa de Cancelamento</th>
+                <th>Coordenador / Distrital</th>
+                <th>Status da Loja</th>
+                <th>Diagnóstico Operacional</th>
+              </tr>
+            </thead>
+            <tbody id="orders-ranking-table-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
         </div>
       </section>
     </main>

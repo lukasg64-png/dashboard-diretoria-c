@@ -21,6 +21,8 @@ let coordinatorChartInstance = null;
 let historyChartInstance = null;
 let zeroSalesChartInstance = null;
 let cumulativeOrdersChartInstance = null;
+let ordersPieChartInstance = null;
+let ordersCanceledChartInstance = null;
 
 // DOM Elements
 const syncStatusText = document.getElementById('sync-status-text');
@@ -1275,6 +1277,12 @@ function applyFilters() {
 
   // Dynamic charts update based on filtered stores!
   updateAnalyticsCharts(filteredStores);
+
+  // Re-render orders tab if it is currently active
+  const activeTabBtn = document.querySelector('.btn-tab.active');
+  if (activeTabBtn && activeTabBtn.getAttribute('data-tab') === 'tab-orders') {
+    renderOrdersTab();
+  }
 }
 
 function renderStoresTable() {
@@ -1705,6 +1713,272 @@ if (btnClearFilters) {
 const btnExportCSV = document.getElementById('btn-export-csv');
 if (btnExportCSV) {
   btnExportCSV.addEventListener('click', exportFilteredCSV);
+}
+
+// =============================================
+// ORDERS AND CANCELLATIONS TAB
+// =============================================
+
+// Tab buttons click handlers
+document.querySelectorAll('.btn-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetTab = btn.getAttribute('data-tab');
+    
+    document.querySelectorAll('.btn-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hide'));
+    const activeTabContainer = document.getElementById(targetTab);
+    if (activeTabContainer) {
+      activeTabContainer.classList.remove('hide');
+    }
+    
+    if (targetTab === 'tab-orders') {
+      renderOrdersTab();
+    }
+  });
+});
+
+function renderOrdersTab() {
+  if (!monitorData || !filteredStores) return;
+
+  // Aggregate current stats
+  let totalSalesToday = 0;
+  let totalCanceledToday = 0;
+  let totalPendingToday = 0;
+  
+  let totalSalesYesterday = 0;
+  let totalCanceledYesterday = 0;
+  
+  let totalSales7DaysAgo = 0;
+  let totalCanceled7DaysAgo = 0;
+
+  // We filter out INATIVA stores from the order aggregates to have an accurate operational picture
+  const nonInactiveStores = filteredStores.filter(s => s.status !== 'INATIVA');
+
+  nonInactiveStores.forEach(s => {
+    totalSalesToday += (s.salesToday || 0);
+    totalCanceledToday += (s.canceledToday || 0);
+    totalPendingToday += (s.pendingToday || 0);
+    
+    totalSalesYesterday += (s.salesYesterday || 0);
+    totalCanceledYesterday += (s.canceledYesterday || 0);
+    
+    totalSales7DaysAgo += (s.sales7DaysAgo || 0);
+    totalCanceled7DaysAgo += (s.canceled7DaysAgo || 0);
+  });
+
+  const totalOrdersToday = totalSalesToday + totalCanceledToday + totalPendingToday;
+  const totalOrdersYesterday = totalSalesYesterday + totalCanceledYesterday;
+  const totalOrders7DaysAgo = totalSales7DaysAgo + totalCanceled7DaysAgo;
+
+  const cancelRateToday = totalOrdersToday > 0 ? (totalCanceledToday / totalOrdersToday) * 100 : 0;
+  const cancelRateYesterday = totalOrdersYesterday > 0 ? (totalCanceledYesterday / totalOrdersYesterday) * 100 : 0;
+  const cancelRate7DaysAgo = totalOrders7DaysAgo > 0 ? (totalCanceled7DaysAgo / totalOrders7DaysAgo) * 100 : 0;
+
+  // Update DOM elements
+  document.getElementById('kpi-orders-total').textContent = totalOrdersToday.toLocaleString('pt-BR');
+  document.getElementById('kpi-orders-invoiced').textContent = totalSalesToday.toLocaleString('pt-BR');
+  document.getElementById('kpi-orders-canceled').textContent = totalCanceledToday.toLocaleString('pt-BR');
+  document.getElementById('kpi-orders-pending').textContent = totalPendingToday.toLocaleString('pt-BR');
+  document.getElementById('kpi-orders-cancel-rate').textContent = cancelRateToday.toFixed(1) + '%';
+
+  // Set comparison labels
+  document.getElementById('kpi-orders-invoiced-desc').innerHTML = `Ontem: <strong>${totalSalesYesterday}</strong> | 7d: <strong>${totalSales7DaysAgo}</strong>`;
+  document.getElementById('kpi-orders-canceled-desc').innerHTML = `Ontem: <strong>${totalCanceledYesterday}</strong> | 7d: <strong>${totalCanceled7DaysAgo}</strong>`;
+  document.getElementById('kpi-orders-cancel-rate-desc').innerHTML = `Ontem: <strong>${cancelRateYesterday.toFixed(1)}%</strong> | 7d: <strong>${cancelRate7DaysAgo.toFixed(1)}%</strong>`;
+
+  // Update Charts
+  updateOrdersCharts(totalSalesToday, totalCanceledToday, totalPendingToday, nonInactiveStores);
+
+  // Update Table
+  renderCancellationRankingTable(nonInactiveStores);
+}
+
+function updateOrdersCharts(sales, canceled, pending, storesList) {
+  // 1. Order Status Pie Chart
+  const pieCtx = document.getElementById('orders-pie-chart').getContext('2d');
+  if (ordersPieChartInstance) {
+    ordersPieChartInstance.destroy();
+  }
+  
+  ordersPieChartInstance = new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Faturados', 'Cancelados', 'Pendentes'],
+      datasets: [{
+        data: [sales, canceled, pending],
+        backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+        borderWidth: 1,
+        borderColor: '#1f2937'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#9ca3af', font: { size: 11, weight: 'bold' } }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+
+  // 2. Cancellation Hourly Curve
+  const cancelCtx = document.getElementById('orders-canceled-chart').getContext('2d');
+  if (ordersCanceledChartInstance) {
+    ordersCanceledChartInstance.destroy();
+  }
+
+  const hourlyCanceledSum = Array(24).fill(0);
+  const hourlyCanceledYesterdaySum = Array(24).fill(0);
+  const hourlyCanceled7DaysAgoSum = Array(24).fill(0);
+
+  storesList.forEach(s => {
+    if (s.hourlyCanceled) {
+      for (let i = 0; i < 24; i++) {
+        hourlyCanceledSum[i] += (s.hourlyCanceled[i] || 0);
+        hourlyCanceledYesterdaySum[i] += (s.hourlyCanceledYesterday[i] || 0);
+        hourlyCanceled7DaysAgoSum[i] += (s.hourlyCanceled7DaysAgo[i] || 0);
+      }
+    }
+  });
+
+  const hoursArray = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}h`);
+
+  ordersCanceledChartInstance = new Chart(cancelCtx, {
+    type: 'line',
+    data: {
+      labels: hoursArray,
+      datasets: [
+        {
+          label: 'Cancelamentos Hoje',
+          data: hourlyCanceledSum,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.05)',
+          borderWidth: 3,
+          tension: 0.35,
+          fill: true
+        },
+        {
+          label: 'Ontem',
+          data: hourlyCanceledYesterdaySum,
+          borderColor: '#f97316',
+          borderDash: [5, 5],
+          borderWidth: 2,
+          tension: 0.35,
+          fill: false
+        },
+        {
+          label: '7 Dias Atrás',
+          data: hourlyCanceled7DaysAgoSum,
+          borderColor: '#9ca3af',
+          borderDash: [2, 2],
+          borderWidth: 2,
+          tension: 0.35,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#9ca3af', font: { size: 10, weight: 'bold' } }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af', font: { size: 10 } }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderCancellationRankingTable(storesList) {
+  const tableBody = document.getElementById('orders-ranking-table-body');
+  const label = document.getElementById('orders-ranking-count-label');
+  if (!tableBody) return;
+
+  // Filter stores that have at least 1 order (total) to calculate cancel rate, or any cancel count
+  const activeRanking = storesList.map(s => {
+    const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+    const rate = total > 0 ? ((s.canceledToday || 0) / total) * 100 : 0;
+    return { ...s, totalOrders: total, cancelRate: rate };
+  }).filter(s => s.totalOrders > 0 || s.canceledToday > 0);
+
+  // Sort by cancelRate DESC, then by canceledToday DESC
+  activeRanking.sort((a, b) => {
+    if (b.cancelRate !== a.cancelRate) return b.cancelRate - a.cancelRate;
+    return b.canceledToday - a.canceledToday;
+  });
+
+  label.textContent = `${activeRanking.length} filiais com movimentação hoje`;
+
+  if (activeRanking.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align:center; padding: 32px; color: var(--text-secondary);">
+          <i data-lucide="info" style="margin: 0 auto 8px; width: 24px; height: 24px;"></i>
+          Nenhum pedido registrado hoje para as filiais selecionadas.
+        </td>
+      </tr>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  tableBody.innerHTML = activeRanking.slice(0, 50).map(s => {
+    let rowClass = 'row-online';
+    let badgeClass = 'badge-green';
+    
+    if (s.status === 'OFFLINE') { rowClass = 'row-offline'; badgeClass = 'badge-red'; }
+    else if (s.status === 'CRITICO') { rowClass = 'row-critical'; badgeClass = 'badge-orange'; }
+    else if (s.status === 'ALERTA') { rowClass = 'row-alert'; badgeClass = 'badge-yellow'; }
+    else if (s.status === 'INATIVA') { rowClass = 'row-inativa'; badgeClass = 'badge-grey'; }
+
+    // Red cancel rate highlight if rate > 30% and total orders > 2
+    const isCriticalRate = s.cancelRate > 30 && s.totalOrders >= 3;
+
+    return `
+      <tr class="${rowClass}" onclick="openStoreDetails('${s.name}')" style="cursor:pointer;">
+        <td style="font-weight:800;">${s.name}</td>
+        <td>
+          <span class="store-meta-region">
+            <i data-lucide="map-pin"></i>
+            ${s.city} - ${s.state}
+          </span>
+        </td>
+        <td class="text-center" style="font-weight:800; font-size: 0.95rem;">${s.salesToday}</td>
+        <td class="text-center" style="color:var(--color-red); font-weight:800;">${s.canceledToday || 0}</td>
+        <td class="text-center" style="color:var(--color-yellow); font-weight:800;">${s.pendingToday || 0}</td>
+        <td class="text-center" style="font-weight:800; ${isCriticalRate ? 'color:var(--color-red); background:rgba(239,68,68,0.08);' : 'color:var(--text-primary);'}">
+          ${s.cancelRate.toFixed(1)}%
+          ${isCriticalRate ? '<span style="font-size:0.65rem; display:block; color:var(--color-red); font-weight:bold;">TAXA ALTA</span>' : ''}
+        </td>
+        <td>
+          <div class="store-org-cell">
+            <span class="coord">${s.coordenador || 'Desconhecido'}</span>
+            <span class="dist">D: ${s.distrital || 'Desconhecido'}</span>
+          </div>
+        </td>
+        <td>
+          <span class="status-badge ${badgeClass}">
+            ${s.status}
+          </span>
+        </td>
+        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:240px; white-space:normal;">
+          ${s.details}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  lucide.createIcons();
 }
 
 
