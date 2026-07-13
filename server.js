@@ -118,7 +118,7 @@ const CITY_SUFFIX_MAP = {
 // Values MUST be normalized CSV store names (after normalizeStoreName)
 const SPECIAL_VTEX_TO_CSV = {
   'farmacias sao joao delivery': 'porto alegre dark store',
-  'pf': 'passo fundo',
+  'pf': 'pf matriz',
   'pf matriz': 'pf matriz',
   'pf modelo': 'pf loja modelo',
   'pf uruguai': 'pf uruguai',
@@ -126,8 +126,8 @@ const SPECIAL_VTEX_TO_CSV = {
   'pf general netto': 'pf general neto',
   'gruarapuava': 'guarapuava',
   'santo amaro': 'santo amaro imperatriz', // CSV "sto amaro imperatriz" canonicalizes to "santo amaro imperatriz"
-  'sao francisco paula': 'sao francisco assis', // Forcing match to "S. Francisco Assis" in CSV
-  'sao francisco de paula': 'sao francisco assis',
+  'sao francisco paula': 'sao fran paula', // Corrected to map to Sao Francisco de Paula stores (s fran paula) instead of Assis
+  'sao francisco de paula': 'sao fran paula',
   'santa terezinha de itaipu': 'santa terezinha do itaipu', // CSV canonicalizes to "santa terezinha do itaipu"
   'santa terezinha itaipu': 'santa terezinha do itaipu',
   'santo antonio missoes': 'santo antonio das missoes',
