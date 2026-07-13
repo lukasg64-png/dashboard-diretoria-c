@@ -355,6 +355,102 @@ function updateRegionTables(stateArr, cityArr, coordArr, distritalArr) {
   `}).join('');
 }
 
+// Helper to calculate a store's status at a specific hour in the frontend
+function getStoreStatusAtHour(s, h, dayType) {
+  let hourlySales;
+  if (dayType === 'today') hourlySales = s.hourlySales || [];
+  else if (dayType === 'yesterday') hourlySales = s.hourlySalesYesterday || [];
+  else hourlySales = s.hourlySales7DaysAgo || [];
+
+  const salesH = hourlySales.slice(0, h + 1).reduce((a, b) => a + b, 0);
+  
+  const salesYesterdayH = (s.hourlySalesYesterday || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
+  const sales7DaysAgoH = (s.hourlySales7DaysAgo || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
+  const expectedSalesH = (salesYesterdayH + sales7DaysAgoH) / 2;
+
+  const expectedSalesFull = ((s.salesYesterdayFull || 0) + (s.sales7DaysAgoFull || 0)) / 2;
+  const activeMinutes = 720;
+  const expectedInterval = expectedSalesFull > 0 ? activeMinutes / expectedSalesFull : 0;
+
+  let lastSaleHour = null;
+  for (let hr = h; hr >= 0; hr--) {
+    if (hourlySales[hr] > 0) {
+      lastSaleHour = hr;
+      break;
+    }
+  }
+
+  let minutesSinceLastOrder = null;
+  if (lastSaleHour !== null) {
+    minutesSinceLastOrder = (h - lastSaleHour) * 60;
+  }
+
+  if (expectedSalesFull <= 0.6) {
+    return salesH === 0 ? 'INATIVA' : 'ONLINE';
+  }
+
+  if (salesH === 0) {
+    return expectedSalesH >= 1.2 ? 'OFFLINE' : 'ALERTA';
+  }
+
+  if (minutesSinceLastOrder !== null && expectedInterval > 0) {
+    const deviation = minutesSinceLastOrder / expectedInterval;
+    if (minutesSinceLastOrder > 120 && deviation > 3.0) {
+      return 'CRITICO';
+    }
+    if (minutesSinceLastOrder > 60 && deviation > 2.0) {
+      return 'ALERTA';
+    }
+  }
+
+  if (salesH < expectedSalesH * 0.4) {
+    return 'ALERTA';
+  }
+
+  return 'ONLINE';
+}
+
+// CSV Export
+function exportFilteredCSV() {
+  if (!filteredStores || filteredStores.length === 0) {
+    alert('Nenhuma loja para exportar. Ajuste os filtros e tente novamente.');
+    return;
+  }
+
+  const headers = ['Filial', 'Cidade', 'UF', 'Vendas Hoje', 'Esperado', 'Intervalo Médio (min)', 'Última Venda', 'Tempo Inativo (min)', 'Coordenador', 'Distrital', 'Diretor', 'Status', 'Diagnóstico'];
+  
+  const rows = filteredStores.map(s => [
+    `"${(s.name || '').replace(/"/g, '""')}"`,
+    `"${(s.city || '').replace(/"/g, '""')}"`,
+    s.state || '',
+    s.salesToday,
+    s.expectedSalesSoFar,
+    s.expectedIntervalMinutes || '',
+    s.lastOrderTimeStr || 'N/A',
+    s.minutesSinceLastOrder != null ? s.minutesSinceLastOrder : '',
+    `"${(s.coordenador || '').replace(/"/g, '""')}"`,
+    `"${(s.distrital || '').replace(/"/g, '""')}"`,
+    `"${(s.diretor || '').replace(/"/g, '""')}"`,
+    s.status,
+    `"${(s.details || '').replace(/"/g, '""')}"`
+  ]);
+
+  const bom = '\uFEFF';
+  const csvContent = bom + headers.join(';') + '\n' + rows.map(r => r.join(';')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+  link.href = url;
+  link.download = `monitor_lojas_${dateStr}_${timeStr}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function updateAnalyticsCharts(storesList) {
   // Define allNonInactive for downstream charts (such as Cumulative Orders)
   const allNonInactive = storesList.filter(s => s.status !== 'INATIVA');
@@ -667,60 +763,7 @@ function updateAnalyticsCharts(storesList) {
     }
   });
 
-// Helper to calculate a store's status at a specific hour in the frontend
-function getStoreStatusAtHour(s, h, dayType) {
-  let hourlySales;
-  if (dayType === 'today') hourlySales = s.hourlySales || [];
-  else if (dayType === 'yesterday') hourlySales = s.hourlySalesYesterday || [];
-  else hourlySales = s.hourlySales7DaysAgo || [];
 
-  const salesH = hourlySales.slice(0, h + 1).reduce((a, b) => a + b, 0);
-  
-  const salesYesterdayH = (s.hourlySalesYesterday || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
-  const sales7DaysAgoH = (s.hourlySales7DaysAgo || []).slice(0, h + 1).reduce((a, b) => a + b, 0);
-  const expectedSalesH = (salesYesterdayH + sales7DaysAgoH) / 2;
-
-  const expectedSalesFull = ((s.salesYesterdayFull || 0) + (s.sales7DaysAgoFull || 0)) / 2;
-  const activeMinutes = 720;
-  const expectedInterval = expectedSalesFull > 0 ? activeMinutes / expectedSalesFull : 0;
-
-  let lastSaleHour = null;
-  for (let hr = h; hr >= 0; hr--) {
-    if (hourlySales[hr] > 0) {
-      lastSaleHour = hr;
-      break;
-    }
-  }
-
-  let minutesSinceLastOrder = null;
-  if (lastSaleHour !== null) {
-    minutesSinceLastOrder = (h - lastSaleHour) * 60;
-  }
-
-  if (expectedSalesFull <= 0.6) {
-    return salesH === 0 ? 'INATIVA' : 'ONLINE';
-  }
-
-  if (salesH === 0) {
-    return expectedSalesH >= 1.2 ? 'OFFLINE' : 'ALERTA';
-  }
-
-  if (minutesSinceLastOrder !== null && expectedInterval > 0) {
-    const deviation = minutesSinceLastOrder / expectedInterval;
-    if (minutesSinceLastOrder > 120 && deviation > 3.0) {
-      return 'CRITICO';
-    }
-    if (minutesSinceLastOrder > 60 && deviation > 2.0) {
-      return 'ALERTA';
-    }
-  }
-
-  if (salesH < expectedSalesH * 0.4) {
-    return 'ALERTA';
-  }
-
-  return 'ONLINE';
-}
 
   // ────────────────────────────────────────────────────────────────────
   // 4. COMPARATIVE: Hourly Status/Sales Curve — Today × Yesterday × Last Week
@@ -894,12 +937,32 @@ function getStoreStatusAtHour(s, h, dayType) {
   const cumLastWeek = [];
   const cumLabels = [];
 
+  // Use allStores filtered by org hierarchy only (not by status) for total volume
+  const storesForCum = allStores.filter(s => {
+    if (s.status === 'INATIVA') return false;
+    if (currentDirector && s.diretor !== currentDirector) return false;
+    if (currentDistrital && s.distrital !== currentDistrital) return false;
+    if (currentCoordinator && s.coordenador !== currentCoordinator) return false;
+    if (currentState && s.state !== currentState) return false;
+    if (currentSearchQuery) {
+      const q = currentSearchQuery.toLowerCase();
+      const match =
+        s.name.toLowerCase().includes(q) ||
+        s.city.toLowerCase().includes(q) ||
+        (s.coordenador && s.coordenador.toLowerCase().includes(q)) ||
+        (s.distrital && s.distrital.toLowerCase().includes(q)) ||
+        (s.diretor && s.diretor.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    return true;
+  });
+
   for (let h = 0; h <= refHour; h++) {
     cumLabels.push(`${String(h).padStart(2, '0')}h`);
 
     let totalToday = 0, totalYesterday = 0, totalLastWeek = 0;
 
-    allNonInactive.forEach(s => {
+    storesForCum.forEach(s => {
       totalToday += s.hourlySales.slice(0, h + 1).reduce((a, b) => a + b, 0);
       totalYesterday += s.hourlySalesYesterday.slice(0, h + 1).reduce((a, b) => a + b, 0);
       totalLastWeek += s.hourlySales7DaysAgo.slice(0, h + 1).reduce((a, b) => a + b, 0);
@@ -1033,19 +1096,125 @@ function populateDropdowns(stores) {
   selectState.value = prevSt;
 }
 
+// Dynamic summary calculator for organization filters
+function calculateSummary(storesSubset) {
+  const activeMonitored = storesSubset.filter(s => s.status !== 'INATIVA');
+  const totalMonitored = activeMonitored.length;
+  const offlineCount = activeMonitored.filter(s => s.status === 'OFFLINE').length;
+  const criticalCount = activeMonitored.filter(s => s.status === 'CRITICO').length;
+  const alertCount = activeMonitored.filter(s => s.status === 'ALERTA').length;
+  const onlineCount = activeMonitored.filter(s => s.status === 'ONLINE').length;
+  const inativeCount = storesSubset.filter(s => s.status === 'INATIVA').length;
+
+  const activeWithIdle = activeMonitored.filter(s => s.minutesSinceLastOrder !== null);
+  const avgIdleMinutesGlobal = activeWithIdle.length > 0
+    ? Math.round(activeWithIdle.reduce((sum, s) => sum + s.minutesSinceLastOrder, 0) / activeWithIdle.length)
+    : null;
+
+  // Yesterday
+  const activeMonitoredYesterday = storesSubset.filter(s => s.statusYesterday !== 'INATIVA');
+  const totalMonitoredYesterday = activeMonitoredYesterday.length;
+  const offlineCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'OFFLINE').length;
+  const criticalCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'CRITICO').length;
+  const alertCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'ALERTA').length;
+  const onlineCountYesterday = activeMonitoredYesterday.filter(s => s.statusYesterday === 'ONLINE').length;
+  
+  const activeWithIdleYesterday = activeMonitoredYesterday.filter(s => s.minutesSinceLastOrderYesterday !== null);
+  const avgIdleMinutesYesterday = activeWithIdleYesterday.length > 0
+    ? Math.round(activeWithIdleYesterday.reduce((sum, s) => sum + s.minutesSinceLastOrderYesterday, 0) / activeWithIdleYesterday.length)
+    : null;
+  const healthScoreYesterday = totalMonitoredYesterday > 0
+    ? Math.round(((onlineCountYesterday + alertCountYesterday * 0.5) / totalMonitoredYesterday) * 100)
+    : 100;
+
+  // Last Week
+  const activeMonitoredLastWeek = storesSubset.filter(s => s.status7DaysAgo !== 'INATIVA');
+  const totalMonitoredLastWeek = activeMonitoredLastWeek.length;
+  const offlineCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'OFFLINE').length;
+  const criticalCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'CRITICO').length;
+  const alertCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'ALERTA').length;
+  const onlineCountLastWeek = activeMonitoredLastWeek.filter(s => s.status7DaysAgo === 'ONLINE').length;
+
+  const activeWithIdleLastWeek = activeMonitoredLastWeek.filter(s => s.minutesSinceLastOrder7DaysAgo !== null);
+  const avgIdleMinutesLastWeek = activeWithIdleLastWeek.length > 0
+    ? Math.round(activeWithIdleLastWeek.reduce((sum, s) => sum + s.minutesSinceLastOrder7DaysAgo, 0) / activeWithIdleLastWeek.length)
+    : null;
+  const healthScoreLastWeek = totalMonitoredLastWeek > 0
+    ? Math.round(((onlineCountLastWeek + alertCountLastWeek * 0.5) / totalMonitoredLastWeek) * 100)
+    : 100;
+
+  // Comparative KPIs
+  let totalOrdersToday = 0, totalOrdersYesterday = 0, totalOrdersLastWeek = 0;
+  let zeroSalesToday = 0, zeroSalesYesterday = 0, zeroSalesLastWeek = 0;
+  let totalRevenueToday = 0;
+
+  // Reference hour
+  let refHour = 23;
+  if (monitorData && monitorData.referenceTime) {
+    refHour = parseInt(monitorData.referenceTime.split(':')[0], 10);
+  }
+
+  activeMonitored.forEach(s => {
+    const cumToday = s.hourlySales.slice(0, refHour + 1).reduce((a, b) => a + b, 0);
+    const cumYesterday = s.hourlySalesYesterday.slice(0, refHour + 1).reduce((a, b) => a + b, 0);
+    const cumLastWeek = s.hourlySales7DaysAgo.slice(0, refHour + 1).reduce((a, b) => a + b, 0);
+
+    totalOrdersToday += cumToday;
+    totalOrdersYesterday += cumYesterday;
+    totalOrdersLastWeek += cumLastWeek;
+    totalRevenueToday += s.revenueToday;
+
+    if (cumToday === 0) zeroSalesToday++;
+    if (cumYesterday === 0) zeroSalesYesterday++;
+    if (cumLastWeek === 0) zeroSalesLastWeek++;
+  });
+
+  return {
+    totalMonitored,
+    offlineCount,
+    criticalCount,
+    alertCount,
+    onlineCount,
+    inativeCount,
+    avgIdleMinutesGlobal,
+    healthScore: totalMonitored > 0 ? Math.round(((onlineCount + alertCount * 0.5) / totalMonitored) * 100) : 100,
+
+    // Yesterday
+    offlineCountYesterday,
+    criticalCountYesterday,
+    alertCountYesterday,
+    avgIdleMinutesYesterday,
+    healthScoreYesterday,
+
+    // Last Week
+    offlineCountLastWeek,
+    criticalCountLastWeek,
+    alertCountLastWeek,
+    avgIdleMinutesLastWeek,
+    healthScoreLastWeek,
+
+    // Comparative KPIs
+    totalOrdersToday,
+    totalOrdersYesterday,
+    totalOrdersLastWeek,
+    zeroSalesToday,
+    zeroSalesYesterday,
+    zeroSalesLastWeek,
+    totalRevenueToday
+  };
+}
+
 // Apply reactive filters
 function applyFilters() {
-  filteredStores = allStores.filter(s => {
-    // 1. Status Filter
-    if (currentStatusFilter !== 'ALL' && s.status !== currentStatusFilter) return false;
-    
-    // 2. Dropdown selectors
+  // First, filter by organizational/search criteria (without status filter)
+  const orgFilteredStores = allStores.filter(s => {
+    // Dropdown selectors
     if (currentDirector && s.diretor !== currentDirector) return false;
     if (currentDistrital && s.distrital !== currentDistrital) return false;
     if (currentCoordinator && s.coordenador !== currentCoordinator) return false;
     if (currentState && s.state !== currentState) return false;
 
-    // 3. Search match
+    // Search match
     if (currentSearchQuery) {
       const q = currentSearchQuery.toLowerCase();
       const match = 
@@ -1057,6 +1226,18 @@ function applyFilters() {
       if (!match) return false;
     }
 
+    return true;
+  });
+
+  // Calculate and update dynamic KPIs for the selected organization
+  if (monitorData) {
+    const summary = calculateSummary(orgFilteredStores);
+    updateKPIs(summary, monitorData.referenceDate, monitorData.referenceTime);
+  }
+
+  // Then filter by status
+  filteredStores = orgFilteredStores.filter(s => {
+    if (currentStatusFilter !== 'ALL' && s.status !== currentStatusFilter) return false;
     return true;
   });
 
@@ -1480,4 +1661,38 @@ btnSyncTrigger.addEventListener('click', async () => {
     lucide.createIcons();
   }
 });
+
+// Clear all filters handler
+const btnClearFilters = document.getElementById('btn-clear-filters');
+if (btnClearFilters) {
+  btnClearFilters.addEventListener('click', () => {
+    currentDirector = '';
+    currentDistrital = '';
+    currentCoordinator = '';
+    currentState = '';
+    currentSearchQuery = '';
+    currentStatusFilter = 'ALL';
+    
+    // Reset inputs
+    selectDirector.value = '';
+    selectDistrital.value = '';
+    selectCoordinator.value = '';
+    selectState.value = '';
+    searchInput.value = '';
+    
+    // Reset status buttons
+    document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('active'));
+    document.querySelector('.btn-status[data-status="ALL"]').classList.add('active');
+    document.querySelectorAll('.kpi-card.interactive-card').forEach(c => c.classList.remove('selected'));
+    
+    applyFilters();
+  });
+}
+
+// Export CSV handler
+const btnExportCSV = document.getElementById('btn-export-csv');
+if (btnExportCSV) {
+  btnExportCSV.addEventListener('click', exportFilteredCSV);
+}
+
 

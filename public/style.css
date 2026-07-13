@@ -956,3 +956,114 @@ body {
   position: relative;
 }
 
+/* =============================================
+   HEADER FILTERS BAR
+   ============================================= */
+.header-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  flex-wrap: wrap;
+}
+
+.header-filters-bar .filter-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-filters-bar .filter-label i {
+  width: 14px;
+  height: 14px;
+  color: var(--color-blue);
+}
+
+.header-filters-bar .custom-select {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  min-width: 140px;
+  max-width: 220px;
+}
+
+.header-filters-bar .btn-clear-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.header-filters-bar .btn-clear-filters:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.header-filters-bar .btn-clear-filters i {
+  width: 12px;
+  height: 12px;
+}
+
+@media (max-width: 768px) {
+  .header-filters-bar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .header-filters-bar .custom-select {
+    min-width: 100px;
+    flex: 1;
+  }
+}
+
+/* =============================================
+   EXPORT BUTTON
+   ============================================= */
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--color-green);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.btn-export:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--color-green);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.btn-export i {
+  width: 14px;
+  height: 14px;
+}

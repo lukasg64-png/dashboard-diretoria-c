@@ -51,6 +51,26 @@
       </div>
     </header>
 
+    <!-- Header Filters Bar -->
+    <div class="header-filters-bar">
+      <span class="filter-label"><i data-lucide="filter"></i> Filtros:</span>
+      <select id="select-director" class="custom-select">
+        <option value="">Diretor: Todos</option>
+      </select>
+      <select id="select-distrital" class="custom-select">
+        <option value="">Distrital: Todos</option>
+      </select>
+      <select id="select-coordinator" class="custom-select">
+        <option value="">Coordenador: Todos</option>
+      </select>
+      <select id="select-state" class="custom-select">
+        <option value="">Estado: Todos</option>
+      </select>
+      <button id="btn-clear-filters" class="btn-clear-filters" title="Limpar todos os filtros">
+        <i data-lucide="x-circle"></i> Limpar
+      </button>
+    </div>
+
     <main class="app-content" id="tab-monitor">
       <!-- Global Status Banner -->
       <section class="global-status-banner" id="global-status-banner">
@@ -307,25 +327,6 @@
             <button class="btn-status" data-status="INATIVA">⚫ Inativas</button>
           </div>
 
-          <!-- Director Select -->
-          <select id="select-director" class="custom-select">
-            <option value="">Diretor: Todos</option>
-          </select>
-
-          <!-- Distrital Select -->
-          <select id="select-distrital" class="custom-select">
-            <option value="">Distrital: Todos</option>
-          </select>
-
-          <!-- Coordinator Select -->
-          <select id="select-coordinator" class="custom-select">
-            <option value="">Coordenador: Todos</option>
-          </select>
-
-          <!-- State Select -->
-          <select id="select-state" class="custom-select">
-            <option value="">Estado: Todos</option>
-          </select>
         </div>
       </section>
 
@@ -336,7 +337,12 @@
             <i data-lucide="layout-grid"></i>
             Listagem de Lojas Monitoradas
           </h2>
-          <span id="stores-count-label" class="stores-count-label">-- lojas encontradas</span>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span id="stores-count-label" class="stores-count-label">-- lojas encontradas</span>
+            <button id="btn-export-csv" class="btn-export" title="Exportar lista filtrada como CSV">
+              <i data-lucide="download"></i> Exportar CSV
+            </button>
+          </div>
         </div>
         <div class="table-responsive">
           <table class="main-table">
@@ -361,6 +367,7 @@
         <div class="load-more-container">
           <button id="btn-load-more" class="btn-secondary">Carregar mais 50 filiais</button>
         </div>
+      </section>
     </main>
 
   </div>
@@ -454,7 +461,7 @@
 
           <div>
             <h3 style="color:var(--color-blue); margin-bottom:6px; font-size:1rem; font-weight:700;">Frequência de Sincronização</h3>
-            <p>O servidor faz uma varredura automática na API VTEX <strong>a cada 1 hora</strong> (no minuto 20 de cada hora) buscando novos pedidos. O painel também se atualiza automaticamente a cada 60 segundos.</p>
+            <p>O servidor faz uma varredura automática na API VTEX <strong>a cada 20 minutos</strong> buscando novos pedidos. O painel também se atualiza automaticamente a cada 60 segundos.</p>
           </div>
         </div>
       </div>
