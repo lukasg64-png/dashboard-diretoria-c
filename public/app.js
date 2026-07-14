@@ -1392,6 +1392,38 @@ function openStoreDetails(storeName) {
   modalStoreCanceled.textContent = store.canceledToday || 0;
   modalStorePending.textContent = store.pendingToday || 0;
 
+  // Render channels and payments
+  const modalDelivery = document.getElementById('modal-store-delivery-channels');
+  const modalPayments = document.getElementById('modal-store-payment-methods');
+  
+  if (modalDelivery) {
+    if (!store.deliveryChannels || Object.keys(store.deliveryChannels).length === 0) {
+      modalDelivery.innerHTML = '<span style="color:var(--text-secondary); font-style:italic; font-weight:normal;">Nenhuma venda hoje</span>';
+    } else {
+      modalDelivery.innerHTML = Object.entries(store.deliveryChannels)
+        .map(([channel, count]) => `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; font-weight:normal;">
+            <span>${channel}</span>
+            <span class="stores-count-label" style="padding: 1px 6px; font-size: 0.72rem; font-weight:700;">${count}</span>
+          </div>
+        `).join('');
+    }
+  }
+
+  if (modalPayments) {
+    if (!store.paymentMethods || Object.keys(store.paymentMethods).length === 0) {
+      modalPayments.innerHTML = '<span style="color:var(--text-secondary); font-style:italic; font-weight:normal;">Nenhuma venda hoje</span>';
+    } else {
+      modalPayments.innerHTML = Object.entries(store.paymentMethods)
+        .map(([method, count]) => `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; font-weight:normal;">
+            <span>${method}</span>
+            <span class="stores-count-label" style="padding: 1px 6px; font-size: 0.72rem; font-weight:700; background:rgba(59,130,246,0.1); color:var(--color-blue); border:1px solid rgba(59,130,246,0.15);">${count}</span>
+          </div>
+        `).join('');
+    }
+  }
+
   // Render Chart.js line chart for hourly sales
   const ctx = document.getElementById('store-hourly-chart').getContext('2d');
   
@@ -1761,10 +1793,10 @@ function renderOrdersTab() {
     totalCanceledToday += (s.canceledToday || 0);
     totalPendingToday += (s.pendingToday || 0);
     
-    totalSalesYesterday += (s.salesYesterday || 0);
+    totalSalesYesterday += (s.salesYesterdaySoFar || 0);
     totalCanceledYesterday += (s.canceledYesterday || 0);
     
-    totalSales7DaysAgo += (s.sales7DaysAgo || 0);
+    totalSales7DaysAgo += (s.sales7DaysAgoSoFar || 0);
     totalCanceled7DaysAgo += (s.canceled7DaysAgo || 0);
   });
 

@@ -106,7 +106,9 @@ function minifyOrder(order) {
         state: order.shippingData?.address?.state,
         city: order.shippingData?.address?.city
       }
-    }
+    },
+    paymentNames: (order.paymentData?.transactions || []).flatMap(t => (t.payments || []).map(p => p.paymentSystemName)).filter(Boolean),
+    deliveryChannels: (order.shippingData?.logisticsInfo || []).map(l => l.deliveryChannel).filter(Boolean)
   };
 }
 
@@ -220,8 +222,19 @@ async function syncPeriod(daysAgo, cache) {
   console.log(`[VTEX Sync] IDs localizados para daysAgo=${daysAgo}: ${orderIds.length}`);
 
   if (orderIds.length > 0) {
-    const toFetch = orderIds.filter(id => !cache[id]);
-    console.log(`[VTEX Sync] Do cache: ${orderIds.length - toFetch.length}. Para buscar: ${toFetch.length}`);
+    let selfHealedCount = 0;
+    const toFetch = orderIds.filter(id => {
+      const cached = cache[id];
+      if (!cached) return true;
+      if (cached.paymentNames === undefined || cached.deliveryChannels === undefined) {
+        if (selfHealedCount < 10000) {
+          selfHealedCount++;
+          return true;
+        }
+      }
+      return false;
+    });
+    console.log(`[VTEX Sync] Do cache (completos): ${orderIds.length - toFetch.length}. Para buscar (inclui auto-cura): ${toFetch.length}`);
     
     if (toFetch.length > 0) {
       await fetchOrderDetails(toFetch, cache);
@@ -229,11 +242,11 @@ async function syncPeriod(daysAgo, cache) {
   }
 }
 
-async function syncVtexData() {
+async function syncVtexData(forceFull = false) {
   if (isSyncing) return;
   isSyncing = true;
   progressPercent = 0;
-  console.log('[VTEX Sync] Iniciando sincronização autônoma de pedidos...');
+  console.log(`[VTEX Sync] Iniciando sincronização autônoma de pedidos (forceFull=${forceFull})...`);
   
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -242,8 +255,8 @@ async function syncVtexData() {
   try {
     pruneCache(cache);
 
-    // Sync only days 0, 1, and 7
-    const targetDays = [0, 1, 7];
+    // Sync only days 0, 1, and 7 if forceFull is true, or if lastSyncTime is null (startup)
+    const targetDays = (forceFull || !lastSyncTime) ? [0, 1, 7] : [0];
     for (const d of targetDays) {
       await syncPeriod(d, cache);
       saveCacheStreamSync(cache, CACHE_FILE);

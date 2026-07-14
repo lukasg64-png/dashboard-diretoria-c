@@ -447,7 +447,9 @@ function processStoreHealth() {
       hourlySales7DaysAgo: Array(24).fill(0),
       hourlyCanceled: Array(24).fill(0),
       hourlyCanceledYesterday: Array(24).fill(0),
-      hourlyCanceled7DaysAgo: Array(24).fill(0)
+      hourlyCanceled7DaysAgo: Array(24).fill(0),
+      paymentMethods: {},
+      deliveryChannels: {}
     };
   });
 
@@ -506,7 +508,9 @@ function processStoreHealth() {
           hourlySales7DaysAgo: Array(24).fill(0),
           hourlyCanceled: Array(24).fill(0),
           hourlyCanceledYesterday: Array(24).fill(0),
-          hourlyCanceled7DaysAgo: Array(24).fill(0)
+          hourlyCanceled7DaysAgo: Array(24).fill(0),
+          paymentMethods: {},
+          deliveryChannels: {}
         };
       }
 
@@ -533,15 +537,19 @@ function processStoreHealth() {
         }
       } else if (dayStr === yesterdayStr) {
         if (isCanceled) {
-          stats.canceledYesterday++;
           stats.hourlyCanceledYesterday[hour]++;
+          if (orderSeconds <= currentSeconds) {
+            stats.canceledYesterday++;
+          }
           return;
         }
         if (isPending) return;
       } else if (dayStr === sevenDaysStr) {
         if (isCanceled) {
-          stats.canceled7DaysAgo++;
           stats.hourlyCanceled7DaysAgo[hour]++;
+          if (orderSeconds <= currentSeconds) {
+            stats.canceled7DaysAgo++;
+          }
           return;
         }
         if (isPending) return;
@@ -556,6 +564,19 @@ function processStoreHealth() {
         stats.salesToday++;
         stats.revenueToday += value;
         stats.hourlySales[hour]++;
+
+        // Aggregate payment methods and delivery channels for today's orders
+        if (o.paymentNames) {
+          o.paymentNames.forEach(pm => {
+            stats.paymentMethods[pm] = (stats.paymentMethods[pm] || 0) + 1;
+          });
+        }
+        if (o.deliveryChannels) {
+          o.deliveryChannels.forEach(dc => {
+            const dcFriendly = dc === 'pickup-in-point' ? 'Retirada' : (dc === 'delivery' ? 'Entrega' : dc);
+            stats.deliveryChannels[dcFriendly] = (stats.deliveryChannels[dcFriendly] || 0) + 1;
+          });
+        }
       } else if (dayStr === yesterdayStr) {
         stats.salesYesterdayFull++;
         stats.hourlySalesYesterday[hour]++;
@@ -660,6 +681,10 @@ function processStoreHealth() {
       revenueToday: Math.round(s.revenueToday),
       revenueYesterdaySoFar: Math.round(s.revenueYesterday),
       revenue7DaysAgoSoFar: Math.round(s.revenue7DaysAgo),
+      canceledToday: s.canceledToday || 0,
+      canceledYesterday: s.canceledYesterday || 0,
+      canceled7DaysAgo: s.canceled7DaysAgo || 0,
+      pendingToday: s.pendingToday || 0,
       expectedSalesSoFar: +expectedSalesSoFar.toFixed(1),
       expectedIntervalMinutes: expectedInterval > 0 ? Math.round(expectedInterval) : null,
       minutesSinceLastOrder: minutesSinceLastOrder >= 0 ? minutesSinceLastOrder : null,
@@ -672,7 +697,9 @@ function processStoreHealth() {
       details,
       hourlySales: s.hourlySales,
       hourlySalesYesterday: s.hourlySalesYesterday,
-      hourlySales7DaysAgo: s.hourlySales7DaysAgo
+      hourlySales7DaysAgo: s.hourlySales7DaysAgo,
+      paymentMethods: s.paymentMethods,
+      deliveryChannels: s.deliveryChannels
     };
   });
 
@@ -981,7 +1008,7 @@ app.get('/api/sync/state', (req, res) => {
 
 // Endpoint to trigger manual sync
 app.post('/api/sync/trigger', async (req, res) => {
-  vtexSync.syncVtexData().catch(err => console.error('[Trigger Sync] Failed:', err.message));
+  vtexSync.syncVtexData(true).catch(err => console.error('[Trigger Sync] Failed:', err.message));
   res.json({ status: 'success', message: 'Sincronização iniciada no plano de fundo.' });
 });
 
