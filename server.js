@@ -384,6 +384,19 @@ function processStoreHealth() {
     };
   }
 
+  // 1. Calculate latest order date in cache to check for snapshot mode
+  let latestOrderDate = null;
+  if (orders.length > 0) {
+    const times = orders.map(o => new Date(o.creationDate).getTime()).filter(t => !isNaN(t));
+    if (times.length > 0) {
+      latestOrderDate = new Date(Math.max(...times));
+    }
+  }
+
+  const timeDiffHours = latestOrderDate 
+    ? (Date.now() - latestOrderDate.getTime()) / 3600000 
+    : 0;
+
   // 2. Determine reference date and time timezone safe
   const syncState = vtexSync.getSyncState();
   let refDate = new Date();
@@ -393,6 +406,12 @@ function processStoreHealth() {
     if (Date.now() - lastSync.getTime() < 45 * 60 * 1000) {
       refDate = lastSync;
     }
+  }
+
+  // If the cache is outdated (e.g. sync delay or test database), use latestOrderDate as reference (Snapshot Mode)
+  const isSnapshotMode = timeDiffHours >= 3.0 && latestOrderDate;
+  if (isSnapshotMode) {
+    refDate = latestOrderDate;
   }
 
   const calendarNowBrt = getBrtTimeDetails(refDate);
@@ -409,9 +428,6 @@ function processStoreHealth() {
   const sDate = new Date(refDate.getTime());
   sDate.setDate(sDate.getDate() - 7);
   const sevenDaysStr = getBrtTimeDetails(sDate).dateStr;
-
-  const latestOrderDate = new Date(Math.max(...orders.map(o => new Date(o.creationDate).getTime())));
-  const timeDiffHours = (Date.now() - latestOrderDate.getTime()) / 3600000;
 
   const currentSeconds = currentHour * 3600 + currentMinute * 60 + currentSecond;
 
