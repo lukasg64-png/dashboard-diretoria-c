@@ -12,6 +12,12 @@ let currentDistrital = '';
 let currentCoordinator = '';
 let currentState = '';
 
+// Sorting state
+let storesSortField = 'status'; // default status priority
+let storesSortAsc = true;
+let rankingSortField = 'cancelRate'; // default cancel rate desc
+let rankingSortAsc = false;
+
 let drillLevel = 'diretor'; // 'diretor', 'distrital', 'coordenador', 'filial'
 
 // Chart instances
@@ -1247,14 +1253,39 @@ function applyFilters() {
     return true;
   });
 
-  // Sort order: OFFLINE -> CRITICO -> ALERTA -> ONLINE -> INATIVA. Sub-sort by expected sales volume.
-  filteredStores.sort((a, b) => {
-    const priority = { OFFLINE: 0, CRITICO: 1, ALERTA: 2, ONLINE: 3, INATIVA: 4 };
-    if (priority[a.status] !== priority[b.status]) {
-      return priority[a.status] - priority[b.status];
-    }
-    return b.expectedSalesSoFar - a.expectedSalesSoFar;
-  });
+  // Sort stores dynamically
+  if (storesSortField === 'status') {
+    filteredStores.sort((a, b) => {
+      const priority = { OFFLINE: 0, CRITICO: 1, ALERTA: 2, ONLINE: 3, INATIVA: 4 };
+      const priorityDiff = priority[a.status] - priority[b.status];
+      if (priorityDiff !== 0) return storesSortAsc ? priorityDiff : -priorityDiff;
+      return b.expectedSalesSoFar - a.expectedSalesSoFar; // sub-sort desc
+    });
+  } else {
+    filteredStores.sort((a, b) => {
+      let valA = a[storesSortField];
+      let valB = b[storesSortField];
+      
+      if (storesSortField === 'expectedIntervalMinutes') {
+        valA = valA === null ? 999999 : valA;
+        valB = valB === null ? 999999 : valB;
+      }
+      
+      if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = (valB || '').toLowerCase();
+      }
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+      
+      if (valA < valB) return storesSortAsc ? -1 : 1;
+      if (valA > valB) return storesSortAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Update header arrow indicators
+  updateHeaderIcons();
 
   storesCountLabel.textContent = `${filteredStores.length} lojas encontradas`;
   
@@ -1747,6 +1778,36 @@ if (btnExportCSV) {
   btnExportCSV.addEventListener('click', exportFilteredCSV);
 }
 
+// Initialize sorting click listeners for Table 1 (Monitor de Inatividade)
+document.querySelectorAll('#tab-monitor th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const field = th.getAttribute('data-sort');
+    if (storesSortField === field) {
+      storesSortAsc = !storesSortAsc;
+    } else {
+      storesSortField = field;
+      const descFields = ['salesToday', 'expectedSalesSoFar', 'expectedIntervalMinutes', 'lastOrderTimeStr'];
+      storesSortAsc = !descFields.includes(field);
+    }
+    applyFilters();
+  });
+});
+
+// Initialize sorting click listeners for Table 2 (Ranking de Cancelamentos)
+document.querySelectorAll('#tab-orders th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const field = th.getAttribute('data-sort');
+    if (rankingSortField === field) {
+      rankingSortAsc = !rankingSortAsc;
+    } else {
+      rankingSortField = field;
+      const descFields = ['salesToday', 'canceledToday', 'pendingToday', 'cancelRate'];
+      rankingSortAsc = !descFields.includes(field);
+    }
+    renderOrdersTab();
+  });
+});
+
 // =============================================
 // ORDERS AND CANCELLATIONS TAB
 // =============================================
@@ -1943,11 +2004,26 @@ function renderCancellationRankingTable(storesList) {
     return { ...s, totalOrders: total, cancelRate: rate };
   }).filter(s => s.totalOrders > 0 || s.canceledToday > 0);
 
-  // Sort by cancelRate DESC, then by canceledToday DESC
+  // Sort dynamically
   activeRanking.sort((a, b) => {
-    if (b.cancelRate !== a.cancelRate) return b.cancelRate - a.cancelRate;
-    return b.canceledToday - a.canceledToday;
+    let valA = a[rankingSortField];
+    let valB = b[rankingSortField];
+
+    if (typeof valA === 'string') {
+      valA = valA.toLowerCase();
+      valB = (valB || '').toLowerCase();
+    }
+    
+    if (valA == null) return 1;
+    if (valB == null) return -1;
+
+    if (valA < valB) return rankingSortAsc ? -1 : 1;
+    if (valA > valB) return rankingSortAsc ? 1 : -1;
+    return 0;
   });
+
+  // Update header arrow indicators
+  updateHeaderIcons();
 
   label.textContent = `${activeRanking.length} filiais com movimentação hoje`;
 
@@ -2011,6 +2087,38 @@ function renderCancellationRankingTable(storesList) {
   }).join('');
 
   lucide.createIcons();
+}
+
+function updateHeaderIcons() {
+  // Table 1
+  document.querySelectorAll('#tab-monitor th[data-sort]').forEach(th => {
+    const field = th.getAttribute('data-sort');
+    const iconSpan = th.querySelector('.sort-icon');
+    if (iconSpan) {
+      if (storesSortField === field) {
+        iconSpan.textContent = storesSortAsc ? ' ▲' : ' ▼';
+        iconSpan.style.opacity = '1';
+      } else {
+        iconSpan.textContent = '';
+        iconSpan.style.opacity = '0.3';
+      }
+    }
+  });
+
+  // Table 2
+  document.querySelectorAll('#tab-orders th[data-sort]').forEach(th => {
+    const field = th.getAttribute('data-sort');
+    const iconSpan = th.querySelector('.sort-icon');
+    if (iconSpan) {
+      if (rankingSortField === field) {
+        iconSpan.textContent = rankingSortAsc ? ' ▲' : ' ▼';
+        iconSpan.style.opacity = '1';
+      } else {
+        iconSpan.textContent = '';
+        iconSpan.style.opacity = '0.3';
+      }
+    }
+  });
 }
 
 

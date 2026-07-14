@@ -358,15 +358,15 @@
           <table class="main-table">
             <thead>
               <tr>
-                <th>Filial</th>
-                <th>Cidade/UF</th>
-                <th class="text-center">Vendas Hoje</th>
-                <th class="text-center">Esperado</th>
-                <th class="text-center">Intervalo Médio</th>
-                <th class="text-center">Última Venda</th>
-                <th>Coordenador / Distrital</th>
-                <th>Status</th>
-                <th>Diagnóstico</th>
+                <th data-sort="name" style="cursor: pointer; user-select: none;">Filial <span class="sort-icon"></span></th>
+                <th data-sort="city" style="cursor: pointer; user-select: none;">Cidade/UF <span class="sort-icon"></span></th>
+                <th data-sort="salesToday" class="text-center" style="cursor: pointer; user-select: none;">Vendas Hoje <span class="sort-icon"></span></th>
+                <th data-sort="expectedSalesSoFar" class="text-center" style="cursor: pointer; user-select: none;">Esperado <span class="sort-icon"></span></th>
+                <th data-sort="expectedIntervalMinutes" class="text-center" style="cursor: pointer; user-select: none;">Intervalo Médio <span class="sort-icon"></span></th>
+                <th data-sort="lastOrderTimeStr" class="text-center" style="cursor: pointer; user-select: none;">Última Venda <span class="sort-icon"></span></th>
+                <th data-sort="coordenador" style="cursor: pointer; user-select: none;">Coordenador / Distrital <span class="sort-icon"></span></th>
+                <th data-sort="status" style="cursor: pointer; user-select: none;">Status <span class="sort-icon"></span></th>
+                <th data-sort="details" style="cursor: pointer; user-select: none;">Diagnóstico <span class="sort-icon"></span></th>
               </tr>
             </thead>
             <tbody id="stores-table-body">
@@ -456,15 +456,15 @@
           <table class="main-table">
             <thead>
               <tr>
-                <th>Filial</th>
-                <th>Cidade/UF</th>
-                <th class="text-center">Vendas Hoje</th>
-                <th class="text-center">Cancelados Hoje</th>
-                <th class="text-center">Pendentes Hoje</th>
-                <th class="text-center">Taxa de Cancelamento</th>
-                <th>Coordenador / Distrital</th>
-                <th>Status da Loja</th>
-                <th>Diagnóstico Operacional</th>
+                <th data-sort="name" style="cursor: pointer; user-select: none;">Filial <span class="sort-icon"></span></th>
+                <th data-sort="city" style="cursor: pointer; user-select: none;">Cidade/UF <span class="sort-icon"></span></th>
+                <th data-sort="salesToday" class="text-center" style="cursor: pointer; user-select: none;">Vendas Hoje <span class="sort-icon"></span></th>
+                <th data-sort="canceledToday" class="text-center" style="cursor: pointer; user-select: none;">Cancelados Hoje <span class="sort-icon"></span></th>
+                <th data-sort="pendingToday" class="text-center" style="cursor: pointer; user-select: none;">Pendentes Hoje <span class="sort-icon"></span></th>
+                <th data-sort="cancelRate" class="text-center" style="cursor: pointer; user-select: none;">Taxa de Cancelamento <span class="sort-icon"></span></th>
+                <th data-sort="coordenador" style="cursor: pointer; user-select: none;">Coordenador / Distrital <span class="sort-icon"></span></th>
+                <th data-sort="status" style="cursor: pointer; user-select: none;">Status da Loja <span class="sort-icon"></span></th>
+                <th data-sort="details" style="cursor: pointer; user-select: none;">Diagnóstico Operacional <span class="sort-icon"></span></th>
               </tr>
             </thead>
             <tbody id="orders-ranking-table-body">
@@ -514,6 +514,22 @@
           <div class="meta-item">
             <span class="meta-lbl">Pendentes Hoje</span>
             <span id="modal-store-pending" class="meta-val" style="color:var(--color-yellow);">0</span>
+          </div>
+        </div>
+        
+        <!-- Channels & Payment Methods diagnostics -->
+        <div class="modal-diagnostics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px;">
+          <div class="meta-item" style="grid-column: span 1; align-items: stretch; justify-content: flex-start; text-align: left;">
+            <span class="meta-lbl" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="truck" style="width: 12px; height: 12px;"></i> Canais de Entrega (Hoje)</span>
+            <div id="modal-store-delivery-channels" style="font-size: 0.82rem; font-weight: 600; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; color: var(--text-primary);">
+              --
+            </div>
+          </div>
+          <div class="meta-item" style="grid-column: span 1; align-items: stretch; justify-content: flex-start; text-align: left;">
+            <span class="meta-lbl" style="display: flex; align-items: center; gap: 4px;"><i data-lucide="credit-card" style="width: 12px; height: 12px;"></i> Meios de Pagamento (Hoje)</span>
+            <div id="modal-store-payment-methods" style="font-size: 0.82rem; font-weight: 600; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; color: var(--text-primary);">
+              --
+            </div>
           </div>
         </div>
         
