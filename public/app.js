@@ -82,10 +82,23 @@ const syncProgressContainer = document.getElementById('sync-progress-container')
 const syncProgressFill = document.getElementById('sync-progress-fill');
 
 // API call to fetch data
-async function loadMonitorData() {
-  setLoadingState(true);
+async function fetchWithTimeout(url, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch('/api/monitor');
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+async function loadMonitorData(isRetry = false) {
+  if (!isRetry) setLoadingState(true);
+  try {
+    const res = await fetchWithTimeout('/api/monitor', 20000);
     const json = await res.json();
     
     if (json.status === 'success') {
@@ -105,9 +118,15 @@ async function loadMonitorData() {
     }
   } catch (err) {
     console.error('[App] Fetch error:', err);
-    showError('Erro ao se conectar com o servidor monitor.');
+    if (!isRetry) {
+      // Auto-retry once after 5s (handles Render cold-start delay)
+      syncStatusText.textContent = 'Reconectando...';
+      setTimeout(() => loadMonitorData(true), 5000);
+    } else {
+      showError('Erro ao se conectar com o servidor monitor.');
+    }
   } finally {
-    setLoadingState(false);
+    if (!isRetry) setLoadingState(false);
   }
 }
 
