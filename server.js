@@ -1113,13 +1113,9 @@ app.listen(PORT, () => {
     console.log('[Heartbeat] RENDER_EXTERNAL_URL not defined. Self-ping skipped.');
   }
   
-  // Only sync on startup if the cache file is missing
-  if (!fs.existsSync(CACHE_FILE)) {
-    console.log('[Init Sync] Cache file missing. Running startup sync...');
-    vtexSync.syncVtexData().catch(err => console.error('[Init Sync] Failed:', err.message));
-  } else {
-    console.log('[Init Sync] Cache file found. Startup sync skipped to prevent rate limits.');
-  }
+  // Always run sync on startup in the background to catch up with new orders
+  console.log('[Init Sync] Running startup sync in background to fetch latest orders...');
+  vtexSync.syncVtexData().catch(err => console.error('[Init Sync] Failed:', err.message));
   
   // Set sync interval every 20 minutes
   setInterval(() => {
