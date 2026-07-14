@@ -61,11 +61,10 @@ function pruneCache(cache) {
     return localDate.toISOString().slice(0, 10);
   };
   
-  const keepDates = new Set([
-    getBrtDateStr(0),
-    getBrtDateStr(1),
-    getBrtDateStr(7)
-  ]);
+  const keepDates = new Set();
+  for (let i = 0; i <= 7; i++) {
+    keepDates.add(getBrtDateStr(i));
+  }
   
   let count = 0;
   for (const id in cache) {
