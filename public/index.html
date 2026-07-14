@@ -448,20 +448,10 @@
       </section>
 
       <!-- Charts Section for Orders -->
-      <section class="analytics-charts-grid">
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Distribuição de Status de Pedidos (Hoje)</h3>
-          </div>
-          <div class="chart-wrapper" style="height: 280px; position: relative;">
-            <canvas id="orders-pie-chart"></canvas>
-          </div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Curva de Pedidos Cancelados (Hora a Hora)</h3>
-          </div>
-          <div class="chart-wrapper" style="height: 280px; position: relative;">
+      <section class="charts-section" style="margin-bottom: 24px;">
+        <div class="chart-container" style="width: 100%;">
+          <h3 class="section-title"><i data-lucide="line-chart"></i> Curva de Pedidos Cancelados (Hora a Hora)</h3>
+          <div class="chart-wrapper" style="height: 280px;">
             <canvas id="orders-canceled-chart"></canvas>
           </div>
         </div>

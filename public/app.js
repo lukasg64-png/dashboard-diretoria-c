@@ -1889,37 +1889,7 @@ function renderOrdersTab() {
 }
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {
-  // 1. Order Status Pie Chart
-  const pieCtx = document.getElementById('orders-pie-chart').getContext('2d');
-  if (ordersPieChartInstance) {
-    ordersPieChartInstance.destroy();
-  }
-  
-  ordersPieChartInstance = new Chart(pieCtx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Faturados', 'Cancelados', 'Pendentes'],
-      datasets: [{
-        data: [sales, canceled, pending],
-        backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
-        borderWidth: 1,
-        borderColor: '#1f2937'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: { color: '#9ca3af', font: { size: 11, weight: 'bold' } }
-        }
-      },
-      cutout: '65%'
-    }
-  });
-
-  // 2. Cancellation Hourly Curve
+  // Cancellation Hourly Curve
   const cancelCtx = document.getElementById('orders-canceled-chart').getContext('2d');
   if (ordersCanceledChartInstance) {
     ordersCanceledChartInstance.destroy();
