@@ -181,7 +181,6 @@ async function syncPeriod(daysAgo, cache) {
   if (daysAgo === 0) {
     const utcOffset = -3;
     const todayBrt = new Date(Date.now() + utcOffset * 3600000).toISOString().slice(0, 10);
-    const todayOrders = Object.values(cache).filter(o => o.creationDate && o.creationDate.startsWith(todayBrt.slice(0, 4)));
     // Find latest order from today BRT
     const todayOnly = Object.values(cache).filter(o => {
       if (!o.creationDate) return false;
