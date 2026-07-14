@@ -1067,6 +1067,13 @@ function processStoreHealth() {
 // Endpoint
 app.get('/api/monitor', (req, res) => {
   const result = processStoreHealth();
+  if (result && result.status === 'error') {
+    return res.json({
+      status: 'error',
+      message: result.message,
+      sync: vtexSync.getSyncState()
+    });
+  }
   res.json({
     status: 'success',
     sync: vtexSync.getSyncState(),
