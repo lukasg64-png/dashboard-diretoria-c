@@ -31,26 +31,17 @@ function loadOrdersCache() {
   return {};
 }
 
-function saveCacheStreamSync(cacheObj, filePath) {
+async function saveCacheAsync(cacheObj, filePath) {
   const tempPath = filePath + '.tmp';
-  const fd = fs.openSync(tempPath, 'w');
-  fs.writeSync(fd, '{\n');
-  const keys = Object.keys(cacheObj);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    fs.writeSync(fd, `"${key}": ${JSON.stringify(cacheObj[key])}`);
-    if (i < keys.length - 1) fs.writeSync(fd, ',\n');
-  }
-  fs.writeSync(fd, '\n}\n');
-  fs.closeSync(fd);
-
   try {
+    const json = JSON.stringify(cacheObj);
+    await fs.promises.writeFile(tempPath, json, 'utf-8');
     if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      await fs.promises.unlink(filePath);
     }
-    fs.renameSync(tempPath, filePath);
+    await fs.promises.rename(tempPath, filePath);
   } catch (err) {
-    console.error('[VTEX Sync] Erro ao mover arquivo temporario para cache oficial:', err.message);
+    console.error('[VTEX Sync] Erro ao salvar cache de forma assíncrona:', err.message);
   }
 }
 
@@ -283,12 +274,12 @@ async function syncVtexData(forceFull = false) {
     const targetDays = (forceFull || !lastSyncTime) ? [0, 1, 7] : [0];
     for (const d of targetDays) {
       await syncPeriod(d, cache);
-      saveCacheStreamSync(cache, CACHE_FILE);
+      await saveCacheAsync(cache, CACHE_FILE);
       console.log(`[VTEX Sync] Cache salvo pós-dia ${d} (${Object.keys(cache).length} pedidos).`);
     }
     
     pruneCache(cache);
-    saveCacheStreamSync(cache, CACHE_FILE);
+    await saveCacheAsync(cache, CACHE_FILE);
     
     lastSyncTime = new Date().toISOString();
     console.log(`[VTEX Sync] Sincronização concluída com sucesso às ${lastSyncTime}.`);
