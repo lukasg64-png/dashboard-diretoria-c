@@ -1990,6 +1990,58 @@ function updateOrdersCharts(sales, canceled, pending, storesList) {
       }
     }
   });
+
+  // Populate Canceled Items & Groups Analysis
+  const analytics = monitorData.canceledAnalytics || { products: [], brands: [], categories: [] };
+  
+  // Products
+  const prodTableBody = document.getElementById('canceled-products-table-body');
+  if (prodTableBody) {
+    if (!analytics.products || analytics.products.length === 0) {
+      prodTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhum item cancelado hoje.</td></tr>`;
+    } else {
+      prodTableBody.innerHTML = analytics.products.map(p => `
+        <tr>
+          <td><span style="color:var(--color-blue); font-weight:bold;">${p.id || 'N/A'}</span></td>
+          <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.name}">${p.name}</td>
+          <td class="text-center" style="font-weight:bold;">${p.quantity}</td>
+          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${p.value.toLocaleString('pt-BR')}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Categories
+  const catTableBody = document.getElementById('canceled-categories-table-body');
+  if (catTableBody) {
+    if (!analytics.categories || analytics.categories.length === 0) {
+      catTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhuma categoria cancelada hoje.</td></tr>`;
+    } else {
+      catTableBody.innerHTML = analytics.categories.map(c => `
+        <tr>
+          <td style="font-weight:bold;">${c.name}</td>
+          <td class="text-center" style="font-weight:bold;">${c.quantity}</td>
+          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${c.value.toLocaleString('pt-BR')}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Brands
+  const brandTableBody = document.getElementById('canceled-brands-table-body');
+  if (brandTableBody) {
+    if (!analytics.brands || analytics.brands.length === 0) {
+      brandTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhuma marca cancelada hoje.</td></tr>`;
+    } else {
+      brandTableBody.innerHTML = analytics.brands.map(b => `
+        <tr>
+          <td style="font-weight:bold;">${b.name}</td>
+          <td class="text-center" style="font-weight:bold;">${b.quantity}</td>
+          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${b.value.toLocaleString('pt-BR')}</td>
+        </tr>
+      `).join('');
+    }
+  }
 }
 
 function renderCancellationRankingTable(storesList) {

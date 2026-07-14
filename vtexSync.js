@@ -108,7 +108,15 @@ function minifyOrder(order) {
       }
     },
     paymentNames: (order.paymentData?.transactions || []).flatMap(t => (t.payments || []).map(p => p.paymentSystemName)).filter(Boolean),
-    deliveryChannels: (order.shippingData?.logisticsInfo || []).map(l => l.deliveryChannel).filter(Boolean)
+    deliveryChannels: (order.shippingData?.logisticsInfo || []).map(l => l.deliveryChannel).filter(Boolean),
+    items: (order.items || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      brand: item.additionalInfo?.brandName || 'Desconhecido',
+      category: item.additionalInfo?.categories?.[0]?.name || 'Outros'
+    }))
   };
 }
 
@@ -226,7 +234,10 @@ async function syncPeriod(daysAgo, cache) {
     const toFetch = orderIds.filter(id => {
       const cached = cache[id];
       if (!cached) return true;
-      if (cached.paymentNames === undefined || cached.deliveryChannels === undefined) {
+      const needsCure = cached.paymentNames === undefined || 
+                        cached.deliveryChannels === undefined || 
+                        (cached.status === 'canceled' && cached.items === undefined);
+      if (needsCure) {
         if (selfHealedCount < 10000) {
           selfHealedCount++;
           return true;
