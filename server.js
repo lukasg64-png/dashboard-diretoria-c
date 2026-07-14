@@ -397,19 +397,18 @@ function processStoreHealth() {
     ? (Date.now() - latestOrderDate.getTime()) / 3600000 
     : 0;
 
+
   // 2. Determine reference date and time timezone safe
   const syncState = vtexSync.getSyncState();
   let refDate = new Date();
-  if (syncState.lastSyncTime) {
-    const lastSync = new Date(syncState.lastSyncTime);
-    // If the last sync was within 45 minutes, use it to avoid false alarms due to sync delay
-    if (Date.now() - lastSync.getTime() < 45 * 60 * 1000) {
-      refDate = lastSync;
-    }
-  }
 
-  // If the cache is outdated (e.g. sync delay or test database), use latestOrderDate as reference (Snapshot Mode)
-  const isSnapshotMode = timeDiffHours >= 3.0 && latestOrderDate;
+  // Only use snapshot mode when NOT actively syncing, and when the latest order is from today's BRT date
+  // (prevents using yesterday's data as today's reference during startup before sync finishes)
+  const realNowBrt = getBrtTimeDetails(refDate);
+  const latestOrderBrt = latestOrderDate ? getBrtTimeDetails(latestOrderDate) : null;
+  const isFromToday = latestOrderBrt && latestOrderBrt.dateStr === realNowBrt.dateStr;
+
+  const isSnapshotMode = !syncState.isSyncing && timeDiffHours >= 3.0 && latestOrderDate && isFromToday;
   if (isSnapshotMode) {
     refDate = latestOrderDate;
   }

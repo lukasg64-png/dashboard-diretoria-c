@@ -104,7 +104,7 @@ function minifyOrder(order) {
   };
 }
 
-const getDayRange = (daysAgo) => {
+const getDayRange = (daysAgo, startFromIso = null) => {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
   const utcOffset = -3;
@@ -114,7 +114,7 @@ const getDayRange = (daysAgo) => {
   nextDay.setDate(nextDay.getDate() + 1);
   const nextDayString = nextDay.toISOString().slice(0, 10);
   return {
-    start: `${dateString}T03:00:00Z`,
+    start: startFromIso || `${dateString}T03:00:00Z`,
     end: `${nextDayString}T02:59:59Z`
   };
 };
@@ -174,9 +174,34 @@ async function fetchOrderDetails(orderIds, cache) {
 }
 
 async function syncPeriod(daysAgo, cache) {
-  console.log(`[VTEX Sync] Buscando ordens para daysAgo=${daysAgo}...`);
   progressPercent = 0;
-  const block = getDayRange(daysAgo);
+
+  // Incremental sync for today: find the latest order already in cache and only fetch from there
+  let startFromIso = null;
+  if (daysAgo === 0) {
+    const utcOffset = -3;
+    const todayBrt = new Date(Date.now() + utcOffset * 3600000).toISOString().slice(0, 10);
+    const todayOrders = Object.values(cache).filter(o => o.creationDate && o.creationDate.startsWith(todayBrt.slice(0, 4)));
+    // Find latest order from today BRT
+    const todayOnly = Object.values(cache).filter(o => {
+      if (!o.creationDate) return false;
+      const brt = new Date(new Date(o.creationDate).getTime() + utcOffset * 3600000);
+      return brt.toISOString().slice(0, 10) === todayBrt;
+    });
+    if (todayOnly.length > 0) {
+      const latestMs = Math.max(...todayOnly.map(o => new Date(o.creationDate).getTime()));
+      // Go back 5 minutes to avoid missing orders due to clock skew
+      const fromMs = latestMs - 5 * 60 * 1000;
+      startFromIso = new Date(fromMs).toISOString().slice(0, 19) + 'Z';
+      console.log(`[VTEX Sync] Incremental sync daysAgo=0 a partir de ${startFromIso} (${todayOnly.length} pedidos hoje em cache)`);
+    } else {
+      console.log(`[VTEX Sync] Sync completo daysAgo=0 (sem pedidos de hoje em cache)`);
+    }
+  } else {
+    console.log(`[VTEX Sync] Buscando ordens para daysAgo=${daysAgo}...`);
+  }
+
+  const block = getDayRange(daysAgo, startFromIso);
   let allListItems = []; // store full list items, not just IDs
   let page = 1;
   const maxPages = 40;
