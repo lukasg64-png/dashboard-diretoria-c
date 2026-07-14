@@ -698,6 +698,9 @@ function processStoreHealth() {
       hourlySales: s.hourlySales,
       hourlySalesYesterday: s.hourlySalesYesterday,
       hourlySales7DaysAgo: s.hourlySales7DaysAgo,
+      hourlyCanceled: s.hourlyCanceled || Array(24).fill(0),
+      hourlyCanceledYesterday: s.hourlyCanceledYesterday || Array(24).fill(0),
+      hourlyCanceled7DaysAgo: s.hourlyCanceled7DaysAgo || Array(24).fill(0),
       paymentMethods: s.paymentMethods,
       deliveryChannels: s.deliveryChannels
     };
