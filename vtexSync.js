@@ -11,7 +11,8 @@ const headers = {
   'Accept': 'application/json',
   'Content-Type': 'application/json',
   'X-VTEX-API-AppKey': process.env.VTEX_APP_KEY,
-  'X-VTEX-API-AppToken': process.env.VTEX_APP_TOKEN
+  'X-VTEX-API-AppToken': process.env.VTEX_APP_TOKEN,
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 };
 
 // Global sync state flag
@@ -202,25 +203,38 @@ async function syncPeriod(daysAgo, cache) {
     const maxPages = 30;
     let hasMore = true;
 
-    while (hasMore && page <= maxPages) {
-      try {
-        const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${block.start} TO ${block.end}]&per_page=100&page=${page}`;
-        const res = await axios.get(url, { headers, timeout: 30000 });
-        const list = res.data.list || [];
-        if (list.length > 0) {
-          list.forEach(o => {
-            orderIds.push(o.orderId);
-            if (cache[o.orderId] && cache[o.orderId].status !== o.status) {
-              cache[o.orderId].status = o.status;
-            }
-          });
-          page++;
-        } else {
-          hasMore = false;
+     while (hasMore && page <= maxPages) {
+      let retries = 3;
+      let delay = 2000;
+      let success = false;
+
+      while (retries > 0 && !success) {
+        try {
+          const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${block.start} TO ${block.end}]&per_page=100&page=${page}`;
+          const res = await axios.get(url, { headers, timeout: 20000 });
+          const list = res.data.list || [];
+          if (list.length > 0) {
+            list.forEach(o => {
+              orderIds.push(o.orderId);
+              if (cache[o.orderId] && cache[o.orderId].status !== o.status) {
+                cache[o.orderId].status = o.status;
+              }
+            });
+            page++;
+          } else {
+            hasMore = false;
+          }
+          success = true;
+        } catch (e) {
+          retries--;
+          console.error(`[VTEX Sync] Erro página ${page} bloco ${i} daysAgo=${daysAgo} (Tentativas restantes: ${retries}):`, e.message);
+          if (retries > 0) {
+            await new Promise(r => setTimeout(r, delay));
+            delay += 2000;
+          } else {
+            hasMore = false;
+          }
         }
-      } catch (e) {
-        console.error(`[VTEX Sync] Erro página ${page} bloco ${i} daysAgo=${daysAgo}:`, e.message);
-        hasMore = false;
       }
     }
   }
