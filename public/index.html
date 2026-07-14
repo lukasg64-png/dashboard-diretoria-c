@@ -385,40 +385,64 @@
       <!-- KPI Panel for Orders -->
       <section class="kpi-panel">
         <div class="kpi-grid">
-          <div class="kpi-card">
-            <span class="kpi-label">Total de Pedidos</span>
-            <div class="kpi-value-container">
-              <span id="kpi-orders-total" class="kpi-val">0</span>
+          <!-- Total Orders Card -->
+          <div class="kpi-card border-blue" id="card-orders-total">
+            <div class="kpi-header">
+              <span class="kpi-label">Total de Pedidos</span>
+              <i data-lucide="shopping-cart"></i>
             </div>
-            <span id="kpi-orders-total-desc" class="kpi-desc">Confirmados + Cancelados + Pendentes</span>
+            <div class="kpi-main">
+              <span id="kpi-orders-total" class="kpi-value text-blue">0</span>
+            </div>
+            <div class="kpi-footer" id="kpi-orders-total-desc">Confirmados + Cancelados + Pendentes</div>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Faturados / Integrados</span>
-            <div class="kpi-value-container">
-              <span id="kpi-orders-invoiced" class="kpi-val" style="color:var(--color-green);">0</span>
+
+          <!-- Invoiced Card -->
+          <div class="kpi-card border-green" id="card-orders-invoiced">
+            <div class="kpi-header">
+              <span class="kpi-label">Faturados / Integrados</span>
+              <i data-lucide="check-circle-2"></i>
             </div>
-            <span id="kpi-orders-invoiced-desc" class="kpi-desc">-- ontem</span>
+            <div class="kpi-main">
+              <span id="kpi-orders-invoiced" class="kpi-value text-green">0</span>
+            </div>
+            <div class="kpi-footer" id="kpi-orders-invoiced-desc">Carregando...</div>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Pedidos Cancelados</span>
-            <div class="kpi-value-container">
-              <span id="kpi-orders-canceled" class="kpi-val" style="color:var(--color-red);">0</span>
+
+          <!-- Canceled Card -->
+          <div class="kpi-card border-red" id="card-orders-canceled">
+            <div class="kpi-header">
+              <span class="kpi-label">Pedidos Cancelados</span>
+              <i data-lucide="x-circle"></i>
             </div>
-            <span id="kpi-orders-canceled-desc" class="kpi-desc">-- ontem</span>
+            <div class="kpi-main">
+              <span id="kpi-orders-canceled" class="kpi-value text-red">0</span>
+            </div>
+            <div class="kpi-footer" id="kpi-orders-canceled-desc">Carregando...</div>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Pendentes de Pagamento</span>
-            <div class="kpi-value-container">
-              <span id="kpi-orders-pending" class="kpi-val" style="color:var(--color-yellow);">0</span>
+
+          <!-- Pending Card -->
+          <div class="kpi-card border-yellow" id="card-orders-pending">
+            <div class="kpi-header">
+              <span class="kpi-label">Pendentes de Pagamento</span>
+              <i data-lucide="clock"></i>
             </div>
-            <span id="kpi-orders-pending-desc" class="kpi-desc">Aguardando aprovação</span>
+            <div class="kpi-main">
+              <span id="kpi-orders-pending" class="kpi-value text-yellow">0</span>
+            </div>
+            <div class="kpi-footer" id="kpi-orders-pending-desc">Aguardando aprovação</div>
           </div>
-          <div class="kpi-card">
-            <span class="kpi-label">Taxa de Cancelamento</span>
-            <div class="kpi-value-container">
-              <span id="kpi-orders-cancel-rate" class="kpi-val">0%</span>
+
+          <!-- Cancel Rate Card -->
+          <div class="kpi-card border-orange" id="card-orders-cancel-rate">
+            <div class="kpi-header">
+              <span class="kpi-label">Taxa de Cancelamento</span>
+              <i data-lucide="percent"></i>
             </div>
-            <span id="kpi-orders-cancel-rate-desc" class="kpi-desc">Média histórica: --</span>
+            <div class="kpi-main">
+              <span id="kpi-orders-cancel-rate" class="kpi-value text-orange">0%</span>
+            </div>
+            <div class="kpi-footer" id="kpi-orders-cancel-rate-desc">Carregando...</div>
           </div>
         </div>
       </section>

@@ -2042,6 +2042,7 @@ function updateOrdersCharts(sales, canceled, pending, storesList) {
       `).join('');
     }
   }
+  lucide.createIcons();
 }
 
 function renderCancellationRankingTable(storesList) {
