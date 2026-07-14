@@ -52,12 +52,10 @@ function pruneCache(cache) {
     const localDate = new Date(d.getTime() + (utcOffset * 3600000));
     return localDate.toISOString().slice(0, 10);
   };
-  
   const keepDates = new Set();
   for (let i = 0; i <= 7; i++) {
     keepDates.add(getBrtDateStr(i));
   }
-  
   let count = 0;
   for (const id in cache) {
     const order = cache[id];
@@ -65,7 +63,6 @@ function pruneCache(cache) {
       const creation = new Date(order.creationDate);
       const localCreation = new Date(creation.getTime() + (utcOffset * 3600000));
       const brtDateStr = localCreation.toISOString().slice(0, 10);
-      
       if (!keepDates.has(brtDateStr)) {
         delete cache[id];
         count++;
@@ -82,16 +79,12 @@ function pruneCache(cache) {
 
 function minifyOrder(order) {
   if (!order) return null;
-
   return {
     orderId: order.orderId,
     status: order.status,
     creationDate: order.creationDate,
     value: order.value,
-    sellers: (order.sellers || []).map(s => ({
-      id: s.id,
-      name: s.name
-    })),
+    sellers: (order.sellers || []).map(s => ({ id: s.id, name: s.name })),
     shippingData: {
       address: {
         state: order.shippingData?.address?.state,
@@ -111,49 +104,37 @@ function minifyOrder(order) {
   };
 }
 
-const getTimeBlocks = (daysAgo) => {
+const getDayRange = (daysAgo) => {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
   const utcOffset = -3;
   const localDate = new Date(d.getTime() + (utcOffset * 3600000));
   const dateString = localDate.toISOString().slice(0, 10);
-  
   const nextDay = new Date(localDate);
   nextDay.setDate(nextDay.getDate() + 1);
   const nextDayString = nextDay.toISOString().slice(0, 10);
-
-  return [
-    { start: `${dateString}T03:00:00.000Z`, end: `${dateString}T06:59:59.999Z` },
-    { start: `${dateString}T07:00:00.000Z`, end: `${dateString}T10:59:59.999Z` },
-    { start: `${dateString}T11:00:00.000Z`, end: `${dateString}T14:59:59.999Z` },
-    { start: `${dateString}T15:00:00.000Z`, end: `${dateString}T18:59:59.999Z` },
-    { start: `${dateString}T19:00:00.000Z`, end: `${dateString}T22:59:59.999Z` },
-    { start: `${dateString}T23:00:00.000Z`, end: `${nextDayString}T02:59:59.999Z` }
-  ];
+  return {
+    start: `${dateString}T03:00:00Z`,
+    end: `${nextDayString}T02:59:59Z`
+  };
 };
 
 async function fetchOrderDetails(orderIds, cache) {
   const chunkSize = 30;
   const totalChunks = Math.ceil(orderIds.length / chunkSize);
-
   for (let i = 0; i < orderIds.length; i += chunkSize) {
     const chunkIdx = Math.floor(i / chunkSize) + 1;
     progressPercent = Math.round((chunkIdx / totalChunks) * 100);
-    
     if (chunkIdx % 10 === 0 || chunkIdx === 1 || chunkIdx === totalChunks) {
       console.log(`[VTEX Sync] Buscando detalhes: lote ${chunkIdx}/${totalChunks}...`);
     }
-
     const chunk = orderIds.slice(i, i + chunkSize);
     const promises = chunk.map(async id => {
       let retries = 3;
       let delay = 1000;
       while (retries > 0) {
         try {
-          const res = await axios.get(`https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders/${id}`, { 
-            headers, 
-            timeout: 30000
-          });
+          const res = await axios.get(`https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders/${id}`, { headers, timeout: 30000 });
           return res.data;
         } catch (err) {
           if (err.response && err.response.status === 429) {
@@ -167,17 +148,14 @@ async function fetchOrderDetails(orderIds, cache) {
       }
       return null;
     });
-    
     const results = await Promise.all(promises);
     const validResults = results.filter(r => r !== null);
-    
     for (const order of validResults) {
       const minified = minifyOrder(order);
       if (minified) {
         cache[minified.orderId] = minified;
       }
     }
-
     await new Promise(r => setTimeout(r, 100));
   }
 }
@@ -185,62 +163,59 @@ async function fetchOrderDetails(orderIds, cache) {
 async function syncPeriod(daysAgo, cache) {
   console.log(`[VTEX Sync] Buscando ordens para daysAgo=${daysAgo}...`);
   progressPercent = 0;
-  const blocks = getTimeBlocks(daysAgo);
+  const block = getDayRange(daysAgo);
   let orderIds = [];
-
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i];
-    let page = 1;
-    const maxPages = 30;
-    let hasMore = true;
-
-     while (hasMore && page <= maxPages) {
-      let retries = 3;
-      let delay = 2000;
-      let success = false;
-
-      while (retries > 0 && !success) {
-        try {
-          const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${block.start} TO ${block.end}]&per_page=100&page=${page}`;
-          const res = await axios.get(url, { headers, timeout: 20000 });
-          const list = res.data.list || [];
-          if (list.length > 0) {
-            list.forEach(o => {
-              orderIds.push(o.orderId);
-              if (cache[o.orderId] && cache[o.orderId].status !== o.status) {
-                cache[o.orderId].status = o.status;
-              }
-            });
-            page++;
-          } else {
-            hasMore = false;
+  let page = 1;
+  const maxPages = 40;
+  let hasMore = true;
+  while (hasMore && page <= maxPages) {
+    let retries = 3;
+    let delay = 2000;
+    let success = false;
+    while (retries > 0 && !success) {
+      try {
+        const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${block.start} TO ${block.end}]&per_page=100&page=${page}`;
+        const res = await axios.get(url, { headers, timeout: 20000 });
+        const list = res.data.list || [];
+        if (list.length > 0) {
+          list.forEach(o => {
+            orderIds.push(o.orderId);
+            if (cache[o.orderId] && cache[o.orderId].status !== o.status) {
+              cache[o.orderId].status = o.status;
+            }
+          });
+          const paging = res.data.paging;
+          if (paging && paging.pages) {
+            if (page >= paging.pages) {
+              hasMore = false;
+            }
           }
-          success = true;
-        } catch (e) {
-          retries--;
-          console.error(`[VTEX Sync] Erro página ${page} bloco ${i} daysAgo=${daysAgo} (Tentativas restantes: ${retries}):`, e.message);
-          if (retries > 0) {
-            await new Promise(r => setTimeout(r, delay));
-            delay += 2000;
-          } else {
-            hasMore = false;
-          }
+          page++;
+        } else {
+          hasMore = false;
+        }
+        success = true;
+      } catch (e) {
+        retries--;
+        console.error(`[VTEX Sync] Erro página ${page} daysAgo=${daysAgo} (Tentativas restantes: ${retries}):`, e.message);
+        if (retries > 0) {
+          await new Promise(r => setTimeout(r, delay));
+          delay += 2000;
+        } else {
+          hasMore = false;
         }
       }
     }
+    await new Promise(r => setTimeout(r, 200));
   }
-
   orderIds = Array.from(new Set(orderIds));
   console.log(`[VTEX Sync] IDs localizados para daysAgo=${daysAgo}: ${orderIds.length}`);
-
   if (orderIds.length > 0) {
     let selfHealedCount = 0;
     const toFetch = orderIds.filter(id => {
       const cached = cache[id];
       if (!cached) return true;
-      const needsCure = cached.paymentNames === undefined || 
-                        cached.deliveryChannels === undefined || 
-                        (cached.status === 'canceled' && cached.items === undefined);
+      const needsCure = cached.paymentNames === undefined || cached.deliveryChannels === undefined || (cached.status === 'canceled' && cached.items === undefined);
       if (needsCure) {
         if (selfHealedCount < 10000) {
           selfHealedCount++;
@@ -250,7 +225,6 @@ async function syncPeriod(daysAgo, cache) {
       return false;
     });
     console.log(`[VTEX Sync] Do cache (completos): ${orderIds.length - toFetch.length}. Para buscar (inclui auto-cura): ${toFetch.length}`);
-    
     if (toFetch.length > 0) {
       await fetchOrderDetails(toFetch, cache);
     }
@@ -262,25 +236,18 @@ async function syncVtexData(forceFull = false) {
   isSyncing = true;
   progressPercent = 0;
   console.log(`[VTEX Sync] Iniciando sincronização autônoma de pedidos (forceFull=${forceFull})...`);
-  
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
   const cache = loadOrdersCache();
-
   try {
     pruneCache(cache);
-
-    // Sync only days 0, 1, and 7 if forceFull is true, or if lastSyncTime is null (startup)
     const targetDays = (forceFull || !lastSyncTime) ? [0, 1, 7] : [0];
     for (const d of targetDays) {
       await syncPeriod(d, cache);
       await saveCacheAsync(cache, CACHE_FILE);
       console.log(`[VTEX Sync] Cache salvo pós-dia ${d} (${Object.keys(cache).length} pedidos).`);
     }
-    
     pruneCache(cache);
     await saveCacheAsync(cache, CACHE_FILE);
-    
     lastSyncTime = new Date().toISOString();
     console.log(`[VTEX Sync] Sincronização concluída com sucesso às ${lastSyncTime}.`);
   } catch (err) {
@@ -293,9 +260,5 @@ async function syncVtexData(forceFull = false) {
 
 module.exports = {
   syncVtexData,
-  getSyncState: () => ({
-    isSyncing,
-    progressPercent,
-    lastSyncTime
-  })
+  getSyncState: () => ({ isSyncing, progressPercent, lastSyncTime })
 };
