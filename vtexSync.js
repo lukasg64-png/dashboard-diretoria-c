@@ -119,30 +119,35 @@ const getDayRange = (daysAgo) => {
   };
 };
 
+// Fetch order details one at a time with retry, saving cache incrementally
 async function fetchOrderDetails(orderIds, cache) {
-  const chunkSize = 30;
+  // Use smaller chunks and save cache after each batch to ensure data is persisted
+  const chunkSize = 10;
   const totalChunks = Math.ceil(orderIds.length / chunkSize);
+  let savedChunks = 0;
+
   for (let i = 0; i < orderIds.length; i += chunkSize) {
     const chunkIdx = Math.floor(i / chunkSize) + 1;
     progressPercent = Math.round((chunkIdx / totalChunks) * 100);
-    if (chunkIdx % 10 === 0 || chunkIdx === 1 || chunkIdx === totalChunks) {
-      console.log(`[VTEX Sync] Buscando detalhes: lote ${chunkIdx}/${totalChunks}...`);
+    if (chunkIdx % 5 === 0 || chunkIdx === 1 || chunkIdx === totalChunks) {
+      console.log(`[VTEX Sync] Buscando detalhes: lote ${chunkIdx}/${totalChunks} (${progressPercent}%)...`);
     }
     const chunk = orderIds.slice(i, i + chunkSize);
     const promises = chunk.map(async id => {
-      let retries = 3;
-      let delay = 1000;
+      let retries = 2;
+      let delay = 2000;
       while (retries > 0) {
         try {
-          const res = await axios.get(`https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders/${id}`, { headers, timeout: 30000 });
+          const res = await axios.get(
+            `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders/${id}`,
+            { headers, timeout: 25000 }
+          );
           return res.data;
         } catch (err) {
-          if (err.response && err.response.status === 429) {
-            retries--;
+          retries--;
+          if (retries > 0) {
             await new Promise(r => setTimeout(r, delay));
             delay += 1000;
-          } else {
-            return null;
           }
         }
       }
@@ -156,7 +161,15 @@ async function fetchOrderDetails(orderIds, cache) {
         cache[minified.orderId] = minified;
       }
     }
-    await new Promise(r => setTimeout(r, 100));
+
+    // Save cache every 5 chunks (50 orders) to persist progress incrementally
+    savedChunks++;
+    if (savedChunks % 5 === 0) {
+      await saveCacheAsync(cache, CACHE_FILE);
+    }
+
+    // Small delay between batches to avoid overwhelming VTEX API
+    await new Promise(r => setTimeout(r, 300));
   }
 }
 
@@ -164,10 +177,12 @@ async function syncPeriod(daysAgo, cache) {
   console.log(`[VTEX Sync] Buscando ordens para daysAgo=${daysAgo}...`);
   progressPercent = 0;
   const block = getDayRange(daysAgo);
-  let orderIds = [];
+  let allListItems = []; // store full list items, not just IDs
   let page = 1;
   const maxPages = 40;
   let hasMore = true;
+  let totalPages = null;
+
   while (hasMore && page <= maxPages) {
     let retries = 3;
     let delay = 2000;
@@ -177,18 +192,25 @@ async function syncPeriod(daysAgo, cache) {
         const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${block.start} TO ${block.end}]&per_page=100&page=${page}`;
         const res = await axios.get(url, { headers, timeout: 20000 });
         const list = res.data.list || [];
+        const paging = res.data.paging;
+
+        if (totalPages === null && paging && paging.pages) {
+          totalPages = paging.pages;
+          console.log(`[VTEX Sync] daysAgo=${daysAgo}: Total de páginas=${totalPages}, pedidos estimados=${paging.total}`);
+        }
+
         if (list.length > 0) {
+          allListItems.push(...list);
+
+          // Update status of already-cached orders from the listing (fast, no API call needed)
           list.forEach(o => {
-            orderIds.push(o.orderId);
             if (cache[o.orderId] && cache[o.orderId].status !== o.status) {
               cache[o.orderId].status = o.status;
             }
           });
-          const paging = res.data.paging;
-          if (paging && paging.pages) {
-            if (page >= paging.pages) {
-              hasMore = false;
-            }
+
+          if (paging && paging.pages && page >= paging.pages) {
+            hasMore = false;
           }
           page++;
         } else {
@@ -202,29 +224,31 @@ async function syncPeriod(daysAgo, cache) {
           await new Promise(r => setTimeout(r, delay));
           delay += 2000;
         } else {
+          // Skip this page and continue — better to have partial data than no data
           hasMore = false;
         }
       }
     }
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 300));
   }
-  orderIds = Array.from(new Set(orderIds));
+
+  const orderIds = Array.from(new Set(allListItems.map(o => o.orderId)));
   console.log(`[VTEX Sync] IDs localizados para daysAgo=${daysAgo}: ${orderIds.length}`);
+
   if (orderIds.length > 0) {
-    let selfHealedCount = 0;
+    // Determine which orders need full detail fetch
+    // Orders need fetch if: (a) not in cache at all, or (b) missing sellers (key field), or (c) canceled and missing items
     const toFetch = orderIds.filter(id => {
       const cached = cache[id];
       if (!cached) return true;
-      const needsCure = cached.paymentNames === undefined || cached.deliveryChannels === undefined || (cached.status === 'canceled' && cached.items === undefined);
-      if (needsCure) {
-        if (selfHealedCount < 10000) {
-          selfHealedCount++;
-          return true;
-        }
-      }
+      if (!cached.sellers || cached.sellers.length === 0) return true;
+      // Re-fetch canceled orders that lack items (for canceledAnalytics)
+      if (cached.status === 'canceled' && (!cached.items || cached.items.length === 0)) return true;
       return false;
     });
-    console.log(`[VTEX Sync] Do cache (completos): ${orderIds.length - toFetch.length}. Para buscar (inclui auto-cura): ${toFetch.length}`);
+
+    console.log(`[VTEX Sync] Do cache (completos): ${orderIds.length - toFetch.length}. Para buscar: ${toFetch.length}`);
+
     if (toFetch.length > 0) {
       await fetchOrderDetails(toFetch, cache);
     }
@@ -240,6 +264,7 @@ async function syncVtexData(forceFull = false) {
   const cache = loadOrdersCache();
   try {
     pruneCache(cache);
+    // Always sync today. Sync yesterday and 7 days ago on forceFull or first run.
     const targetDays = (forceFull || !lastSyncTime) ? [0, 1, 7] : [0];
     for (const d of targetDays) {
       await syncPeriod(d, cache);
