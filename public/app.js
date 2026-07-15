@@ -1979,7 +1979,7 @@ function updateOrdersCharts(sales, canceled, pending, storesList) {
   });
   lucide.createIcons();
 }
-
+function updateHeaderIcons() {
   // Table 1
   document.querySelectorAll('#tab-monitor th[data-sort]').forEach(th => {
     const field = th.getAttribute('data-sort');
