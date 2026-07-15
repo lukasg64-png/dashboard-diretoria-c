@@ -15,6 +15,9 @@ let currentDirector = '';
 let currentDistrital = '';
 let currentCoordinator = '';
 let currentState = '';
+let currentCategoryFilter = '';
+let currentPaymentFilter = '';
+let currentProductFilter = '';
 
 // Sorting state
 let storesSortField = 'status'; // default status priority
@@ -59,6 +62,9 @@ const selectDirector = document.getElementById('select-director');
 const selectDistrital = document.getElementById('select-distrital');
 const selectCoordinator = document.getElementById('select-coordinator');
 const selectState = document.getElementById('select-state');
+const selectCategory = document.getElementById('select-category');
+const selectPayment = document.getElementById('select-payment');
+const selectProduct = document.getElementById('select-product');
 const storesCountLabel = document.getElementById('stores-count-label');
 const storesTableBody = document.getElementById('stores-table-body');
 const btnLoadMore = document.getElementById('btn-load-more');
@@ -113,6 +119,7 @@ async function loadMonitorData(isRetry = false) {
       updateKPIs(monitorData.summary, monitorData.referenceDate, monitorData.referenceTime);
       updateRegionTables(monitorData.stateAnalytics, monitorData.cityAnalytics, monitorData.coordinatorAnalytics, monitorData.distritalAnalytics);
       populateDropdowns(allStores);
+      populateOrderLevelFilters();
       applyFilters();
       
       syncStatusText.textContent = `Atualizado: ${monitorData.referenceTime}`;
@@ -1170,6 +1177,45 @@ function populateDropdowns(stores) {
   selectState.value = prevSt;
 }
 
+function populateOrderLevelFilters() {
+  if (!monitorData || !monitorData.cancellationsAnalytics) return;
+  const analytics = monitorData.cancellationsAnalytics;
+  const todayOrders = analytics.todayOrders || [];
+
+  const categories = new Set();
+  const payments = new Set();
+  const products = new Set();
+
+  todayOrders.forEach(o => {
+    o.paymentNames.forEach(p => payments.add(p));
+    o.items.forEach(item => {
+      if (item.category) categories.add(item.category);
+      if (item.name) products.add(item.name);
+    });
+  });
+
+  if (selectCategory) {
+    const curVal = selectCategory.value;
+    selectCategory.innerHTML = '<option value="">Categoria: Todas</option>' + 
+      Array.from(categories).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+    selectCategory.value = categories.has(curVal) ? curVal : '';
+  }
+
+  if (selectPayment) {
+    const curVal = selectPayment.value;
+    selectPayment.innerHTML = '<option value="">Pagamento: Todos</option>' + 
+      Array.from(payments).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    selectPayment.value = payments.has(curVal) ? curVal : '';
+  }
+
+  if (selectProduct) {
+    const curVal = selectProduct.value;
+    selectProduct.innerHTML = '<option value="">Produto: Todos</option>' + 
+      Array.from(products).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    selectProduct.value = products.has(curVal) ? curVal : '';
+  }
+}
+
 // Dynamic summary calculator for organization filters
 function calculateSummary(storesSubset) {
   const activeMonitored = storesSubset.filter(s => s.status !== 'INATIVA');
@@ -1280,13 +1326,73 @@ function calculateSummary(storesSubset) {
 
 // Apply reactive filters
 function applyFilters() {
+  // Pre-process store sales counts if order-level filters are active
+  const todayOrders = (monitorData && monitorData.cancellationsAnalytics && monitorData.cancellationsAnalytics.todayOrders) || [];
+  
+  // Clone stores list to avoid mutating global data
+  const storesCopy = allStores.map(s => {
+    if (s._origSalesToday === undefined) s._origSalesToday = s.salesToday;
+    if (s._origCanceledToday === undefined) s._origCanceledToday = s.canceledToday;
+    if (s._origPendingToday === undefined) s._origPendingToday = s.pendingToday;
+    return { ...s };
+  });
+
+  if (currentCategoryFilter || currentPaymentFilter || currentProductFilter) {
+    // Zero out count for all stores
+    storesCopy.forEach(s => {
+      s.salesToday = 0;
+      s.canceledToday = 0;
+      s.pendingToday = 0;
+    });
+
+    todayOrders.forEach(o => {
+      if (currentCategoryFilter) {
+        const hasCat = o.items.some(i => i.category === currentCategoryFilter);
+        if (!hasCat) return;
+      }
+      if (currentPaymentFilter) {
+        if (!o.paymentNames.includes(currentPaymentFilter)) return;
+      }
+      if (currentProductFilter) {
+        const hasProd = o.items.some(i => i.name === currentProductFilter);
+        if (!hasProd) return;
+      }
+
+      const store = storesCopy.find(s => s.name === o.storeName);
+      if (store) {
+        const statusLower = (o.status || '').toLowerCase();
+        if (statusLower === 'canceled' || statusLower === 'cancel') {
+          store.canceledToday++;
+        } else if (statusLower === 'payment-pending') {
+          store.pendingToday++;
+        } else {
+          store.salesToday++;
+        }
+      }
+    });
+  } else {
+    // Restore original values
+    storesCopy.forEach(s => {
+      s.salesToday = s._origSalesToday;
+      s.canceledToday = s._origCanceledToday;
+      s.pendingToday = s._origPendingToday;
+    });
+  }
+
   // First, filter by organizational/search criteria (without status filter)
-  const orgFilteredStores = allStores.filter(s => {
+  const orgFilteredStores = storesCopy.filter(s => {
     // Dropdown selectors
     if (currentDirector && s.diretor !== currentDirector) return false;
     if (currentDistrital && s.distrital !== currentDistrital) return false;
     if (currentCoordinator && s.coordenador !== currentCoordinator) return false;
     if (currentState && s.state !== currentState) return false;
+
+    // Filter out stores that had zero transactions under order-level filters
+    if (currentCategoryFilter || currentPaymentFilter || currentProductFilter) {
+      if (s.salesToday === 0 && s.canceledToday === 0 && s.pendingToday === 0) {
+        return false;
+      }
+    }
 
     // Search match
     if (currentSearchQuery) {
@@ -1700,6 +1806,21 @@ selectState.addEventListener('change', (e) => {
   applyFilters();
 });
 
+selectCategory.addEventListener('change', (e) => {
+  currentCategoryFilter = e.target.value;
+  applyFilters();
+});
+
+selectPayment.addEventListener('change', (e) => {
+  currentPaymentFilter = e.target.value;
+  applyFilters();
+});
+
+selectProduct.addEventListener('change', (e) => {
+  currentProductFilter = e.target.value;
+  applyFilters();
+});
+
 // Status buttons interaction
 document.querySelectorAll('.btn-status').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1817,6 +1938,9 @@ if (btnClearFilters) {
     currentState = '';
     currentSearchQuery = '';
     currentStatusFilter = 'ALL';
+    currentCategoryFilter = '';
+    currentPaymentFilter = '';
+    currentProductFilter = '';
     
     // Reset inputs
     selectDirector.value = '';
@@ -1824,6 +1948,9 @@ if (btnClearFilters) {
     selectCoordinator.value = '';
     selectState.value = '';
     searchInput.value = '';
+    if (selectCategory) selectCategory.value = '';
+    if (selectPayment) selectPayment.value = '';
+    if (selectProduct) selectProduct.value = '';
     
     // Reset status buttons
     document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('active'));
@@ -1976,13 +2103,13 @@ function renderCancellationsInsights() {
   if (canceledProds.length === 0) {
     pList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem produtos cancelados hoje</span>`;
   } else {
-    // Find maximum quantity to scale progress bars
     const maxQty = Math.max(...canceledProds.map(p => p.quantity), 1);
     pList.innerHTML = canceledProds.map(p => {
       const pct = (p.quantity / maxQty) * 100;
       const formattedPrice = (p.price ? `R$ ${(p.price/100).toFixed(2)}` : 'R$ 0,00');
+      const escapedName = p.name.replace(/'/g, "\\'");
       return `
-        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 6px; margin-bottom: 2px;">
+        <div onclick="clickFilterProduct('${escapedName}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom: 2px;">
             <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${p.name}">${p.name}</span>
             <span style="color:var(--color-red); font-weight:800; flex-shrink:0;">${p.quantity} un</span>
@@ -2007,8 +2134,9 @@ function renderCancellationsInsights() {
     const maxCat = Math.max(...canceledCats.map(c => c.count), 1);
     cList.innerHTML = canceledCats.map(c => {
       const pct = (c.count / maxCat) * 100;
+      const escapedCat = c.category.replace(/'/g, "\\'");
       return `
-        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 6px; margin-bottom: 2px;">
+        <div onclick="clickFilterCategory('${escapedCat}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
             <span style="font-weight:700; color:var(--text-primary);">${c.category}</span>
             <span style="color:var(--color-red); font-weight:800;">${c.count} un</span>
@@ -2029,8 +2157,9 @@ function renderCancellationsInsights() {
     const maxPay = Math.max(...canceledPays.map(p => p.count), 1);
     payList.innerHTML = canceledPays.map(p => {
       const pct = (p.count / maxPay) * 100;
+      const escapedPay = p.paymentName.replace(/'/g, "\\'");
       return `
-        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 6px; margin-bottom: 2px;">
+        <div onclick="clickFilterPayment('${escapedPay}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
             <span style="font-weight:700; color:var(--text-primary);">${p.paymentName}</span>
             <span style="color:var(--color-red); font-weight:800;">${p.count} ped.</span>
@@ -2044,6 +2173,30 @@ function renderCancellationsInsights() {
   }
 
   lucide.createIcons();
+}
+
+function clickFilterProduct(prodName) {
+  if (selectProduct) {
+    selectProduct.value = prodName;
+    currentProductFilter = prodName;
+    applyFilters();
+  }
+}
+
+function clickFilterCategory(catName) {
+  if (selectCategory) {
+    selectCategory.value = catName;
+    currentCategoryFilter = catName;
+    applyFilters();
+  }
+}
+
+function clickFilterPayment(payName) {
+  if (selectPayment) {
+    selectPayment.value = payName;
+    currentPaymentFilter = payName;
+    applyFilters();
+  }
 }
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {

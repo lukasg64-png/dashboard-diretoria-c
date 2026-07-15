@@ -492,6 +492,8 @@ function processStoreHealth() {
   const topSuccessfulPayments = {};
   let totalSuccessfulValueToday = 0;
 
+  const todayOrders = [];
+
   // Aggregate order metrics
   for (const o of orders) {
     const status = (o.status || '').toLowerCase();
@@ -511,6 +513,25 @@ function processStoreHealth() {
     // Compile global order statistics for today
     if (dayStr === todayStr) {
       const val = (o.value || 0) / 100;
+      
+      // Resolve clean storeName using lookupStore
+      let storeName = 'sjdigital';
+      if (o.sellers && o.sellers.length > 0) {
+        const s = o.sellers.find(sel => sel.id !== '1' && sel.id !== 'sjdigital' && sel.name !== 'sjdigital') || o.sellers[0];
+        const cleanName = (s.name || s.id).split(' - ')[0].trim();
+        const orgInfo = lookupStore(cleanName);
+        storeName = orgInfo ? orgInfo.rawName : cleanName;
+      }
+
+      todayOrders.push({
+        orderId: o.orderId,
+        status: o.status,
+        storeName,
+        value: val,
+        paymentNames: o.paymentNames || [],
+        items: o.items || []
+      });
+
       if (isCanceled) {
         totalCanceledValueToday += val;
         if (o.paymentNames) {
@@ -1111,7 +1132,8 @@ function processStoreHealth() {
       topCanceledPayments: topCanceledPaymentsList,
       topSuccessfulProducts: topSuccessfulProductsList,
       topSuccessfulCategories: topSuccessfulCategoriesList,
-      topSuccessfulPayments: topSuccessfulPaymentsList
+      topSuccessfulPayments: topSuccessfulPaymentsList,
+      todayOrders: todayOrders
     }
   };
 }
