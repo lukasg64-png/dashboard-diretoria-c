@@ -1048,6 +1048,55 @@ app.get('/ping', (req, res) => {
 });
 
 // Serve static
+
+// Debug endpoint
+app.get('/debug', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const cachePath = path.join(__dirname, 'data', 'vtex_orders_cache.json');
+    let cacheStats = 'File does not exist';
+    if (fs.existsSync(cachePath)) {
+      const stats = fs.statSync(cachePath);
+      cacheStats = `Exists, size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`;
+    }
+    
+    // Test direct VTEX OMS request (first page of today)
+    const axios = require('axios');
+    const account = process.env.VTEX_ACCOUNT || 'sjdigital';
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-VTEX-API-AppKey': process.env.VTEX_APP_KEY,
+      'X-VTEX-API-AppToken': process.env.VTEX_APP_TOKEN,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    };
+    
+    const today = new Date().toISOString().slice(0, 10);
+    const start = `${today}T00:00:00Z`;
+    const end = `${today}T23:59:59Z`;
+    const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${start} TO ${end}]&per_page=5&page=1`;
+    
+    const startReq = Date.now();
+    let vtexTest = '';
+    try {
+      const vtexRes = await axios.get(url, { headers, timeout: 5000 });
+      vtexTest = `Success in ${Date.now() - startReq}ms, total orders: ${vtexRes.data?.paging?.total}`;
+    } catch (err) {
+      vtexTest = `Failed in ${Date.now() - startReq}ms: ${err.message}`;
+    }
+
+    res.json({
+      memory: process.memoryUsage(),
+      cacheStats,
+      vtexTest,
+      envKeys: Object.keys(process.env).filter(k => k.includes('VTEX') || k.includes('RENDER'))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
