@@ -176,13 +176,12 @@ async function fetchOrderDetails(orderIds, cache) {
       }
     }
 
-    // Save cache every chunk
-    savedChunks++;
-    await saveCacheAsync(cache, CACHE_FILE);
-
     // Minimal delay between batches
     await new Promise(r => setTimeout(r, 50));
   }
+  
+  // Save cache once after all details are fetched
+  await saveCacheAsync(cache, CACHE_FILE);
 }
 
 async function syncPeriod(daysAgo, cache) {
