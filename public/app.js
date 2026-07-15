@@ -98,7 +98,7 @@ async function fetchWithTimeout(url, timeoutMs = 20000) {
 async function loadMonitorData(isRetry = false) {
   if (!isRetry) setLoadingState(true);
   try {
-    const res = await fetchWithTimeout('/api/monitor', 20000);
+    const res = await fetchWithTimeout('/api/monitor', 45000);
     const json = await res.json();
     
     if (json.status === 'success') {
@@ -114,17 +114,26 @@ async function loadMonitorData(isRetry = false) {
       syncStatusText.textContent = `Atualizado: ${monitorData.referenceTime}`;
       syncStatusText.parentElement.firstElementChild.className = 'pulse-indicator status-green';
     } else {
-      showError(json.message || 'Erro no processamento dos dados.');
+      // Server is up but data not ready (syncing)
+      const syncInfo = json.sync;
+      const pct = syncInfo && syncInfo.progressPercent ? syncInfo.progressPercent : 0;
+      const msg = syncInfo && syncInfo.isSyncing 
+        ? `Sincronizando dados da VTEX (${pct}%)... Aguarde.`
+        : (json.message || 'Erro no processamento dos dados.');
+      showError(msg);
+      // Auto-retry while syncing
+      if (syncInfo && syncInfo.isSyncing) {
+        setTimeout(() => loadMonitorData(true), 10000);
+      } else {
+        setTimeout(() => loadMonitorData(true), 15000);
+      }
     }
   } catch (err) {
     console.error('[App] Fetch error:', err);
-    if (!isRetry) {
-      // Auto-retry once after 5s (handles Render cold-start delay)
-      syncStatusText.textContent = 'Reconectando...';
-      setTimeout(() => loadMonitorData(true), 5000);
-    } else {
-      showError('Erro ao se conectar com o servidor monitor.');
-    }
+    syncStatusText.textContent = 'Reconectando ao servidor...';
+    syncStatusText.parentElement.firstElementChild.className = 'pulse-indicator status-yellow';
+    // Always auto-retry on network errors (cold start, timeout, etc.)
+    setTimeout(() => loadMonitorData(true), 10000);
   } finally {
     if (!isRetry) setLoadingState(false);
   }
@@ -1902,7 +1911,6 @@ function renderOrdersTab() {
 
   // Update Charts
   updateOrdersCharts(totalSalesToday, totalCanceledToday, totalPendingToday, nonInactiveStores);
-    updateHourlyStatusChart(monitorData.hourlyStatusHistory);
   }
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {
