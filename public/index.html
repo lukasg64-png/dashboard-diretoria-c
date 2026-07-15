@@ -12,8 +12,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <div class="app-layout">
@@ -583,24 +583,27 @@
 
     <!-- Funnel tab main container -->
     <main class="app-content tab-content hide" id="tab-funnel">
-      <!-- Funnel KPIs Cards -->
-      <section class="kpis-grid" style="margin-bottom: 24px;">
-        <div class="kpi-card border-blue">
-          <span class="kpi-title"><i data-lucide="percent"></i> Conversão Geral (Aprovados)</span>
-          <div class="kpi-value" id="kpi-funnel-conversion">0.0%</div>
-          <span class="kpi-desc" id="kpi-funnel-conversion-desc">Ontem: 0.0% | 7d: 0.0%</span>
-        </div>
-        <div class="kpi-card border-green">
-          <span class="kpi-title"><i data-lucide="shield-check"></i> Sucesso de Pagamento</span>
-          <div class="kpi-value" id="kpi-funnel-payment-success">0.0%</div>
-          <span class="kpi-desc" id="kpi-funnel-payment-desc">Pedidos com pagamento autorizado</span>
-        </div>
-        <div class="kpi-card border-orange">
-          <span class="kpi-title"><i data-lucide="truck"></i> Separação e Envio</span>
-          <div class="kpi-value" id="kpi-funnel-fulfillment-rate">0.0%</div>
-          <span class="kpi-desc" id="kpi-funnel-fulfillment-desc">Pedidos faturados das docas</span>
-        </div>
-      </section>
+      <!-- Funnel KPIs Cards with horizontal progression arrow background -->
+      <div style="position: relative; margin-bottom: 24px;">
+        <div class="funnel-arrow-bg"></div>
+        <section class="kpi-grid" style="position: relative; z-index: 1; background: transparent;">
+          <div class="kpi-card border-blue">
+            <span class="kpi-title"><i data-lucide="percent"></i> Conversão Geral (Aprovados)</span>
+            <div class="kpi-value" id="kpi-funnel-conversion">0.0%</div>
+            <span class="kpi-desc" id="kpi-funnel-conversion-desc">Ontem: 0.0% | 7d: 0.0%</span>
+          </div>
+          <div class="kpi-card border-green">
+            <span class="kpi-title"><i data-lucide="shield-check"></i> Sucesso de Pagamento</span>
+            <div class="kpi-value" id="kpi-funnel-payment-success">0.0%</div>
+            <span class="kpi-desc" id="kpi-funnel-payment-desc">Pedidos com pagamento autorizado</span>
+          </div>
+          <div class="kpi-card border-orange">
+            <span class="kpi-title"><i data-lucide="truck"></i> Separação e Envio</span>
+            <div class="kpi-value" id="kpi-funnel-fulfillment-rate">0.0%</div>
+            <span class="kpi-desc" id="kpi-funnel-fulfillment-desc">Pedidos faturados das docas</span>
+          </div>
+        </section>
+      </div>
 
       <!-- Visual Funnel Comparisons -->
       <section class="panel-card" style="margin-bottom: 24px; padding: 20px;">
@@ -657,8 +660,8 @@
           </div>
         </div>
 
-        <div class="table-container">
-          <table class="stores-table">
+        <div class="table-responsive">
+          <table class="main-table">
             <thead>
               <tr>
                 <th>Pedido</th>
@@ -813,6 +816,6 @@
     lucide.createIcons();
   </script>
   <!-- App Controller -->
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
