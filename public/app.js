@@ -263,7 +263,33 @@ function updateGlobalStatusBanner(summary) {
   else levelCrit = 4; // Severo
 
   // Final level is the maximum of both
-  const finalLevel = Math.max(levelZero, levelCrit);
+  let finalLevel = Math.max(levelZero, levelCrit);
+
+  // Gating based on overall Health Score to ensure proportionality
+  const health = summary.healthScore;
+  const pctOffline = summary.offlineCount / Math.max(summary.totalMonitored, 1);
+  const pctCritical = summary.criticalCount / Math.max(summary.totalMonitored, 1);
+
+  // Downgrade if health is high to prevent small noise in low baselines from causing alert states
+  if (health >= 95) {
+    finalLevel = Math.min(finalLevel, 1);
+    if (pctOffline < 0.01 && pctCritical < 0.005) {
+      finalLevel = 0; // Excelente
+    }
+  } else if (health >= 88) {
+    finalLevel = Math.min(finalLevel, 2); // At most Atenção
+  } else if (health >= 78) {
+    finalLevel = Math.min(finalLevel, 3); // At most Crítico
+  }
+
+  // Upgrade if overall health is poor
+  if (health < 70) {
+    finalLevel = Math.max(finalLevel, 4); // Severo
+  } else if (health < 80) {
+    finalLevel = Math.max(finalLevel, 3); // Crítico
+  } else if (health < 90) {
+    finalLevel = Math.max(finalLevel, 2); // Atenção
+  }
 
   const clusters = ['excelente', 'normal', 'atencao', 'critico', 'severo'];
   const cluster = clusters[finalLevel];
