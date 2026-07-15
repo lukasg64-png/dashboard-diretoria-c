@@ -1938,15 +1938,112 @@ function renderOrdersTab() {
   document.getElementById('kpi-orders-pending').textContent = totalPendingToday.toLocaleString('pt-BR');
   document.getElementById('kpi-orders-cancel-rate').textContent = cancelRateToday.toFixed(1) + '%';
 
-  // Set comparison labels
-  document.getElementById('kpi-orders-invoiced-desc').innerHTML = `Ontem: <strong>${totalSalesYesterday}</strong> | 7d: <strong>${totalSales7DaysAgo}</strong>`;
-  document.getElementById('kpi-orders-canceled-desc').innerHTML = `Ontem: <strong>${totalCanceledYesterday}</strong> | 7d: <strong>${totalCanceled7DaysAgo}</strong>`;
+  // Set comparison labels with monetary values if available
+  const analytics = monitorData.cancellationsAnalytics || {};
+  const formattedCanceledVal = analytics.totalCanceledValueToday ? ` | Val: <strong>R$ ${analytics.totalCanceledValueToday.toLocaleString('pt-BR')}</strong>` : '';
+  const formattedInvoicedVal = analytics.totalSuccessfulValueToday ? ` | Val: <strong>R$ ${analytics.totalSuccessfulValueToday.toLocaleString('pt-BR')}</strong>` : '';
+
+  document.getElementById('kpi-orders-invoiced-desc').innerHTML = `Ontem: <strong>${totalSalesYesterday}</strong> | 7d: <strong>${totalSales7DaysAgo}</strong>${formattedInvoicedVal}`;
+  document.getElementById('kpi-orders-canceled-desc').innerHTML = `Ontem: <strong>${totalCanceledYesterday}</strong> | 7d: <strong>${totalCanceled7DaysAgo}</strong>${formattedCanceledVal}`;
   document.getElementById('kpi-orders-cancel-rate-desc').innerHTML = `Ontem: <strong>${cancelRateYesterday.toFixed(1)}%</strong> | 7d: <strong>${cancelRate7DaysAgo.toFixed(1)}%</strong>`;
 
   // Update Charts
   updateOrdersCharts(totalSalesToday, totalCanceledToday, totalPendingToday, nonInactiveStores);
   // Render the cancellations table
   renderOrdersTable();
+  // Render the cancellations widgets (items, categories, payment methods)
+  renderCancellationsInsights();
+}
+
+function renderCancellationsInsights() {
+  const pList = document.getElementById('cancellation-top-products');
+  const cList = document.getElementById('cancellation-top-categories');
+  const payList = document.getElementById('cancellation-top-payments');
+  
+  if (!pList || !cList || !payList) return;
+
+  if (!monitorData || !monitorData.cancellationsAnalytics) {
+    pList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    cList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    payList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    return;
+  }
+
+  const analytics = monitorData.cancellationsAnalytics;
+
+  // Render Top Canceled Products
+  const canceledProds = analytics.topCanceledProducts || [];
+  if (canceledProds.length === 0) {
+    pList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem produtos cancelados hoje</span>`;
+  } else {
+    // Find maximum quantity to scale progress bars
+    const maxQty = Math.max(...canceledProds.map(p => p.quantity), 1);
+    pList.innerHTML = canceledProds.map(p => {
+      const pct = (p.quantity / maxQty) * 100;
+      const formattedPrice = (p.price ? `R$ ${(p.price/100).toFixed(2)}` : 'R$ 0,00');
+      return `
+        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 6px; margin-bottom: 2px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom: 2px;">
+            <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${p.name}">${p.name}</span>
+            <span style="color:var(--color-red); font-weight:800; flex-shrink:0;">${p.quantity} un</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; color:var(--text-secondary); font-size:0.72rem; margin-bottom:4px;">
+            <span>${p.category} | ${p.brand}</span>
+            <span>Un: ${formattedPrice}</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Canceled Categories
+  const canceledCats = analytics.topCanceledCategories || [];
+  if (canceledCats.length === 0) {
+    cList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem categorias canceladas hoje</span>`;
+  } else {
+    const maxCat = Math.max(...canceledCats.map(c => c.count), 1);
+    cList.innerHTML = canceledCats.map(c => {
+      const pct = (c.count / maxCat) * 100;
+      return `
+        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 6px; margin-bottom: 2px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary);">${c.category}</span>
+            <span style="color:var(--color-red); font-weight:800;">${c.count} un</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Canceled Payments
+  const canceledPays = analytics.topCanceledPayments || [];
+  if (canceledPays.length === 0) {
+    payList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem pagamentos cancelados hoje</span>`;
+  } else {
+    const maxPay = Math.max(...canceledPays.map(p => p.count), 1);
+    payList.innerHTML = canceledPays.map(p => {
+      const pct = (p.count / maxPay) * 100;
+      return `
+        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 6px; margin-bottom: 2px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary);">${p.paymentName}</span>
+            <span style="color:var(--color-red); font-weight:800;">${p.count} ped.</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  lucide.createIcons();
 }
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {

@@ -457,6 +457,41 @@
         </div>
       </section>
 
+      <!-- Cancellations Insights Grid -->
+      <section style="margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <!-- Top Products Canceled -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="package" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Itens mais Cancelados (Hoje)
+            </h3>
+            <div id="cancellation-top-products" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
+          </div>
+
+          <!-- Top Categories Canceled -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="tag" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Categorias mais Canceladas
+            </h3>
+            <div id="cancellation-top-categories" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
+          </div>
+
+          <!-- Top Payments Canceled -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="credit-card" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Pagamento nos Cancelamentos
+            </h3>
+            <div id="cancellation-top-payments" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Store Cancel Table Section -->
       <section class="panel-card stores-panel" style="margin-top: 24px;">
         <div class="panel-header">
@@ -643,6 +678,6 @@
     lucide.createIcons();
   </script>
   <!-- App Controller -->
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

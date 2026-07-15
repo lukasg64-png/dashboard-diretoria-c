@@ -481,6 +481,17 @@ function processStoreHealth() {
     };
   });
 
+  // Analytics aggregation for today's orders
+  const topCanceledProducts = {};
+  const topCanceledCategories = {};
+  const topCanceledPayments = {};
+  let totalCanceledValueToday = 0;
+  
+  const topSuccessfulProducts = {};
+  const topSuccessfulCategories = {};
+  const topSuccessfulPayments = {};
+  let totalSuccessfulValueToday = 0;
+
   // Aggregate order metrics
   for (const o of orders) {
     const status = (o.status || '').toLowerCase();
@@ -496,6 +507,52 @@ function processStoreHealth() {
     const hour = detailsBrt.hour;
     const orderSeconds = detailsBrt.hour * 3600 + detailsBrt.minute * 60 + detailsBrt.second;
     const value = (o.value || 0) / 100;
+
+    // Compile global order statistics for today
+    if (dayStr === todayStr) {
+      const val = (o.value || 0) / 100;
+      if (isCanceled) {
+        totalCanceledValueToday += val;
+        if (o.paymentNames) {
+          o.paymentNames.forEach(pm => {
+            topCanceledPayments[pm] = (topCanceledPayments[pm] || 0) + 1;
+          });
+        }
+        if (o.items) {
+          o.items.forEach(item => {
+            const itemKey = item.name || item.id;
+            if (!topCanceledProducts[itemKey]) {
+              topCanceledProducts[itemKey] = { name: item.name, category: item.category, brand: item.brand, quantity: 0, cancelCount: 0 };
+            }
+            topCanceledProducts[itemKey].quantity += (item.quantity || 1);
+            topCanceledProducts[itemKey].cancelCount++;
+
+            const cat = item.category || 'Outros';
+            topCanceledCategories[cat] = (topCanceledCategories[cat] || 0) + (item.quantity || 1);
+          });
+        }
+      } else if (!isPending) {
+        totalSuccessfulValueToday += val;
+        if (o.paymentNames) {
+          o.paymentNames.forEach(pm => {
+            topSuccessfulPayments[pm] = (topSuccessfulPayments[pm] || 0) + 1;
+          });
+        }
+        if (o.items) {
+          o.items.forEach(item => {
+            const itemKey = item.name || item.id;
+            if (!topSuccessfulProducts[itemKey]) {
+              topSuccessfulProducts[itemKey] = { name: item.name, category: item.category, brand: item.brand, quantity: 0, salesCount: 0 };
+            }
+            topSuccessfulProducts[itemKey].quantity += (item.quantity || 1);
+            topSuccessfulProducts[itemKey].salesCount++;
+
+            const cat = item.category || 'Outros';
+            topSuccessfulCategories[cat] = (topSuccessfulCategories[cat] || 0) + (item.quantity || 1);
+          });
+        }
+      }
+    }
 
     o.sellers.forEach(s => {
       if (s.id === '1' || s.id === 'sjdigital' || s.name === 'sjdigital') return;
@@ -977,11 +1034,33 @@ function processStoreHealth() {
     ? Math.round(((onlineCountLastWeek + alertCountLastWeek * 0.5) / totalMonitoredLastWeek) * 100)
     : 100;
 
-  // Aggregate canceled items stats for today
-  const canceledOrdersToday = orders.filter(o => o.status === 'canceled' && o.creationDate.startsWith(todayStr));
-  
-  const canceledProducts = {};
-  const canceledBrands = {};
+  // Format top items as sorted arrays
+  const topCanceledProductsList = Object.values(topCanceledProducts)
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 15);
+
+  const topCanceledCategoriesList = Object.entries(topCanceledCategories)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topCanceledPaymentsList = Object.entries(topCanceledPayments)
+    .map(([paymentName, count]) => ({ paymentName, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const topSuccessfulProductsList = Object.values(topSuccessfulProducts)
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 15);
+
+  const topSuccessfulCategoriesList = Object.entries(topSuccessfulCategories)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topSuccessfulPaymentsList = Object.entries(topSuccessfulPayments)
+    .map(([paymentName, count]) => ({ paymentName, count }))
+    .sort((a, b) => b.count - a.count);
+
   return {
     referenceDate: todayStr,
     referenceTime: refTimeStr,
@@ -1023,7 +1102,17 @@ function processStoreHealth() {
     coordinatorAnalytics: coordinatorList,
     distritalAnalytics: distritalList,
     hourlyStatusHistory,
-    stores: processedStores
+    stores: processedStores,
+    cancellationsAnalytics: {
+      totalCanceledValueToday: Math.round(totalCanceledValueToday),
+      totalSuccessfulValueToday: Math.round(totalSuccessfulValueToday),
+      topCanceledProducts: topCanceledProductsList,
+      topCanceledCategories: topCanceledCategoriesList,
+      topCanceledPayments: topCanceledPaymentsList,
+      topSuccessfulProducts: topSuccessfulProductsList,
+      topSuccessfulCategories: topSuccessfulCategoriesList,
+      topSuccessfulPayments: topSuccessfulPaymentsList
+    }
   };
 }
 
