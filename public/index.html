@@ -457,6 +457,57 @@
         </div>
       </section>
 
+      <!-- Store Cancel Table Section -->
+      <section class="panel-card stores-panel" style="margin-top: 24px;">
+        <div class="panel-header">
+          <h2>
+            <i data-lucide="alert-triangle"></i>
+            Cancelamentos e Pedidos por Filial
+          </h2>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+            <!-- Local Search input inside this tab -->
+            <div class="search-box" style="margin-bottom: 0;">
+              <i data-lucide="search"></i>
+              <input type="text" id="orders-search-input" placeholder="Buscar filial...">
+            </div>
+            
+            <!-- Filter dropdown -->
+            <select id="select-cancel-filter" class="custom-select" style="padding: 6px 12px; font-size: 0.85rem; height: 34px;">
+              <option value="ALL">Todos os pedidos</option>
+              <option value="WITH_CANCELLATIONS">Apenas com cancelamentos</option>
+              <option value="HIGH_CANCEL_RATE">Taxa de cancelamento > 10%</option>
+              <option value="WITH_PENDING">Apenas com pendentes</option>
+            </select>
+            
+            <span id="orders-table-count-label" class="stores-count-label">-- lojas encontradas</span>
+            <button id="btn-export-orders-csv" class="btn-export" title="Exportar dados de cancelamento como CSV">
+              <i data-lucide="download"></i> Exportar CSV
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th data-sort="name" style="cursor: pointer; user-select: none;">Filial <span class="sort-icon"></span></th>
+                <th data-sort="city" style="cursor: pointer; user-select: none;">Cidade/UF <span class="sort-icon"></span></th>
+                <th data-sort="salesToday" class="text-center" style="cursor: pointer; user-select: none;">Faturados <span class="sort-icon"></span></th>
+                <th data-sort="canceledToday" class="text-center" style="cursor: pointer; user-select: none;">Cancelados <span class="sort-icon"></span></th>
+                <th data-sort="pendingToday" class="text-center" style="cursor: pointer; user-select: none;">Pendentes <span class="sort-icon"></span></th>
+                <th data-sort="totalOrders" class="text-center" style="cursor: pointer; user-select: none;">Total Pedidos <span class="sort-icon"></span></th>
+                <th data-sort="cancelRate" class="text-center" style="cursor: pointer; user-select: none;">Taxa Cancelamento <span class="sort-icon"></span></th>
+                <th style="user-select: none;">Diagnóstico de Pedidos</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+        <div class="load-more-container">
+          <button id="btn-orders-load-more" class="btn-secondary">Carregar mais 50 filiais</button>
+        </div>
+      </section>
 
     </main>
 
@@ -592,6 +643,6 @@
     lucide.createIcons();
   </script>
   <!-- App Controller -->
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

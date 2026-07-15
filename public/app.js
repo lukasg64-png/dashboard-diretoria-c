@@ -3,6 +3,10 @@ let monitorData = null;
 let allStores = [];
 let filteredStores = [];
 let displayLimit = 50;
+let ordersDisplayLimit = 50;
+let ordersSearchQuery = '';
+let ordersCancelFilter = 'ALL';
+
 
 // Filter values
 let currentStatusFilter = 'ALL';
@@ -329,7 +333,11 @@ function updateGlobalStatusBanner(summary) {
   // Update classes
   banner.className = `global-status-banner status-${cluster}`;
   title.textContent = titleText;
-  desc.textContent = descText;
+  
+  const zeroOffline = summary.offlineCount || 0;
+  const zeroAlert = (summary.zeroSalesToday || 0) - zeroOffline;
+  desc.innerHTML = descText + `<br><span style="opacity:0.9; font-size:0.82rem; display:block; margin-top:6px; border-top: 1px solid rgba(255,255,255,0.08); padding-top:6px;"><i data-lucide="info" style="width:13px; height:13px; display:inline-block; vertical-align:middle; margin-right:4px; margin-top:-2px;"></i> <strong>Diagnóstico de Estresse:</strong> Das ${zeroToday} lojas sem vendas acumuladas hoje, <strong>${zeroOffline}</strong> são de alto volume (classificadas como <strong>Offline</strong>) e <strong>${zeroAlert > 0 ? zeroAlert : 0}</strong> são de baixo volume esperado (em <strong>Atenção</strong>).</span>`;
+  lucide.createIcons();
 
   // Update clusters UI
   clusters.forEach(c => {
@@ -1937,7 +1945,9 @@ function renderOrdersTab() {
 
   // Update Charts
   updateOrdersCharts(totalSalesToday, totalCanceledToday, totalPendingToday, nonInactiveStores);
-  }
+  // Render the cancellations table
+  renderOrdersTable();
+}
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {
   // Cancellation Hourly Curve
@@ -2028,6 +2038,227 @@ function updateHeaderIcons() {
       }
     }
   });
+}
+
+// Render dynamic cancellations table
+function renderOrdersTable() {
+  const tableBody = document.getElementById('orders-table-body');
+  const countLabel = document.getElementById('orders-table-count-label');
+  const btnLoadMore = document.getElementById('btn-orders-load-more');
+  
+  if (!tableBody || !filteredStores) return;
+
+  // We filter out INATIVA stores from the cancellations view
+  let storesList = filteredStores.filter(s => s.status !== 'INATIVA');
+
+  // Apply tab-local search query
+  if (ordersSearchQuery) {
+    const q = ordersSearchQuery.toLowerCase();
+    storesList = storesList.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      s.city.toLowerCase().includes(q)
+    );
+  }
+
+  // Apply local cancellation filter dropdown
+  if (ordersCancelFilter === 'WITH_CANCELLATIONS') {
+    storesList = storesList.filter(s => (s.canceledToday || 0) > 0);
+  } else if (ordersCancelFilter === 'HIGH_CANCEL_RATE') {
+    storesList = storesList.filter(s => {
+      const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+      const rate = total > 0 ? (s.canceledToday / total) * 100 : 0;
+      return rate > 10;
+    });
+  } else if (ordersCancelFilter === 'WITH_PENDING') {
+    storesList = storesList.filter(s => (s.pendingToday || 0) > 0);
+  }
+
+  // Calculate totalOrders and cancelRate helper properties for sorting
+  storesList.forEach(s => {
+    s.totalOrders = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+    s.cancelRate = s.totalOrders > 0 ? (s.canceledToday / s.totalOrders) * 100 : 0;
+  });
+
+  // Sort stores dynamically
+  storesList.sort((a, b) => {
+    let valA = a[rankingSortField];
+    let valB = b[rankingSortField];
+
+    // If sorting by name or city, compare as strings
+    if (rankingSortField === 'name' || rankingSortField === 'city') {
+      valA = (valA || '').toLowerCase();
+      valB = (valB || '').toLowerCase();
+    } else {
+      valA = Number(valA || 0);
+      valB = Number(valB || 0);
+    }
+
+    if (valA < valB) return rankingSortAsc ? -1 : 1;
+    if (valA > valB) return rankingSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  // Update header arrow indicators for Table 2
+  document.querySelectorAll('#tab-orders th[data-sort]').forEach(th => {
+    const field = th.getAttribute('data-sort');
+    const iconSpan = th.querySelector('.sort-icon');
+    if (iconSpan) {
+      if (rankingSortField === field) {
+        iconSpan.textContent = rankingSortAsc ? ' ▲' : ' ▼';
+        iconSpan.style.opacity = '1';
+      } else {
+        iconSpan.textContent = '';
+        iconSpan.style.opacity = '0.3';
+      }
+    }
+  });
+
+  countLabel.textContent = `${storesList.length} lojas encontradas`;
+
+  const slice = storesList.slice(0, ordersDisplayLimit);
+
+  if (slice.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align:center; padding: 32px; color: var(--text-secondary);">
+          <i data-lucide="info" style="margin: 0 auto 8px; width: 24px; height: 24px;"></i>
+          Nenhuma loja com pedidos corresponde aos filtros selecionados.
+        </td>
+      </tr>
+    `;
+    if (btnLoadMore) btnLoadMore.classList.add('hide');
+    lucide.createIcons();
+    return;
+  }
+
+  tableBody.innerHTML = slice.map((s, idx) => {
+    let statusColor = 'var(--text-secondary)';
+    let diagText = 'Sem cancelamentos hoje';
+    
+    if (s.canceledToday > 0) {
+      if (s.cancelRate > 30) {
+        statusColor = 'var(--color-red)';
+        diagText = `Crítico: Taxa de cancelamento elevada (${s.cancelRate.toFixed(1)}%)`;
+      } else if (s.cancelRate > 15) {
+        statusColor = 'var(--color-orange)';
+        diagText = `Alerta: Taxa de cancelamento média (${s.cancelRate.toFixed(1)}%)`;
+      } else {
+        statusColor = 'var(--color-yellow)';
+        diagText = `Taxa sob controle (${s.cancelRate.toFixed(1)}%)`;
+      }
+    } else if (s.pendingToday > 0) {
+      statusColor = 'var(--color-yellow)';
+      diagText = `${s.pendingToday} pedido(s) aguardando aprovação`;
+    }
+
+    return `
+      <tr onclick="openStoreDetails('${s.name}')" style="cursor:pointer;">
+        <td style="font-weight:800;">${s.name}</td>
+        <td>
+          <span class="store-meta-region">
+            <i data-lucide="map-pin"></i>
+            ${s.city} - ${s.state}
+          </span>
+        </td>
+        <td class="text-center" style="font-weight:700;">${s.salesToday}</td>
+        <td class="text-center" style="color:var(--color-red); font-weight:700;">${s.canceledToday || 0}</td>
+        <td class="text-center" style="color:var(--color-yellow); font-weight:700;">${s.pendingToday || 0}</td>
+        <td class="text-center" style="font-weight:800; font-size: 0.95rem;">${s.totalOrders}</td>
+        <td class="text-center" style="color:${statusColor}; font-weight:800;">${s.cancelRate.toFixed(1)}%</td>
+        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:240px; white-space:normal;">
+          ${diagText}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (btnLoadMore) {
+    if (storesList.length > ordersDisplayLimit) {
+      btnLoadMore.classList.remove('hide');
+    } else {
+      btnLoadMore.classList.add('hide');
+    }
+  }
+
+  lucide.createIcons();
+}
+
+function exportOrdersCSV() {
+  if (!filteredStores || filteredStores.length === 0) {
+    alert('Nenhuma loja para exportar.');
+    return;
+  }
+  
+  let storesList = filteredStores.filter(s => s.status !== 'INATIVA');
+  
+  if (ordersSearchQuery) {
+    const q = ordersSearchQuery.toLowerCase();
+    storesList = storesList.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      s.city.toLowerCase().includes(q)
+    );
+  }
+
+  if (ordersCancelFilter === 'WITH_CANCELLATIONS') {
+    storesList = storesList.filter(s => (s.canceledToday || 0) > 0);
+  } else if (ordersCancelFilter === 'HIGH_CANCEL_RATE') {
+    storesList = storesList.filter(s => {
+      const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+      const rate = total > 0 ? (s.canceledToday / total) * 100 : 0;
+      return rate > 10;
+    });
+  } else if (ordersCancelFilter === 'WITH_PENDING') {
+    storesList = storesList.filter(s => (s.pendingToday || 0) > 0);
+  }
+
+  let csvContent = '\uFEFF'; // UTF-8 BOM
+  csvContent += 'Filial,Cidade/UF,Pedidos Faturados,Pedidos Cancelados,Pedidos Pendentes,Total Pedidos,Taxa de Cancelamento\n';
+  
+  storesList.forEach(s => {
+    const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+    const rate = total > 0 ? (s.canceledToday / total) * 100 : 0;
+    csvContent += `"${s.name}","${s.city} - ${s.state}",${s.salesToday},${s.canceledToday || 0},${s.pendingToday || 0},${total},${rate.toFixed(2)}%\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `monitor_cancelamentos_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Bind Order Tab specific event listeners
+const ordersSearchInput = document.getElementById('orders-search-input');
+if (ordersSearchInput) {
+  ordersSearchInput.addEventListener('input', (e) => {
+    ordersSearchQuery = e.target.value;
+    renderOrdersTable();
+  });
+}
+
+const selectCancelFilter = document.getElementById('select-cancel-filter');
+if (selectCancelFilter) {
+  selectCancelFilter.addEventListener('change', (e) => {
+    ordersCancelFilter = e.target.value;
+    ordersDisplayLimit = 50; // reset pagination
+    renderOrdersTable();
+  });
+}
+
+const btnOrdersLoadMore = document.getElementById('btn-orders-load-more');
+if (btnOrdersLoadMore) {
+  btnOrdersLoadMore.addEventListener('click', () => {
+    ordersDisplayLimit += 50;
+    renderOrdersTable();
+  });
+}
+
+const btnExportOrdersCSV = document.getElementById('btn-export-orders-csv');
+if (btnExportOrdersCSV) {
+  btnExportOrdersCSV.addEventListener('click', exportOrdersCSV);
 }
 
 
