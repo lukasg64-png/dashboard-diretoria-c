@@ -585,18 +585,18 @@
     <main class="app-content tab-content hide" id="tab-funnel">
       <!-- Funnel KPIs Cards -->
       <section class="kpis-grid" style="margin-bottom: 24px;">
-        <div class="kpi-card">
-          <span class="kpi-title"><i data-lucide="percent" class="status-blue"></i> Conversão Geral (Aprovados)</span>
+        <div class="kpi-card border-blue">
+          <span class="kpi-title"><i data-lucide="percent"></i> Conversão Geral (Aprovados)</span>
           <div class="kpi-value" id="kpi-funnel-conversion">0.0%</div>
           <span class="kpi-desc" id="kpi-funnel-conversion-desc">Ontem: 0.0% | 7d: 0.0%</span>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-title"><i data-lucide="shield-check" class="status-green"></i> Sucesso de Pagamento</span>
+        <div class="kpi-card border-green">
+          <span class="kpi-title"><i data-lucide="shield-check"></i> Sucesso de Pagamento</span>
           <div class="kpi-value" id="kpi-funnel-payment-success">0.0%</div>
           <span class="kpi-desc" id="kpi-funnel-payment-desc">Pedidos com pagamento autorizado</span>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-title"><i data-lucide="truck" class="status-purple"></i> Separação e Envio</span>
+        <div class="kpi-card border-orange">
+          <span class="kpi-title"><i data-lucide="truck"></i> Separação e Envio</span>
           <div class="kpi-value" id="kpi-funnel-fulfillment-rate">0.0%</div>
           <span class="kpi-desc" id="kpi-funnel-fulfillment-desc">Pedidos faturados das docas</span>
         </div>
@@ -641,15 +641,15 @@
             <i data-lucide="clock"></i>
             Fila de Pedidos Ativos (Últimas 24h)
           </h2>
-          <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+          <div class="panel-actions">
             <!-- Local Search input inside this tab -->
-            <div class="search-box" style="margin-bottom: 0;">
+            <div class="search-box">
               <i data-lucide="search"></i>
               <input type="text" id="queue-search-input" placeholder="Buscar pedido ou filial...">
             </div>
             
             <!-- Filter dropdown -->
-            <select id="select-queue-status" class="custom-select" style="padding: 6px 12px; font-size: 0.85rem; height: 34px;">
+            <select id="select-queue-status" class="custom-select">
               <option value="ALL">Status: Todos</option>
               <option value="payment-pending">Aguardando Pagamento</option>
               <option value="payment-approved">Pagamento Aprovado</option>
@@ -657,7 +657,7 @@
           </div>
         </div>
 
-        <div style="overflow-x: auto;">
+        <div class="table-container">
           <table class="stores-table">
             <thead>
               <tr>
