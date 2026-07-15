@@ -310,13 +310,19 @@ function lookupStore(vtexCleanName) {
   return null;
 }
 
-// Timezone safe helper
+// Timezone safe helper (High performance manual UTC-3 calculation)
 function getBrtTimeDetails(date) {
-  const options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-  const timeStr = date.toLocaleTimeString('en-US', options);
-  const [hour, minute, second] = timeStr.split(':').map(Number);
+  const brtMs = date.getTime() - (3 * 3600 * 1000);
+  const brtDate = new Date(brtMs);
   
-  const dateStr = date.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // outputs YYYY-MM-DD
+  const hour = brtDate.getUTCHours();
+  const minute = brtDate.getUTCMinutes();
+  const second = brtDate.getUTCSeconds();
+  
+  const yyyy = brtDate.getUTCFullYear();
+  const mm = String(brtDate.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(brtDate.getUTCDate()).padStart(2, '0');
+  const dateStr = `${yyyy}-${mm}-${dd}`;
   
   return { hour, minute, second, dateStr };
 }
@@ -355,28 +361,35 @@ function evaluateStoreStatus(sales, expectedSalesSoFar, expectedSalesFull, expec
   }
 }
 
+let cachedOrders = null;
+let lastCacheMtime = 0;
+
+function getOrdersCache() {
+  if (!fs.existsSync(CACHE_FILE)) {
+    return {};
+  }
+  try {
+    const stat = fs.statSync(CACHE_FILE);
+    const mtime = stat.mtimeMs;
+    if (!cachedOrders || mtime > lastCacheMtime) {
+      console.log(`[Cache] Carregando cache de pedidos do disco (${(stat.size / 1024 / 1024).toFixed(2)} MB)...`);
+      cachedOrders = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8')) || {};
+      lastCacheMtime = mtime;
+    }
+  } catch (err) {
+    console.error('[Cache] Erro ao carregar cache de pedidos do disco:', err.message);
+    if (!cachedOrders) cachedOrders = {};
+  }
+  return cachedOrders;
+}
+
 // Main processing logic
 function processStoreHealth() {
   const storesBase = loadStoresBase();
   
-  if (!fs.existsSync(CACHE_FILE)) {
-    return {
-      status: 'error',
-      message: 'Base de dados de cache da VTEX indisponível. Aguarde a sincronização do projeto principal.'
-    };
-  }
-
-  let cache;
-  try {
-    cache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
-  } catch (err) {
-    return {
-      status: 'error',
-      message: 'Erro ao carregar banco de dados de cache VTEX: ' + err.message
-    };
-  }
-
+  const cache = getOrdersCache();
   const orders = Object.values(cache);
+  
   if (orders.length === 0) {
     return {
       status: 'error',
@@ -1014,20 +1027,42 @@ function processStoreHealth() {
   };
 }
 
+let cachedMonitorData = null;
+let lastCacheUpdate = 0;
+
+function updateMonitorCache() {
+  try {
+    const result = processStoreHealth();
+    if (result && result.status !== 'error') {
+      cachedMonitorData = result;
+      lastCacheUpdate = Date.now();
+      return true;
+    }
+  } catch (err) {
+    console.error('[Monitor Cache] Erro ao pre-processar dados:', err.message);
+  }
+  return false;
+}
+
 // Endpoint
 app.get('/api/monitor', (req, res) => {
-  const result = processStoreHealth();
-  if (result && result.status === 'error') {
+  if (!cachedMonitorData) {
+    console.log('[API] Primeiro request, gerando cache de monitoramento de forma sincrona...');
+    updateMonitorCache();
+  }
+  
+  if (!cachedMonitorData) {
     return res.json({
       status: 'error',
-      message: result.message,
+      message: 'Base de dados de cache da VTEX indisponível ou vazia. Aguarde a sincronização.',
       sync: vtexSync.getSyncState()
     });
   }
+
   res.json({
     status: 'success',
     sync: vtexSync.getSyncState(),
-    data: result
+    data: cachedMonitorData
   });
 });
 
@@ -1102,6 +1137,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, () => {
   console.log(`🚀 Standalone Store Health Monitor running on http://localhost:${PORT}`);
 
+  // Initial pre-calculation of monitor cache
+  console.log('[Monitor Cache] Inicializando cache de monitoramento em segundo plano...');
+  setTimeout(() => {
+    updateMonitorCache();
+  }, 1000);
+
+  // Update monitor cache in the background every 30 seconds
+  setInterval(() => {
+    updateMonitorCache();
+  }, 30 * 1000);
+
   // Self-ping heartbeat to prevent Render sleep on free tier
   const selfUrl = process.env.RENDER_EXTERNAL_URL;
   if (selfUrl) {
@@ -1120,11 +1166,17 @@ app.listen(PORT, () => {
   
   // Always run sync on startup in the background to catch up with new orders
   console.log('[Init Sync] Running startup sync in background to fetch latest orders...');
-  vtexSync.syncVtexData().catch(err => console.error('[Init Sync] Failed:', err.message));
+  vtexSync.syncVtexData().then(() => {
+    // Force immediate update of cache when sync finishes
+    console.log('[Monitor Cache] Sincronizacao concluida, atualizando cache...');
+    updateMonitorCache();
+  }).catch(err => console.error('[Init Sync] Failed:', err.message));
   
   // Set sync interval every 20 minutes
   setInterval(() => {
     console.log('[Interval] Executando sincronização programada com VTEX...');
-    vtexSync.syncVtexData().catch(err => console.error('[Interval Sync] Failed:', err.message));
+    vtexSync.syncVtexData().then(() => {
+      updateMonitorCache();
+    }).catch(err => console.error('[Interval Sync] Failed:', err.message));
   }, 20 * 60 * 1000);
 });
