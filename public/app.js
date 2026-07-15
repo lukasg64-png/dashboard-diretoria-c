@@ -2669,53 +2669,56 @@ function drawFunnelColumn(data) {
   const invPct = total > 0 ? (invoiced / total * 100).toFixed(1) : '0.0';
   const cancPct = total > 0 ? (canceled / total * 100).toFixed(1) : '0.0';
 
+  // To scale widths nicely while maintaining a funnel shape
+  const widthLevel1 = 100;
+  const widthLevel2 = total > 0 ? Math.max(60, Math.min(85, (approved / total) * 100)) : 75;
+  const widthLevel3 = total > 0 ? Math.max(40, Math.min(70, (invoiced / total) * 100)) : 50;
+
   return `
-    <!-- Created -->
-    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-blue);">
-      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
-        <span style="color: var(--text-primary);">1. Pedidos Criados</span>
-        <span style="color: var(--color-blue); font-weight:800;">${total.toLocaleString('pt-BR')} ped.</span>
+    <div class="visual-funnel-wrapper" style="position: relative; display: flex; flex-direction: column; align-items: center; padding: 24px 0 10px; gap: 20px; min-height: 380px;">
+      
+      <!-- Central vertical arrow passing through the funnel stages -->
+      <div style="position: absolute; top: 10px; bottom: 30px; width: 24px; background: linear-gradient(to bottom, rgba(255,255,255,0.01), rgba(255,255,255,0.08) 80%, rgba(255,255,255,0.12)); border-radius: 12px; z-index: 1;">
+        <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 18px solid rgba(255,255,255,0.12);"></div>
       </div>
-      <div style="background: rgba(59, 130, 246, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
-        <div style="background: var(--color-blue); width: 100%; height: 100%; transition: width 0.3s;"></div>
-        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">100%</span>
-      </div>
-    </div>
 
-    <!-- Approved -->
-    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-yellow);">
-      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
-        <span style="color: var(--text-primary);">2. Pagamento Autorizado</span>
-        <span style="color: var(--color-yellow); font-weight:800;">${approved.toLocaleString('pt-BR')} ped.</span>
+      <!-- Level 1: Created -->
+      <div style="width: ${widthLevel1}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(15deg);">
+        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.45)); border: 2px solid var(--color-blue); border-radius: 40px; padding: 14px 20px; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.75rem; color: var(--color-blue); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">1. Pedidos Criados</div>
+          <div style="font-size: 1.25rem; font-weight: 900; color: #fff;">${total.toLocaleString('pt-BR')} <span style="font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 700;">100% do fluxo</div>
+        </div>
       </div>
-      <div style="background: rgba(245, 158, 11, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
-        <div style="background: var(--color-yellow); width: ${appPct}%; height: 100%; transition: width 0.3s;"></div>
-        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">${appPct}%</span>
-      </div>
-    </div>
 
-    <!-- Invoiced -->
-    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-green);">
-      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
-        <span style="color: var(--text-primary);">3. Faturado (Sucesso)</span>
-        <span style="color: var(--color-green); font-weight:800;">${invoiced.toLocaleString('pt-BR')} ped.</span>
-      </div>
-      <div style="background: rgba(16, 185, 129, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
-        <div style="background: var(--color-green); width: ${invPct}%; height: 100%; transition: width 0.3s;"></div>
-        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">${invPct}%</span>
-      </div>
-    </div>
+      <!-- Level 2: Approved -->
+      <div style="width: ${widthLevel2}%; z-index: 3; transition: all 0.3s; transform: perspective(500px) rotateX(15deg); position: relative;">
+        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.45)); border: 2px solid var(--color-yellow); border-radius: 40px; padding: 14px 20px; box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.75rem; color: var(--color-yellow); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">2. Pagamento Autorizado</div>
+          <div style="font-size: 1.25rem; font-weight: 900; color: #fff;">${approved.toLocaleString('pt-BR')} <span style="font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="font-size: 0.75rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 8px; border-radius: 10px; margin-top: 2px;">${appPct}%</div>
+        </div>
 
-    <!-- Canceled -->
-    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-red);">
-      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
-        <span style="color: var(--text-primary);">Cancelados (Fuga)</span>
-        <span style="color: var(--color-red); font-weight:800;">${canceled.toLocaleString('pt-BR')} ped.</span>
+        <!-- Leak Bubble: Cancelados (breaks off to the right) -->
+        <div style="position: absolute; right: -75px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; align-items: center; gap: 4px;">
+          <div style="width: 20px; height: 2px; background: rgba(239, 68, 68, 0.3); border-style: dashed;"></div>
+          <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.45)); border: 2px solid var(--color-red); border-radius: 20px; padding: 6px 12px; box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3); text-align: center; min-width: 80px; backdrop-filter: blur(4px);">
+            <div style="font-size: 0.6rem; color: var(--color-red); font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em;">Cancelados</div>
+            <div style="font-size: 0.85rem; font-weight: 800; color: #fff;">${canceled}</div>
+            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.7); font-weight: 700;">${cancPct}%</div>
+          </div>
+        </div>
       </div>
-      <div style="background: rgba(239, 68, 68, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
-        <div style="background: var(--color-red); width: ${cancPct}%; height: 100%; transition: width 0.3s;"></div>
-        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">${cancPct}%</span>
+
+      <!-- Level 3: Invoiced -->
+      <div style="width: ${widthLevel3}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(15deg);">
+        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.45)); border: 2px solid var(--color-green); border-radius: 40px; padding: 14px 20px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.75rem; color: var(--color-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">3. Faturado (Sucesso)</div>
+          <div style="font-size: 1.25rem; font-weight: 900; color: #fff;">${invoiced.toLocaleString('pt-BR')} <span style="font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="font-size: 0.75rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 8px; border-radius: 10px; margin-top: 2px;">${invPct}%</div>
+        </div>
       </div>
+
     </div>
   `;
 }

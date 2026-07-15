@@ -564,17 +564,21 @@ function processStoreHealth() {
         });
       }
     } else if (dayStr === yesterdayStr) {
-      funnelYesterday.total++;
-      if (isPending) funnelYesterday.pending++;
-      if (isApproved) funnelYesterday.approved++;
-      if (isInvoiced) funnelYesterday.invoiced++;
-      if (isCanceled) funnelYesterday.canceled++;
+      if (orderSeconds <= currentSeconds) {
+        funnelYesterday.total++;
+        if (isPending) funnelYesterday.pending++;
+        if (isApproved) funnelYesterday.approved++;
+        if (isInvoiced) funnelYesterday.invoiced++;
+        if (isCanceled) funnelYesterday.canceled++;
+      }
     } else if (dayStr === sevenDaysStr) {
-      funnelSevenDaysAgo.total++;
-      if (isPending) funnelSevenDaysAgo.pending++;
-      if (isApproved) funnelSevenDaysAgo.approved++;
-      if (isInvoiced) funnelSevenDaysAgo.invoiced++;
-      if (isCanceled) funnelSevenDaysAgo.canceled++;
+      if (orderSeconds <= currentSeconds) {
+        funnelSevenDaysAgo.total++;
+        if (isPending) funnelSevenDaysAgo.pending++;
+        if (isApproved) funnelSevenDaysAgo.approved++;
+        if (isInvoiced) funnelSevenDaysAgo.invoiced++;
+        if (isCanceled) funnelSevenDaysAgo.canceled++;
+      }
     }
 
     // Compile global order statistics for today
