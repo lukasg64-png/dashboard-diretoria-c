@@ -18,6 +18,7 @@ let currentState = '';
 let currentCategoryFilter = '';
 let currentPaymentFilter = '';
 let currentProductFilter = '';
+let currentReasonFilter = '';
 
 // Sorting state
 let storesSortField = 'status'; // default status priority
@@ -65,6 +66,7 @@ const selectState = document.getElementById('select-state');
 const selectCategory = document.getElementById('select-category');
 const selectPayment = document.getElementById('select-payment');
 const selectProduct = document.getElementById('select-product');
+const selectReason = document.getElementById('select-reason');
 const storesCountLabel = document.getElementById('stores-count-label');
 const storesTableBody = document.getElementById('stores-table-body');
 const btnLoadMore = document.getElementById('btn-load-more');
@@ -1185,6 +1187,7 @@ function populateOrderLevelFilters() {
   const categories = new Set();
   const payments = new Set();
   const products = new Set();
+  const reasons = new Set();
 
   todayOrders.forEach(o => {
     o.paymentNames.forEach(p => payments.add(p));
@@ -1192,6 +1195,11 @@ function populateOrderLevelFilters() {
       if (item.category) categories.add(item.category);
       if (item.name) products.add(item.name);
     });
+    const statusLower = (o.status || '').toLowerCase();
+    if (statusLower === 'canceled' || statusLower === 'cancel') {
+      const normReason = normalizeCancelReason(o.cancelReason);
+      reasons.add(normReason);
+    }
   });
 
   if (selectCategory) {
@@ -1213,6 +1221,13 @@ function populateOrderLevelFilters() {
     selectProduct.innerHTML = '<option value="">Produto: Todos</option>' + 
       Array.from(products).sort().map(p => `<option value="${p}">${p}</option>`).join('');
     selectProduct.value = products.has(curVal) ? curVal : '';
+  }
+
+  if (selectReason) {
+    const curVal = selectReason.value;
+    selectReason.innerHTML = '<option value="">Motivo: Todos</option>' + 
+      Array.from(reasons).sort().map(r => `<option value="${r}">${r}</option>`).join('');
+    selectReason.value = reasons.has(curVal) ? curVal : '';
   }
 }
 
@@ -1324,6 +1339,22 @@ function calculateSummary(storesSubset) {
   };
 }
 
+// Clean/normalize cancellation reason comments (matches backend)
+function normalizeCancelReason(reason) {
+  if (!reason) return 'Problema de pagamento / gateway';
+  const r = reason.toLowerCase();
+  if (r.includes('estoque') || r.includes('divergencia') || r.includes('divergência')) return 'Divergência de estoque';
+  if (r.includes('receita') || r.includes('controlado')) return 'Falta de receita do controlado';
+  if (r.includes('pagamento') || r.includes('autorização') || r.includes('autorizacao') || r.includes('recusa')) return 'Problema no pagamento';
+  if (r.includes('desistiu') || r.includes('desistencia') || r.includes('desistência') || r.includes('cliente quis')) return 'Desistência do cliente';
+  if (r.includes('duplicado') || r.includes('duplicidade')) return 'Pedido duplicado';
+  if (r.includes('teste')) return 'Pedido de teste';
+  
+  const trimmed = reason.trim().replace(/[\r\n\t]+/g, ' ');
+  if (!trimmed) return 'Problema de pagamento / gateway';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 // Apply reactive filters
 function applyFilters() {
   // Pre-process store sales counts if order-level filters are active
@@ -1337,7 +1368,7 @@ function applyFilters() {
     return { ...s };
   });
 
-  if (currentCategoryFilter || currentPaymentFilter || currentProductFilter) {
+  if (currentCategoryFilter || currentPaymentFilter || currentProductFilter || currentReasonFilter) {
     // Zero out count for all stores
     storesCopy.forEach(s => {
       s.salesToday = 0;
@@ -1356,6 +1387,10 @@ function applyFilters() {
       if (currentProductFilter) {
         const hasProd = o.items.some(i => i.name === currentProductFilter);
         if (!hasProd) return;
+      }
+      if (currentReasonFilter) {
+        const normReason = normalizeCancelReason(o.cancelReason);
+        if (normReason !== currentReasonFilter) return;
       }
 
       const store = storesCopy.find(s => s.name === o.storeName);
@@ -1388,7 +1423,7 @@ function applyFilters() {
     if (currentState && s.state !== currentState) return false;
 
     // Filter out stores that had zero transactions under order-level filters
-    if (currentCategoryFilter || currentPaymentFilter || currentProductFilter) {
+    if (currentCategoryFilter || currentPaymentFilter || currentProductFilter || currentReasonFilter) {
       if (s.salesToday === 0 && s.canceledToday === 0 && s.pendingToday === 0) {
         return false;
       }
@@ -1821,6 +1856,11 @@ selectProduct.addEventListener('change', (e) => {
   applyFilters();
 });
 
+selectReason.addEventListener('change', (e) => {
+  currentReasonFilter = e.target.value;
+  applyFilters();
+});
+
 // Status buttons interaction
 document.querySelectorAll('.btn-status').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1941,6 +1981,7 @@ if (btnClearFilters) {
     currentCategoryFilter = '';
     currentPaymentFilter = '';
     currentProductFilter = '';
+    currentReasonFilter = '';
     
     // Reset inputs
     selectDirector.value = '';
@@ -1951,6 +1992,7 @@ if (btnClearFilters) {
     if (selectCategory) selectCategory.value = '';
     if (selectPayment) selectPayment.value = '';
     if (selectProduct) selectProduct.value = '';
+    if (selectReason) selectReason.value = '';
     
     // Reset status buttons
     document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('active'));
@@ -2086,13 +2128,17 @@ function renderCancellationsInsights() {
   const pList = document.getElementById('cancellation-top-products');
   const cList = document.getElementById('cancellation-top-categories');
   const payList = document.getElementById('cancellation-top-payments');
+  const reasonList = document.getElementById('cancellation-top-reasons');
+  const operatorList = document.getElementById('cancellation-top-operators');
   
-  if (!pList || !cList || !payList) return;
+  if (!pList || !cList || !payList || !reasonList || !operatorList) return;
 
   if (!monitorData || !monitorData.cancellationsAnalytics) {
     pList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
     cList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
     payList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    reasonList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    operatorList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
     return;
   }
 
@@ -2172,6 +2218,51 @@ function renderCancellationsInsights() {
     }).join('');
   }
 
+  // Render Top Cancellation Reasons
+  const canceledReasons = analytics.topCanceledReasons || [];
+  if (canceledReasons.length === 0) {
+    reasonList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem motivos de cancelamento hoje</span>`;
+  } else {
+    const maxReason = Math.max(...canceledReasons.map(r => r.count), 1);
+    reasonList.innerHTML = canceledReasons.map(r => {
+      const pct = (r.count / maxReason) * 100;
+      const escapedReason = r.reason.replace(/'/g, "\\'");
+      return `
+        <div onclick="clickFilterReason('${escapedReason}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${r.reason}">${r.reason}</span>
+            <span style="color:var(--color-red); font-weight:800;">${r.count} ped.</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Cancellation Operators
+  const canceledOperators = analytics.topCanceledOperators || [];
+  if (canceledOperators.length === 0) {
+    operatorList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem operadores hoje</span>`;
+  } else {
+    const maxOp = Math.max(...canceledOperators.map(o => o.count), 1);
+    operatorList.innerHTML = canceledOperators.map(o => {
+      const pct = (o.count / maxOp) * 100;
+      return `
+        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${o.operator}">${o.operator}</span>
+            <span style="color:var(--color-red); font-weight:800;">${o.count} ped.</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   lucide.createIcons();
 }
 
@@ -2195,6 +2286,14 @@ function clickFilterPayment(payName) {
   if (selectPayment) {
     selectPayment.value = payName;
     currentPaymentFilter = payName;
+    applyFilters();
+  }
+}
+
+function clickFilterReason(reasonName) {
+  if (selectReason) {
+    selectReason.value = reasonName;
+    currentReasonFilter = reasonName;
     applyFilters();
   }
 }

@@ -75,6 +75,9 @@
       <select id="select-product" class="custom-select">
         <option value="">Produto: Todos</option>
       </select>
+      <select id="select-reason" class="custom-select">
+        <option value="">Motivo: Todos</option>
+      </select>
       <button id="btn-clear-filters" class="btn-clear-filters" title="Limpar todos os filtros">
         <i data-lucide="x-circle"></i> Limpar
       </button>
@@ -498,6 +501,26 @@
               <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
             </div>
           </div>
+
+          <!-- Top Cancellation Reasons -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="help-circle" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Principais Motivos de Cancelamento
+            </h3>
+            <div id="cancellation-top-reasons" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
+          </div>
+
+          <!-- Top Cancellation Operators -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="user-x" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Quem Cancelou (Operador / Gateway)
+            </h3>
+            <div id="cancellation-top-operators" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -687,6 +710,6 @@
     lucide.createIcons();
   </script>
   <!-- App Controller -->
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

@@ -327,6 +327,23 @@ function getBrtTimeDetails(date) {
   return { hour, minute, second, dateStr };
 }
 
+// Clean/normalize cancellation reason comments
+function normalizeCancelReason(reason) {
+  if (!reason) return 'Problema de pagamento / gateway';
+  const r = reason.toLowerCase();
+  if (r.includes('estoque') || r.includes('divergencia') || r.includes('divergência')) return 'Divergência de estoque';
+  if (r.includes('receita') || r.includes('controlado')) return 'Falta de receita do controlado';
+  if (r.includes('pagamento') || r.includes('autorização') || r.includes('autorizacao') || r.includes('recusa')) return 'Problema no pagamento';
+  if (r.includes('desistiu') || r.includes('desistencia') || r.includes('desistência') || r.includes('cliente quis')) return 'Desistência do cliente';
+  if (r.includes('duplicado') || r.includes('duplicidade')) return 'Pedido duplicado';
+  if (r.includes('teste')) return 'Pedido de teste';
+  
+  // Format operator notes cleanly (e.g. capitalize)
+  const trimmed = reason.trim().replace(/[\r\n\t]+/g, ' ');
+  if (!trimmed) return 'Problema de pagamento / gateway';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 // Helper to evaluate store status
 function evaluateStoreStatus(sales, expectedSalesSoFar, expectedSalesFull, expectedInterval, minutesSinceLastOrder) {
   if (expectedSalesFull <= 0.6) {
@@ -485,6 +502,8 @@ function processStoreHealth() {
   const topCanceledProducts = {};
   const topCanceledCategories = {};
   const topCanceledPayments = {};
+  const topCanceledReasons = {};
+  const topCanceledOperators = {};
   let totalCanceledValueToday = 0;
   
   const topSuccessfulProducts = {};
@@ -529,11 +548,23 @@ function processStoreHealth() {
         storeName,
         value: val,
         paymentNames: o.paymentNames || [],
-        items: o.items || []
+        items: o.items || [],
+        cancelReason: o.cancelReason || null,
+        cancelledBy: o.cancelledBy || null
       });
 
       if (isCanceled) {
         totalCanceledValueToday += val;
+        
+        // Aggregate cancellation reasons
+        const rawReason = o.cancelReason;
+        const normReason = normalizeCancelReason(rawReason);
+        topCanceledReasons[normReason] = (topCanceledReasons[normReason] || 0) + 1;
+
+        // Aggregate cancellation operators
+        const operator = o.cancelledBy || 'Desconhecido';
+        topCanceledOperators[operator] = (topCanceledOperators[operator] || 0) + 1;
+
         if (o.paymentNames) {
           o.paymentNames.forEach(pm => {
             topCanceledPayments[pm] = (topCanceledPayments[pm] || 0) + 1;
@@ -1060,6 +1091,16 @@ function processStoreHealth() {
     .sort((a, b) => b.quantity - a.quantity)
     .slice(0, 15);
 
+  const topCanceledReasonsList = Object.entries(topCanceledReasons)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topCanceledOperatorsList = Object.entries(topCanceledOperators)
+    .map(([operator, count]) => ({ operator, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
   const topCanceledCategoriesList = Object.entries(topCanceledCategories)
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count)
@@ -1130,6 +1171,8 @@ function processStoreHealth() {
       topCanceledProducts: topCanceledProductsList,
       topCanceledCategories: topCanceledCategoriesList,
       topCanceledPayments: topCanceledPaymentsList,
+      topCanceledReasons: topCanceledReasonsList,
+      topCanceledOperators: topCanceledOperatorsList,
       topSuccessfulProducts: topSuccessfulProductsList,
       topSuccessfulCategories: topSuccessfulCategoriesList,
       topSuccessfulPayments: topSuccessfulPaymentsList,

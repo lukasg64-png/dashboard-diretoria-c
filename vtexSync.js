@@ -100,7 +100,10 @@ function minifyOrder(order) {
       price: item.price,
       brand: item.additionalInfo?.brandName || 'Desconhecido',
       category: item.additionalInfo?.categories?.[0]?.name || 'Outros'
-    }))
+    })),
+    cancelReason: order.cancelReason || order.cancellationData?.Reason || (order.cancellationData?.RequestedByPaymentNotification ? 'Problema no pagamento / autorização' : null),
+    cancelledBy: order.cancelledBy || (order.cancellationData?.RequestedByPaymentNotification ? 'Gateway de Pagamento' : null),
+    cancellationDate: order.cancellationData?.CancellationDate || null
   };
 }
 
