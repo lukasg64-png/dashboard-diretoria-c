@@ -19,6 +19,8 @@ let currentCategoryFilter = '';
 let currentPaymentFilter = '';
 let currentProductFilter = '';
 let currentReasonFilter = '';
+let queueSearchQuery = '';
+let queueStatusFilter = 'ALL';
 
 // Sorting state
 let storesSortField = 'status'; // default status priority
@@ -70,6 +72,9 @@ const selectReason = document.getElementById('select-reason');
 const storesCountLabel = document.getElementById('stores-count-label');
 const storesTableBody = document.getElementById('stores-table-body');
 const btnLoadMore = document.getElementById('btn-load-more');
+
+const queueSearchInput = document.getElementById('queue-search-input');
+const selectQueueStatus = document.getElementById('select-queue-status');
 
 const btnChartDrillBack = document.getElementById('btn-chart-drill-back');
 const chartDrillTitle = document.getElementById('chart-drill-title');
@@ -1512,10 +1517,15 @@ function applyFilters() {
   // Dynamic charts update based on filtered stores!
   updateAnalyticsCharts(filteredStores);
 
-  // Re-render orders tab if it is currently active
+  // Re-render active tab if currently active
   const activeTabBtn = document.querySelector('.btn-tab.active');
-  if (activeTabBtn && activeTabBtn.getAttribute('data-tab') === 'tab-orders') {
-    renderOrdersTab();
+  if (activeTabBtn) {
+    const tab = activeTabBtn.getAttribute('data-tab');
+    if (tab === 'tab-orders') {
+      renderOrdersTab();
+    } else if (tab === 'tab-funnel') {
+      renderFunnelTab();
+    }
   }
 }
 
@@ -2059,6 +2069,8 @@ document.querySelectorAll('.btn-tab').forEach(btn => {
     
     if (targetTab === 'tab-orders') {
       renderOrdersTab();
+    } else if (targetTab === 'tab-funnel') {
+      renderFunnelTab();
     }
   });
 });
@@ -2609,5 +2621,187 @@ const btnExportOrdersCSV = document.getElementById('btn-export-orders-csv');
 if (btnExportOrdersCSV) {
   btnExportOrdersCSV.addEventListener('click', exportOrdersCSV);
 }
+
+
+// =============================================
+// TRANSACTIONAL SALES FUNNEL TAB
+// =============================================
+
+function renderFunnelTab() {
+  if (!monitorData || !monitorData.funnelAnalytics) return;
+  const f = monitorData.funnelAnalytics;
+
+  // 1. Calculate KPI values
+  const convToday = f.today.total > 0 ? (f.today.approved / f.today.total * 100) : 0;
+  const convYesterday = f.yesterday.total > 0 ? (f.yesterday.approved / f.yesterday.total * 100) : 0;
+  const conv7Days = f.sevenDaysAgo.total > 0 ? (f.sevenDaysAgo.approved / f.sevenDaysAgo.total * 100) : 0;
+
+  const payToday = (f.today.approved + f.today.canceled) > 0 
+    ? (f.today.approved / (f.today.approved + f.today.canceled) * 100) 
+    : 0;
+
+  const fulfillmentToday = f.today.approved > 0 ? (f.today.invoiced / f.today.approved * 100) : 0;
+
+  // 2. Update DOM elements
+  document.getElementById('kpi-funnel-conversion').textContent = convToday.toFixed(1) + '%';
+  document.getElementById('kpi-funnel-conversion-desc').innerHTML = `Ontem: <strong>${convYesterday.toFixed(1)}%</strong> | 7d: <strong>${conv7Days.toFixed(1)}%</strong>`;
+  
+  document.getElementById('kpi-funnel-payment-success').textContent = payToday.toFixed(1) + '%';
+  document.getElementById('kpi-funnel-fulfillment-rate').textContent = fulfillmentToday.toFixed(1) + '%';
+
+  // 3. Render visual funnel columns
+  document.getElementById('funnel-container-today').innerHTML = drawFunnelColumn(f.today);
+  document.getElementById('funnel-container-yesterday').innerHTML = drawFunnelColumn(f.yesterday);
+  document.getElementById('funnel-container-7days').innerHTML = drawFunnelColumn(f.sevenDaysAgo);
+
+  // 4. Render Active Queue Table
+  renderQueueTable();
+}
+
+function drawFunnelColumn(data) {
+  const total = data.total || 0;
+  const pending = data.pending || 0;
+  const approved = data.approved || 0;
+  const invoiced = data.invoiced || 0;
+  const canceled = data.canceled || 0;
+
+  const appPct = total > 0 ? (approved / total * 100).toFixed(1) : '0.0';
+  const invPct = total > 0 ? (invoiced / total * 100).toFixed(1) : '0.0';
+  const cancPct = total > 0 ? (canceled / total * 100).toFixed(1) : '0.0';
+
+  return `
+    <!-- Created -->
+    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-blue);">
+      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
+        <span style="color: var(--text-primary);">1. Pedidos Criados</span>
+        <span style="color: var(--color-blue); font-weight:800;">${total.toLocaleString('pt-BR')} ped.</span>
+      </div>
+      <div style="background: rgba(59, 130, 246, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
+        <div style="background: var(--color-blue); width: 100%; height: 100%; transition: width 0.3s;"></div>
+        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">100%</span>
+      </div>
+    </div>
+
+    <!-- Approved -->
+    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-yellow);">
+      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
+        <span style="color: var(--text-primary);">2. Pagamento Autorizado</span>
+        <span style="color: var(--color-yellow); font-weight:800;">${approved.toLocaleString('pt-BR')} ped.</span>
+      </div>
+      <div style="background: rgba(245, 158, 11, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
+        <div style="background: var(--color-yellow); width: ${appPct}%; height: 100%; transition: width 0.3s;"></div>
+        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">${appPct}%</span>
+      </div>
+    </div>
+
+    <!-- Invoiced -->
+    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-green);">
+      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
+        <span style="color: var(--text-primary);">3. Faturado (Sucesso)</span>
+        <span style="color: var(--color-green); font-weight:800;">${invoiced.toLocaleString('pt-BR')} ped.</span>
+      </div>
+      <div style="background: rgba(16, 185, 129, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
+        <div style="background: var(--color-green); width: ${invPct}%; height: 100%; transition: width 0.3s;"></div>
+        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">${invPct}%</span>
+      </div>
+    </div>
+
+    <!-- Canceled -->
+    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border-left: 4px solid var(--color-red);">
+      <div style="display:flex; justify-content:space-between; margin-bottom: 4px; font-size: 0.8rem; font-weight:700;">
+        <span style="color: var(--text-primary);">Cancelados (Fuga)</span>
+        <span style="color: var(--color-red); font-weight:800;">${canceled.toLocaleString('pt-BR')} ped.</span>
+      </div>
+      <div style="background: rgba(239, 68, 68, 0.1); height: 16px; border-radius: 4px; overflow:hidden; position:relative; display:flex; align-items:center;">
+        <div style="background: var(--color-red); width: ${cancPct}%; height: 100%; transition: width 0.3s;"></div>
+        <span style="position:absolute; right: 8px; font-size: 0.65rem; color: #fff; font-weight: 700;">${cancPct}%</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderQueueTable() {
+  const tbody = document.getElementById('queue-table-body');
+  if (!tbody || !monitorData) return;
+
+  const queue = monitorData.activeOrdersQueue || [];
+  
+  // Filter queue
+  const filteredQueue = queue.filter(o => {
+    // Status filter
+    if (queueStatusFilter !== 'ALL' && o.status !== queueStatusFilter) return false;
+
+    // Search query match (store name or order ID)
+    if (queueSearchQuery) {
+      const q = queueSearchQuery.toLowerCase();
+      const match = o.orderId.toLowerCase().includes(q) || o.storeName.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  if (filteredQueue.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+          Nenhum pedido correspondente na fila.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const now = new Date();
+  tbody.innerHTML = filteredQueue.map(o => {
+    const elapsedMs = now - new Date(o.creationDate);
+    const elapsedMinutes = Math.floor(elapsedMs / (60 * 1000));
+    
+    let elapsedStr = '';
+    if (elapsedMinutes < 60) {
+      elapsedStr = `Há ${elapsedMinutes} min`;
+    } else {
+      const hrs = Math.floor(elapsedMinutes / 60);
+      const mins = elapsedMinutes % 60;
+      elapsedStr = `Há ${hrs}h ${mins}m`;
+    }
+
+    const valueStr = `R$ ${o.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    const paymentsStr = o.paymentNames.join(', ') || 'Desconhecido';
+    
+    let statusBadge = '';
+    if (o.status === 'payment-pending') {
+      statusBadge = `<span class="badge badge-yellow">Aguardando Pagamento</span>`;
+    } else {
+      statusBadge = `<span class="badge badge-blue">Aprovado p/ Faturamento</span>`;
+    }
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--color-blue);">${o.orderId}</td>
+        <td>${o.storeName}</td>
+        <td>${statusBadge}</td>
+        <td style="font-weight: 600; color: var(--text-primary);">${elapsedStr}</td>
+        <td style="font-weight: 700;">${valueStr}</td>
+        <td style="color: var(--text-secondary); font-size: 0.78rem;">${paymentsStr}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Queue filters listeners
+if (queueSearchInput) {
+  queueSearchInput.addEventListener('input', (e) => {
+    queueSearchQuery = e.target.value;
+    renderQueueTable();
+  });
+}
+
+if (selectQueueStatus) {
+  selectQueueStatus.addEventListener('change', (e) => {
+    queueStatusFilter = e.target.value;
+    renderQueueTable();
+  });
+}
+
 
 

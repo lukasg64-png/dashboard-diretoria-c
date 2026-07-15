@@ -91,6 +91,9 @@
       <button class="btn-tab" data-tab="tab-orders">
         <i data-lucide="shopping-bag"></i> Status e Cancelamentos
       </button>
+      <button class="btn-tab" data-tab="tab-funnel">
+        <i data-lucide="filter"></i> Funil de Pedidos
+      </button>
     </div>
 
     <main class="app-content tab-content" id="tab-monitor">
@@ -578,6 +581,106 @@
 
     </main>
 
+    <!-- Funnel tab main container -->
+    <main class="app-content tab-content hide" id="tab-funnel">
+      <!-- Funnel KPIs Cards -->
+      <section class="kpis-grid" style="margin-bottom: 24px;">
+        <div class="kpi-card">
+          <span class="kpi-title"><i data-lucide="percent" class="status-blue"></i> Conversão Geral (Aprovados)</span>
+          <div class="kpi-value" id="kpi-funnel-conversion">0.0%</div>
+          <span class="kpi-desc" id="kpi-funnel-conversion-desc">Ontem: 0.0% | 7d: 0.0%</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-title"><i data-lucide="shield-check" class="status-green"></i> Sucesso de Pagamento</span>
+          <div class="kpi-value" id="kpi-funnel-payment-success">0.0%</div>
+          <span class="kpi-desc" id="kpi-funnel-payment-desc">Pedidos com pagamento autorizado</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-title"><i data-lucide="truck" class="status-purple"></i> Separação e Envio</span>
+          <div class="kpi-value" id="kpi-funnel-fulfillment-rate">0.0%</div>
+          <span class="kpi-desc" id="kpi-funnel-fulfillment-desc">Pedidos faturados das docas</span>
+        </div>
+      </section>
+
+      <!-- Visual Funnel Comparisons -->
+      <section class="panel-card" style="margin-bottom: 24px; padding: 20px;">
+        <h2 style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+          <i data-lucide="bar-chart-2"></i> Comparativo do Funil de Conversão
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+          <!-- Today Funnel Column -->
+          <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.9rem; text-align: center; margin-bottom: 16px; color: var(--color-blue); font-weight: 700;">Hoje (Tempo Real)</h3>
+            <div id="funnel-container-today" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Javascript will render bars here -->
+            </div>
+          </div>
+          
+          <!-- Yesterday Funnel Column -->
+          <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.9rem; text-align: center; margin-bottom: 16px; color: var(--text-secondary); font-weight: 700;">Ontem</h3>
+            <div id="funnel-container-yesterday" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Javascript will render bars here -->
+            </div>
+          </div>
+
+          <!-- 7 Days Ago Funnel Column -->
+          <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.9rem; text-align: center; margin-bottom: 16px; color: var(--text-secondary); font-weight: 700;">7 Dias Atrás</h3>
+            <div id="funnel-container-7days" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Javascript will render bars here -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Orders Queue Section -->
+      <section class="panel-card stores-panel" style="margin-top: 24px;">
+        <div class="panel-header">
+          <h2>
+            <i data-lucide="clock"></i>
+            Fila de Pedidos Ativos (Últimas 24h)
+          </h2>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+            <!-- Local Search input inside this tab -->
+            <div class="search-box" style="margin-bottom: 0;">
+              <i data-lucide="search"></i>
+              <input type="text" id="queue-search-input" placeholder="Buscar pedido ou filial...">
+            </div>
+            
+            <!-- Filter dropdown -->
+            <select id="select-queue-status" class="custom-select" style="padding: 6px 12px; font-size: 0.85rem; height: 34px;">
+              <option value="ALL">Status: Todos</option>
+              <option value="payment-pending">Aguardando Pagamento</option>
+              <option value="payment-approved">Pagamento Aprovado</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="stores-table">
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Filial / Destino</th>
+                <th>Status VTEX</th>
+                <th>Tempo Decorrido</th>
+                <th>Valor do Pedido</th>
+                <th>Meio de Pagamento</th>
+              </tr>
+            </thead>
+            <tbody id="queue-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                  Nenhum pedido ativo na fila de integração.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
   </div>
 
   <!-- Store Detail Modal -->
@@ -710,6 +813,6 @@
     lucide.createIcons();
   </script>
   <!-- App Controller -->
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

@@ -512,13 +512,19 @@ function processStoreHealth() {
   let totalSuccessfulValueToday = 0;
 
   const todayOrders = [];
+  const funnelToday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0 };
+  const funnelYesterday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0 };
+  const funnelSevenDaysAgo = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0 };
+  const activeOrdersQueue = [];
 
   // Aggregate order metrics
   for (const o of orders) {
     const status = (o.status || '').toLowerCase();
     
     const isCanceled = status === 'canceled' || status === 'cancel';
-    const isPending = status === 'payment-pending';
+    const isPending = status === 'payment-pending' || status === 'waiting-for-seller-decision';
+    const isApproved = status === 'payment-approved' || status === 'invoiced';
+    const isInvoiced = status === 'invoiced';
 
     if (!o.sellers || o.sellers.length === 0) continue;
 
@@ -528,6 +534,48 @@ function processStoreHealth() {
     const hour = detailsBrt.hour;
     const orderSeconds = detailsBrt.hour * 3600 + detailsBrt.minute * 60 + detailsBrt.second;
     const value = (o.value || 0) / 100;
+
+    // Populating funnel stats
+    if (dayStr === todayStr) {
+      funnelToday.total++;
+      if (isPending) funnelToday.pending++;
+      if (isApproved) funnelToday.approved++;
+      if (isInvoiced) funnelToday.invoiced++;
+      if (isCanceled) funnelToday.canceled++;
+
+      // If active order (pending or approved but not invoiced/canceled), push to active queue
+      const statusLower = status.toLowerCase();
+      if (statusLower === 'payment-pending' || statusLower === 'waiting-for-seller-decision' || statusLower === 'payment-approved') {
+        let storeName = 'sjdigital';
+        if (o.sellers && o.sellers.length > 0) {
+          const s = o.sellers.find(sel => sel.id !== '1' && sel.id !== 'sjdigital' && sel.name !== 'sjdigital') || o.sellers[0];
+          const cleanName = (s.name || s.id).split(' - ')[0].trim();
+          const orgInfo = lookupStore(cleanName);
+          storeName = orgInfo ? orgInfo.rawName : cleanName;
+        }
+
+        activeOrdersQueue.push({
+          orderId: o.orderId,
+          status: o.status,
+          storeName,
+          creationDate: o.creationDate,
+          value: value,
+          paymentNames: o.paymentNames || []
+        });
+      }
+    } else if (dayStr === yesterdayStr) {
+      funnelYesterday.total++;
+      if (isPending) funnelYesterday.pending++;
+      if (isApproved) funnelYesterday.approved++;
+      if (isInvoiced) funnelYesterday.invoiced++;
+      if (isCanceled) funnelYesterday.canceled++;
+    } else if (dayStr === sevenDaysStr) {
+      funnelSevenDaysAgo.total++;
+      if (isPending) funnelSevenDaysAgo.pending++;
+      if (isApproved) funnelSevenDaysAgo.approved++;
+      if (isInvoiced) funnelSevenDaysAgo.invoiced++;
+      if (isCanceled) funnelSevenDaysAgo.canceled++;
+    }
 
     // Compile global order statistics for today
     if (dayStr === todayStr) {
@@ -1177,7 +1225,13 @@ function processStoreHealth() {
       topSuccessfulCategories: topSuccessfulCategoriesList,
       topSuccessfulPayments: topSuccessfulPaymentsList,
       todayOrders: todayOrders
-    }
+    },
+    funnelAnalytics: {
+      today: funnelToday,
+      yesterday: funnelYesterday,
+      sevenDaysAgo: funnelSevenDaysAgo
+    },
+    activeOrdersQueue: activeOrdersQueue
   };
 }
 
