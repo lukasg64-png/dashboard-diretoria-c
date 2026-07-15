@@ -1902,10 +1902,8 @@ function renderOrdersTab() {
 
   // Update Charts
   updateOrdersCharts(totalSalesToday, totalCanceledToday, totalPendingToday, nonInactiveStores);
-
-  // Update Table
-  renderCancellationRankingTable(nonInactiveStores);
-}
+    updateHourlyStatusChart(monitorData.hourlyStatusHistory);
+  }
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {
   // Cancellation Hourly Curve
@@ -1979,159 +1977,9 @@ function updateOrdersCharts(sales, canceled, pending, storesList) {
       }
     }
   });
-
-  // Populate Canceled Items & Groups Analysis
-  const analytics = monitorData.canceledAnalytics || { products: [], brands: [], categories: [] };
-  
-  // Products
-  const prodTableBody = document.getElementById('canceled-products-table-body');
-  if (prodTableBody) {
-    if (!analytics.products || analytics.products.length === 0) {
-      prodTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhum item cancelado hoje.</td></tr>`;
-    } else {
-      prodTableBody.innerHTML = analytics.products.map(p => `
-        <tr>
-          <td><span style="color:var(--color-blue); font-weight:bold;">${p.id || 'N/A'}</span></td>
-          <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.name}">${p.name}</td>
-          <td class="text-center" style="font-weight:bold;">${p.quantity}</td>
-          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${p.value.toLocaleString('pt-BR')}</td>
-        </tr>
-      `).join('');
-    }
-  }
-
-  // Categories
-  const catTableBody = document.getElementById('canceled-categories-table-body');
-  if (catTableBody) {
-    if (!analytics.categories || analytics.categories.length === 0) {
-      catTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhuma categoria cancelada hoje.</td></tr>`;
-    } else {
-      catTableBody.innerHTML = analytics.categories.map(c => `
-        <tr>
-          <td style="font-weight:bold;">${c.name}</td>
-          <td class="text-center" style="font-weight:bold;">${c.quantity}</td>
-          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${c.value.toLocaleString('pt-BR')}</td>
-        </tr>
-      `).join('');
-    }
-  }
-
-  // Brands
-  const brandTableBody = document.getElementById('canceled-brands-table-body');
-  if (brandTableBody) {
-    if (!analytics.brands || analytics.brands.length === 0) {
-      brandTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhuma marca cancelada hoje.</td></tr>`;
-    } else {
-      brandTableBody.innerHTML = analytics.brands.map(b => `
-        <tr>
-          <td style="font-weight:bold;">${b.name}</td>
-          <td class="text-center" style="font-weight:bold;">${b.quantity}</td>
-          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${b.value.toLocaleString('pt-BR')}</td>
-        </tr>
-      `).join('');
-    }
-  }
   lucide.createIcons();
 }
 
-function renderCancellationRankingTable(storesList) {
-  const tableBody = document.getElementById('orders-ranking-table-body');
-  const label = document.getElementById('orders-ranking-count-label');
-  if (!tableBody) return;
-
-  // Filter stores that have at least 1 order (total) to calculate cancel rate, or any cancel count
-  const activeRanking = storesList.map(s => {
-    const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
-    const rate = total > 0 ? ((s.canceledToday || 0) / total) * 100 : 0;
-    return { ...s, totalOrders: total, cancelRate: rate };
-  }).filter(s => s.totalOrders > 0 || s.canceledToday > 0);
-
-  // Sort dynamically
-  activeRanking.sort((a, b) => {
-    let valA = a[rankingSortField];
-    let valB = b[rankingSortField];
-
-    if (typeof valA === 'string') {
-      valA = valA.toLowerCase();
-      valB = (valB || '').toLowerCase();
-    }
-    
-    if (valA == null) return 1;
-    if (valB == null) return -1;
-
-    if (valA < valB) return rankingSortAsc ? -1 : 1;
-    if (valA > valB) return rankingSortAsc ? 1 : -1;
-    return 0;
-  });
-
-  // Update header arrow indicators
-  updateHeaderIcons();
-
-  label.textContent = `${activeRanking.length} filiais com movimentação hoje`;
-
-  if (activeRanking.length === 0) {
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="9" style="text-align:center; padding: 32px; color: var(--text-secondary);">
-          <i data-lucide="info" style="margin: 0 auto 8px; width: 24px; height: 24px;"></i>
-          Nenhum pedido registrado hoje para as filiais selecionadas.
-        </td>
-      </tr>
-    `;
-    lucide.createIcons();
-    return;
-  }
-
-  tableBody.innerHTML = activeRanking.slice(0, 50).map(s => {
-    let rowClass = 'row-online';
-    let badgeClass = 'badge-green';
-    
-    if (s.status === 'OFFLINE') { rowClass = 'row-offline'; badgeClass = 'badge-red'; }
-    else if (s.status === 'CRITICO') { rowClass = 'row-critical'; badgeClass = 'badge-orange'; }
-    else if (s.status === 'ALERTA') { rowClass = 'row-alert'; badgeClass = 'badge-yellow'; }
-    else if (s.status === 'INATIVA') { rowClass = 'row-inativa'; badgeClass = 'badge-grey'; }
-
-    // Red cancel rate highlight if rate > 30% and total orders > 2
-    const isCriticalRate = s.cancelRate > 30 && s.totalOrders >= 3;
-
-    return `
-      <tr class="${rowClass}" onclick="openStoreDetails('${s.name}')" style="cursor:pointer;">
-        <td style="font-weight:800;">${s.name}</td>
-        <td>
-          <span class="store-meta-region">
-            <i data-lucide="map-pin"></i>
-            ${s.city} - ${s.state}
-          </span>
-        </td>
-        <td class="text-center" style="font-weight:800; font-size: 0.95rem;">${s.salesToday}</td>
-        <td class="text-center" style="color:var(--color-red); font-weight:800;">${s.canceledToday || 0}</td>
-        <td class="text-center" style="color:var(--color-yellow); font-weight:800;">${s.pendingToday || 0}</td>
-        <td class="text-center" style="font-weight:800; ${isCriticalRate ? 'color:var(--color-red); background:rgba(239,68,68,0.08);' : 'color:var(--text-primary);'}">
-          ${s.cancelRate.toFixed(1)}%
-          ${isCriticalRate ? '<span style="font-size:0.65rem; display:block; color:var(--color-red); font-weight:bold;">TAXA ALTA</span>' : ''}
-        </td>
-        <td>
-          <div class="store-org-cell">
-            <span class="coord">${s.coordenador || 'Desconhecido'}</span>
-            <span class="dist">D: ${s.distrital || 'Desconhecido'}</span>
-          </div>
-        </td>
-        <td>
-          <span class="status-badge ${badgeClass}">
-            ${s.status}
-          </span>
-        </td>
-        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:240px; white-space:normal;">
-          ${s.details}
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  lucide.createIcons();
-}
-
-function updateHeaderIcons() {
   // Table 1
   document.querySelectorAll('#tab-monitor th[data-sort]').forEach(th => {
     const field = th.getAttribute('data-sort');
@@ -2139,21 +1987,6 @@ function updateHeaderIcons() {
     if (iconSpan) {
       if (storesSortField === field) {
         iconSpan.textContent = storesSortAsc ? ' ▲' : ' ▼';
-        iconSpan.style.opacity = '1';
-      } else {
-        iconSpan.textContent = '';
-        iconSpan.style.opacity = '0.3';
-      }
-    }
-  });
-
-  // Table 2
-  document.querySelectorAll('#tab-orders th[data-sort]').forEach(th => {
-    const field = th.getAttribute('data-sort');
-    const iconSpan = th.querySelector('.sort-icon');
-    if (iconSpan) {
-      if (rankingSortField === field) {
-        iconSpan.textContent = rankingSortAsc ? ' ▲' : ' ▼';
         iconSpan.style.opacity = '1';
       } else {
         iconSpan.textContent = '';

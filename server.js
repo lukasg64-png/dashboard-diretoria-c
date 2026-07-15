@@ -969,51 +969,6 @@ function processStoreHealth() {
   
   const canceledProducts = {};
   const canceledBrands = {};
-  const canceledCategories = {};
-
-  canceledOrdersToday.forEach(o => {
-    (o.items || []).forEach(item => {
-      // Product
-      const prodName = item.name || 'Produto Sem Nome';
-      if (!canceledProducts[prodName]) {
-        canceledProducts[prodName] = { name: prodName, quantity: 0, value: 0, id: item.id };
-      }
-      canceledProducts[prodName].quantity += (item.quantity || 1);
-      canceledProducts[prodName].value += (item.price || 0) * (item.quantity || 1);
-
-      // Brand
-      const brandName = item.brand || 'Desconhecido';
-      if (!canceledBrands[brandName]) {
-        canceledBrands[brandName] = { name: brandName, quantity: 0, value: 0 };
-      }
-      canceledBrands[brandName].quantity += (item.quantity || 1);
-      canceledBrands[brandName].value += (item.price || 0) * (item.quantity || 1);
-
-      // Category
-      const categoryName = item.category || 'Outros';
-      if (!canceledCategories[categoryName]) {
-        canceledCategories[categoryName] = { name: categoryName, quantity: 0, value: 0 };
-      }
-      canceledCategories[categoryName].quantity += (item.quantity || 1);
-      canceledCategories[categoryName].value += (item.price || 0) * (item.quantity || 1);
-    });
-  });
-
-  const topCanceledProducts = Object.values(canceledProducts)
-    .sort((a, b) => b.quantity - a.quantity || b.value - a.value)
-    .slice(0, 15)
-    .map(p => ({ ...p, value: Math.round(p.value / 100) })); // convert to R$
-
-  const topCanceledBrands = Object.values(canceledBrands)
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10)
-    .map(b => ({ ...b, value: Math.round(b.value / 100) }));
-
-  const topCanceledCategories = Object.values(canceledCategories)
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10)
-    .map(c => ({ ...c, value: Math.round(c.value / 100) }));
-
   return {
     referenceDate: todayStr,
     referenceTime: refTimeStr,
@@ -1055,12 +1010,7 @@ function processStoreHealth() {
     coordinatorAnalytics: coordinatorList,
     distritalAnalytics: distritalList,
     hourlyStatusHistory,
-    stores: processedStores,
-    canceledAnalytics: {
-      products: topCanceledProducts,
-      brands: topCanceledBrands,
-      categories: topCanceledCategories
-    }
+    stores: processedStores
   };
 }
 
