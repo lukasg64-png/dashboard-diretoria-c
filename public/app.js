@@ -265,9 +265,9 @@ function updateGlobalStatusBanner(summary) {
   const ratioZero = zeroToday / Math.max(baselineZero, 1);
   let levelZero = 1; // Default normal
   if (ratioZero <= 0.85) levelZero = 0; // Excelente
-  else if (ratioZero <= 1.15) levelZero = 1; // Normal
-  else if (ratioZero <= 1.4) levelZero = 2; // Atenção
-  else if (ratioZero <= 2.0) levelZero = 3; // Crítico
+  else if (ratioZero <= 1.20) levelZero = 1; // Normal
+  else if (ratioZero <= 1.50) levelZero = 2; // Atenção
+  else if (ratioZero <= 2.20) levelZero = 3; // Crítico
   else levelZero = 4; // Severo
 
   // 2. Calculate Critical Inactivity stress level
@@ -275,9 +275,9 @@ function updateGlobalStatusBanner(summary) {
   const ratioCrit = criticalToday / Math.max(baselineCrit, 5); // Base min of 5 to avoid noise
   let levelCrit = 1; // Default normal
   if (ratioCrit <= 0.85) levelCrit = 0; // Excelente
-  else if (ratioCrit <= 1.2) levelCrit = 1; // Normal
-  else if (ratioCrit <= 1.5) levelCrit = 2; // Atenção
-  else if (ratioCrit <= 2.2) levelCrit = 3; // Crítico
+  else if (ratioCrit <= 1.25) levelCrit = 1; // Normal
+  else if (ratioCrit <= 1.65) levelCrit = 2; // Atenção
+  else if (ratioCrit <= 2.50) levelCrit = 3; // Crítico
   else levelCrit = 4; // Severo
 
   // Final level is the maximum of both
@@ -288,24 +288,31 @@ function updateGlobalStatusBanner(summary) {
   const pctOffline = summary.offlineCount / Math.max(summary.totalMonitored, 1);
   const pctCritical = summary.criticalCount / Math.max(summary.totalMonitored, 1);
 
-  // Downgrade if health is high to prevent small noise in low baselines from causing alert states
-  if (health >= 95) {
-    finalLevel = Math.min(finalLevel, 1);
-    if (pctOffline < 0.01 && pctCritical < 0.005) {
+  // Downgrade rules (much smoother and realistic)
+  if (health >= 94) {
+    finalLevel = Math.min(finalLevel, 1); // Max Normal
+    if (pctOffline < 0.015 && pctCritical < 0.008) {
       finalLevel = 0; // Excelente
     }
-  } else if (health >= 88) {
-    finalLevel = Math.min(finalLevel, 2); // At most Atenção
-  } else if (health >= 78) {
-    finalLevel = Math.min(finalLevel, 3); // At most Crítico
+  } else if (health >= 84) {
+    finalLevel = Math.min(finalLevel, 2); // Max Atenção
+  } else if (health >= 70) {
+    finalLevel = Math.min(finalLevel, 3); // Max Crítico
+  }
+
+  // Hard limit for Severo (Level 4): only if more than 15% of stores are offline OR 8% are critically inactive
+  if (finalLevel === 4) {
+    if (pctOffline < 0.15 && pctCritical < 0.08) {
+      finalLevel = 3; // Downgrade to Crítico
+    }
   }
 
   // Upgrade if overall health is poor
-  if (health < 70) {
+  if (health < 60) {
     finalLevel = Math.max(finalLevel, 4); // Severo
-  } else if (health < 80) {
+  } else if (health < 72) {
     finalLevel = Math.max(finalLevel, 3); // Crítico
-  } else if (health < 90) {
+  } else if (health < 84) {
     finalLevel = Math.max(finalLevel, 2); // Atenção
   }
 
@@ -326,21 +333,21 @@ function updateGlobalStatusBanner(summary) {
     if (levelCrit > levelZero) {
       descText = `Alerta de Inatividade Recente: Há um aumento de lojas ativas que pararam de vender nas últimas 2h (${criticalToday} vs média de ${Math.round(baselineCrit)}).`;
     } else {
-      descText = `Volume de lojas sem venda hoje está acima do esperado (${zeroToday} vs média de ${Math.round(baselineZero)}). Fique de olho.`;
+      descText = `Volume de lojas sem venda hoje está acima do esperado (${zeroToday} vs média de ${Math.round(baselineZero)}).`;
     }
   } else if (finalLevel === 3) {
-    titleText = 'Termômetro Operacional: CRÍTICO';
+    titleText = 'Termômetro Operacional: DESVIO CRÍTICO';
     if (levelCrit > levelZero) {
-      descText = `Desvio Operacional Grave: Pico anômalo de lojas em inatividade crítica (${criticalToday} vs média de ${Math.round(baselineCrit)}). Várias filiais pararam de faturar nas últimas 2 horas! Sugerimos verificar integrações de TI.`;
+      descText = `Desvio Operacional Identificado: Aumento de lojas em inatividade nas últimas 2 horas (${criticalToday} vs média de ${Math.round(baselineCrit)}). Recomendamos verificar a estabilidade de comunicação das filiais.`;
     } else {
-      descText = `Muitas lojas paradas em comparação com o histórico (${zeroToday} vs média de ${Math.round(baselineZero)}). Possível instabilidade sistêmica em andamento.`;
+      descText = `Volume de lojas sem faturamento acumulado hoje está acima da média esperada (${zeroToday} vs média de ${Math.round(baselineZero)}).`;
     }
   } else if (finalLevel === 4) {
-    titleText = 'Termômetro Operacional: INCIDENTE / SEVERO';
+    titleText = 'Termômetro Operacional: INCIDENTE SISTÊMICO';
     if (levelCrit > levelZero) {
-      descText = `INCIDENTE GRAVE DETECTADO: Interrupção repentina de faturamento em massa! ${criticalToday} lojas em inatividade crítica (média histórica para o horário: ${Math.round(baselineCrit)}). Acione imediatamente os times de T.I. e Infraestrutura!`;
+      descText = `INCIDENTE DETECTADO: Queda acentuada no ritmo de faturamento das filiais. ${criticalToday} lojas sem vendas nas últimas 2 horas (média histórica: ${Math.round(baselineCrit)}). Recomendamos verificação das integrações de TI e servidores centrais.`;
     } else {
-      descText = `Volume massivo de lojas sem venda hoje (${zeroToday} vs média de ${Math.round(baselineZero)}). Desvio grave na operação!`;
+      descText = `Volume crítico de lojas sem vendas registrado hoje (${zeroToday} vs média de ${Math.round(baselineZero)}). Desvio acentuado na operação geral.`;
     }
   }
 
