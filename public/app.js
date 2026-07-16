@@ -15,6 +15,7 @@ let currentDirector = '';
 let currentDistrital = '';
 let currentCoordinator = '';
 let currentState = '';
+let currentFilialFilter = '';
 let currentCategoryFilter = '';
 let currentPaymentFilter = '';
 let currentProductFilter = '';
@@ -65,6 +66,7 @@ const selectDirector = document.getElementById('select-director');
 const selectDistrital = document.getElementById('select-distrital');
 const selectCoordinator = document.getElementById('select-coordinator');
 const selectState = document.getElementById('select-state');
+const selectFilial = document.getElementById('select-filial');
 const selectCategory = document.getElementById('select-category');
 const selectPayment = document.getElementById('select-payment');
 const selectProduct = document.getElementById('select-product');
@@ -128,6 +130,35 @@ async function loadMonitorData(isRetry = false) {
       populateDropdowns(allStores);
       populateOrderLevelFilters();
       applyFilters();
+
+      // Calculate global channel distribution (Hoje)
+      let totalDelivery = 0;
+      let totalPickup = 0;
+      if (allStores) {
+        allStores.forEach(s => {
+          if (s.deliveryChannels) {
+            totalDelivery += s.deliveryChannels.Entrega || 0;
+            totalPickup += s.deliveryChannels.Retirada || 0;
+          }
+        });
+      }
+      const totalChannels = totalDelivery + totalPickup || 1;
+      const deliveryPct = (totalDelivery / totalChannels * 100).toFixed(1);
+      const pickupPct = (totalPickup / totalChannels * 100).toFixed(1);
+      
+      const elDelPct = document.getElementById('global-channel-delivery-pct');
+      const elPickPct = document.getElementById('global-channel-pickup-pct');
+      const elDelBar = document.getElementById('global-channel-delivery-bar');
+      const elPickBar = document.getElementById('global-channel-pickup-bar');
+      const elDelCount = document.getElementById('global-channel-delivery-count');
+      const elPickCount = document.getElementById('global-channel-pickup-count');
+      
+      if (elDelPct) elDelPct.textContent = `Entrega: ${deliveryPct}%`;
+      if (elPickPct) elPickPct.textContent = `Retirada: ${pickupPct}%`;
+      if (elDelBar) elDelBar.style.width = `${deliveryPct}%`;
+      if (elPickBar) elPickBar.style.width = `${pickupPct}%`;
+      if (elDelCount) elDelCount.textContent = `${totalDelivery.toLocaleString('pt-BR')} ped.`;
+      if (elPickCount) elPickCount.textContent = `${totalPickup.toLocaleString('pt-BR')} ped.`;
       
       syncStatusText.textContent = `Atualizado: ${monitorData.referenceTime}`;
       syncStatusText.parentElement.firstElementChild.className = 'pulse-indicator status-green';
@@ -1159,12 +1190,14 @@ function populateDropdowns(stores) {
   const coordinators = new Set();
   const distritals = new Set();
   const states = new Set();
+  const filiais = new Set();
   
   stores.forEach(s => {
     if (s.diretor && s.diretor !== 'Desconhecido') directors.add(s.diretor);
     if (s.coordenador && s.coordenador !== 'Desconhecido') coordinators.add(s.coordenador);
     if (s.distrital && s.distrital !== 'Desconhecido') distritals.add(s.distrital);
     if (s.state) states.add(s.state);
+    if (s.name && s.status !== 'INATIVA') filiais.add(s.name);
   });
 
   // Keep existing selection if any
@@ -1172,6 +1205,7 @@ function populateDropdowns(stores) {
   const prevCoord = selectCoordinator.value;
   const prevDist = selectDistrital.value;
   const prevSt = selectState.value;
+  const prevFil = selectFilial ? selectFilial.value : '';
 
   selectDirector.innerHTML = '<option value="">Diretor: Todos</option>' + 
     Array.from(directors).sort().map(d => `<option value="${d}">${d}</option>`).join('');
@@ -1184,6 +1218,12 @@ function populateDropdowns(stores) {
 
   selectState.innerHTML = '<option value="">Estado: Todos</option>' + 
     Array.from(states).sort().map(st => `<option value="${st}">${st}</option>`).join('');
+
+  if (selectFilial) {
+    selectFilial.innerHTML = '<option value="">Filial: Todas</option>' + 
+      Array.from(filiais).sort().map(f => `<option value="${f}">${f}</option>`).join('');
+    selectFilial.value = filiais.has(prevFil) ? prevFil : '';
+  }
 
   selectDirector.value = prevDir;
   selectCoordinator.value = prevCoord;
@@ -1433,6 +1473,7 @@ function applyFilters() {
     if (currentDistrital && s.distrital !== currentDistrital) return false;
     if (currentCoordinator && s.coordenador !== currentCoordinator) return false;
     if (currentState && s.state !== currentState) return false;
+    if (currentFilialFilter && s.name !== currentFilialFilter) return false;
 
     // Filter out stores that had zero transactions under order-level filters
     if (currentCategoryFilter || currentPaymentFilter || currentProductFilter || currentReasonFilter) {
@@ -1532,6 +1573,8 @@ function applyFilters() {
       renderOrdersTab();
     } else if (tab === 'tab-funnel') {
       renderFunnelTab();
+    } else if (tab === 'tab-logistics') {
+      renderLogisticsTab();
     }
   }
 }
@@ -1878,6 +1921,13 @@ selectReason.addEventListener('change', (e) => {
   applyFilters();
 });
 
+if (selectFilial) {
+  selectFilial.addEventListener('change', (e) => {
+    currentFilialFilter = e.target.value;
+    applyFilters();
+  });
+}
+
 // Status buttons interaction
 document.querySelectorAll('.btn-status').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1993,6 +2043,7 @@ if (btnClearFilters) {
     currentDistrital = '';
     currentCoordinator = '';
     currentState = '';
+    currentFilialFilter = '';
     currentSearchQuery = '';
     currentStatusFilter = 'ALL';
     currentCategoryFilter = '';
@@ -2005,6 +2056,7 @@ if (btnClearFilters) {
     selectDistrital.value = '';
     selectCoordinator.value = '';
     selectState.value = '';
+    if (selectFilial) selectFilial.value = '';
     searchInput.value = '';
     if (selectCategory) selectCategory.value = '';
     if (selectPayment) selectPayment.value = '';
@@ -2078,6 +2130,8 @@ document.querySelectorAll('.btn-tab').forEach(btn => {
       renderOrdersTab();
     } else if (targetTab === 'tab-funnel') {
       renderFunnelTab();
+    } else if (targetTab === 'tab-logistics') {
+      renderLogisticsTab();
     }
   });
 });
@@ -2672,17 +2726,27 @@ function drawFunnelColumn(data) {
   const invoiced = data.invoiced || 0;
   const canceled = data.canceled || 0;
 
+  // approved includes both payment-approved AND invoiced orders (cumulative)
+  // invoiced is the subset that actually reached invoiced status
+  const paymentApprovedOnly = approved - invoiced; // payment-approved but not yet invoiced
+
   const appPct = total > 0 ? (approved / total * 100).toFixed(1) : '0.0';
   const invPct = total > 0 ? (invoiced / total * 100).toFixed(1) : '0.0';
   const cancPct = total > 0 ? (canceled / total * 100).toFixed(1) : '0.0';
+  const pendPct = total > 0 ? (pending / total * 100).toFixed(1) : '0.0';
 
-  // To scale widths nicely while maintaining a funnel shape
   const widthLevel1 = 100;
-  const widthLevel2 = total > 0 ? Math.max(60, Math.min(85, (approved / total) * 100)) : 75;
-  const widthLevel3 = total > 0 ? Math.max(40, Math.min(70, (invoiced / total) * 100)) : 50;
+  const widthLevel2 = total > 0 ? Math.max(60, Math.min(90, (approved / total) * 100)) : 80;
+  const widthLevel3 = total > 0 ? Math.max(38, Math.min(72, (invoiced / total) * 100)) : 55;
+
+  const minHeight = '420px';
+
+  const tooltipStep1 = 'Todos os pedidos registrados na VTEX neste período. Inclui pagamentos aprovados, faturados, cancelados e pendentes.';
+  const tooltipStep2 = 'Pedidos com pagamento confirmado pela operadora. Inclui tanto os já faturados pelas filiais quanto os aprovados ainda aguardando faturamento.';
+  const tooltipStep3 = 'Pedidos que atingiram o status "invoiced" na VTEX, ou seja, já foram faturados e integrados pelas filiais físicas. Representa o sucesso real da operação.';
 
   return `
-    <div class="visual-funnel-wrapper" style="position: relative; display: flex; flex-direction: column; align-items: center; padding: 24px 0 10px; gap: 20px; min-height: 380px;">
+    <div class="visual-funnel-wrapper" style="position: relative; display: flex; flex-direction: column; align-items: center; padding: 24px 0 10px; gap: 18px; min-height: ${minHeight};">
       
       <!-- Central vertical arrow passing through the funnel stages -->
       <div style="position: absolute; top: 10px; bottom: 30px; width: 24px; background: linear-gradient(to bottom, rgba(255,255,255,0.01), rgba(255,255,255,0.08) 80%, rgba(255,255,255,0.12)); border-radius: 12px; z-index: 1;">
@@ -2690,39 +2754,55 @@ function drawFunnelColumn(data) {
       </div>
 
       <!-- Level 1: Created -->
-      <div style="width: ${widthLevel1}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(15deg);">
-        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.45)); border: 2px solid var(--color-blue); border-radius: 40px; padding: 14px 20px; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25); text-align: center; backdrop-filter: blur(4px);">
-          <div style="font-size: 0.75rem; color: var(--color-blue); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">1. Pedidos Criados</div>
-          <div style="font-size: 1.25rem; font-weight: 900; color: #fff;">${total.toLocaleString('pt-BR')} <span style="font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
-          <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 700;">100% do fluxo</div>
+      <div style="width: ${widthLevel1}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(12deg); cursor: help;" title="${tooltipStep1}">
+        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.45)); border: 2px solid var(--color-blue); border-radius: 40px; padding: 12px 20px; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.72rem; color: var(--color-blue); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">① Pedidos Criados</div>
+          <div style="font-size: 1.2rem; font-weight: 900; color: #fff;">${total.toLocaleString('pt-BR')} <span style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="font-size: 0.68rem; color: rgba(255,255,255,0.45); font-weight: 600; margin-top: 2px;">Inclui todos os status</div>
         </div>
       </div>
 
-      <!-- Level 2: Approved -->
-      <div style="width: ${widthLevel2}%; z-index: 3; transition: all 0.3s; transform: perspective(500px) rotateX(15deg); position: relative;">
-        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.45)); border: 2px solid var(--color-yellow); border-radius: 40px; padding: 14px 20px; box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25); text-align: center; backdrop-filter: blur(4px);">
-          <div style="font-size: 0.75rem; color: var(--color-yellow); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">2. Pagamento Autorizado</div>
-          <div style="font-size: 1.25rem; font-weight: 900; color: #fff;">${approved.toLocaleString('pt-BR')} <span style="font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
-          <div style="font-size: 0.75rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 8px; border-radius: 10px; margin-top: 2px;">${appPct}%</div>
+      <!-- Level 2: Approved (payment-approved + invoiced) -->
+      <div style="width: ${widthLevel2}%; z-index: 3; transition: all 0.3s; transform: perspective(500px) rotateX(12deg); position: relative; cursor: help;" title="${tooltipStep2}">
+        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.45)); border: 2px solid var(--color-yellow); border-radius: 40px; padding: 12px 20px; box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.72rem; color: var(--color-yellow); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">② Pagamento Aprovado</div>
+          <div style="font-size: 1.2rem; font-weight: 900; color: #fff;">${approved.toLocaleString('pt-BR')} <span style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="display: flex; justify-content: center; gap: 6px; margin-top: 3px; flex-wrap: wrap;">
+            <span style="font-size: 0.7rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.25); display: inline-block; padding: 1px 7px; border-radius: 10px;">${appPct}% do total</span>
+            ${paymentApprovedOnly > 0 ? `<span style="font-size: 0.68rem; color: rgba(255,200,80,0.9); font-weight: 700; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 7px; border-radius: 10px;">⏳ ${paymentApprovedOnly.toLocaleString('pt-BR')} aguard. fat.</span>` : ''}
+          </div>
         </div>
 
-        <!-- Leak Bubble: Cancelados (breaks off to the right) -->
-        <div style="position: absolute; right: -75px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; align-items: center; gap: 4px;">
-          <div style="width: 20px; height: 2px; background: rgba(239, 68, 68, 0.3); border-style: dashed;"></div>
-          <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.45)); border: 2px solid var(--color-red); border-radius: 20px; padding: 6px 12px; box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3); text-align: center; min-width: 80px; backdrop-filter: blur(4px);">
-            <div style="font-size: 0.6rem; color: var(--color-red); font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em;">Cancelados</div>
-            <div style="font-size: 0.85rem; font-weight: 800; color: #fff;">${canceled}</div>
+        <!-- Leak Bubble: Cancelados -->
+        <div style="position: absolute; right: -80px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; align-items: center; gap: 4px;">
+          <div style="width: 18px; height: 2px; background: rgba(239, 68, 68, 0.4); border-top: 2px dashed rgba(239,68,68,0.4);"></div>
+          <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.45)); border: 2px solid var(--color-red); border-radius: 20px; padding: 5px 10px; box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3); text-align: center; min-width: 72px; backdrop-filter: blur(4px);">
+            <div style="font-size: 0.58rem; color: var(--color-red); font-weight: 800; text-transform: uppercase;">Cancelados</div>
+            <div style="font-size: 0.82rem; font-weight: 800; color: #fff;">${canceled.toLocaleString('pt-BR')}</div>
             <div style="font-size: 0.6rem; color: rgba(255,255,255,0.7); font-weight: 700;">${cancPct}%</div>
           </div>
         </div>
+
+        ${pending > 0 ? `<!-- Leak Bubble: Pendentes -->
+        <div style="position: absolute; left: -78px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; align-items: center; gap: 4px; flex-direction: row-reverse;">
+          <div style="width: 18px; height: 2px; background: rgba(234,179,8,0.4); border-top: 2px dashed rgba(234,179,8,0.4);"></div>
+          <div style="background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.4)); border: 2px solid #eab308; border-radius: 20px; padding: 5px 10px; text-align: center; min-width: 72px; backdrop-filter: blur(4px);">
+            <div style="font-size: 0.58rem; color: #eab308; font-weight: 800; text-transform: uppercase;">Pendentes</div>
+            <div style="font-size: 0.82rem; font-weight: 800; color: #fff;">${pending}</div>
+            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.7); font-weight: 700;">${pendPct}%</div>
+          </div>
+        </div>` : ''}
       </div>
 
-      <!-- Level 3: Invoiced -->
-      <div style="width: ${widthLevel3}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(15deg);">
-        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.45)); border: 2px solid var(--color-green); border-radius: 40px; padding: 14px 20px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25); text-align: center; backdrop-filter: blur(4px);">
-          <div style="font-size: 0.75rem; color: var(--color-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">3. Faturado (Sucesso)</div>
-          <div style="font-size: 1.25rem; font-weight: 900; color: #fff;">${invoiced.toLocaleString('pt-BR')} <span style="font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
-          <div style="font-size: 0.75rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 8px; border-radius: 10px; margin-top: 2px;">${invPct}%</div>
+      <!-- Level 3: Invoiced (only status=invoiced) -->
+      <div style="width: ${widthLevel3}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(12deg); cursor: help;" title="${tooltipStep3}">
+        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.45)); border: 2px solid var(--color-green); border-radius: 40px; padding: 12px 20px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.72rem; color: var(--color-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">③ Faturado pela Filial</div>
+          <div style="font-size: 1.2rem; font-weight: 900; color: #fff;">${invoiced.toLocaleString('pt-BR')} <span style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="display: flex; justify-content: center; gap: 6px; margin-top: 3px;">
+            <span style="font-size: 0.7rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.25); display: inline-block; padding: 1px 7px; border-radius: 10px;">${invPct}% do total</span>
+            <span style="font-size: 0.68rem; color: rgba(100,255,180,0.9); font-weight: 700; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 7px; border-radius: 10px;">${approved > 0 ? (invoiced/approved*100).toFixed(0) : 0}% dos aprovados</span>
+          </div>
         </div>
       </div>
 
@@ -2811,6 +2891,502 @@ if (selectQueueStatus) {
     queueStatusFilter = e.target.value;
     renderQueueTable();
   });
+}
+
+// =============================================
+// LOGISTICS MONITORING TAB (ABBiamo / Hemos)
+// =============================================
+
+let logisticsSearchQuery = '';
+let logisticsStatusFilter = 'ALL';
+let logisticsStoreFilter = 'ALL';
+let logisticsSortField = 'creationDate';
+let logisticsSortAsc = false;
+let logisticsListenersBound = false;
+
+function renderLogisticsTab() {
+  if (!monitorData || !monitorData.abbiamoDeliveries) return;
+  const deliveries = monitorData.abbiamoDeliveries;
+
+  // Filter deliveries by store
+  let tabDeliveries = deliveries;
+  if (logisticsStoreFilter !== 'ALL') {
+    tabDeliveries = deliveries.filter(d => d.storeName === logisticsStoreFilter);
+  }
+
+  // Populate store filter dropdown if not focused
+  const storeSelect = document.getElementById('select-logistics-store');
+  if (storeSelect) {
+    const currentVal = storeSelect.value || 'ALL';
+    const uniqueStores = [...new Set(deliveries.map(d => d.storeName))].sort((a, b) => a.localeCompare(b));
+    let optionsHtml = `<option value="ALL">Filial: Todas</option>`;
+    uniqueStores.forEach(st => {
+      optionsHtml += `<option value="${st}">${st}</option>`;
+    });
+    storeSelect.innerHTML = optionsHtml;
+    storeSelect.value = currentVal;
+  }
+
+  // 1. Calculate KPI values
+  const dm = monitorData.funnelAnalytics && monitorData.funnelAnalytics.deliveryMetrics;
+  
+  let slaToday = '—';
+  let slaYesterday = '—';
+  let timeToday = '—';
+  let timeYesterday = '—';
+
+  const formatMins = (mins) => {
+    if (mins === null || mins === undefined) return '—';
+    if (mins >= 60) {
+      return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    }
+    return `${mins} min`;
+  };
+
+  if (logisticsStoreFilter === 'ALL') {
+    slaToday = dm && dm.today && dm.today.slaPct !== null ? `${dm.today.slaPct.toFixed(1)}%` : '—';
+    slaYesterday = dm && dm.yesterday && dm.yesterday.slaPct !== null ? `${dm.yesterday.slaPct.toFixed(1)}%` : '—';
+    timeToday = dm && dm.today ? formatMins(dm.today.avgDeliveryMinutes) : '—';
+    timeYesterday = dm && dm.yesterday ? formatMins(dm.yesterday.avgDeliveryMinutes) : '—';
+  } else {
+    // Dynamic store-specific calculation
+    const calcStoreMetrics = (dayType) => {
+      const dayOrders = tabDeliveries.filter(d => d.dayType === dayType);
+      const withWindow = dayOrders.filter(d => d.deliveryWindowEnd);
+      const totalOrders = withWindow.length;
+      if (totalOrders === 0) return { sla: '—', avgTime: '—' };
+      
+      let onTime = 0;
+      let totalMins = 0;
+      let countWithTime = 0;
+
+      withWindow.forEach(d => {
+        const limit = new Date(d.deliveryWindowEnd).getTime();
+        const actual = d.successfulAt ? new Date(d.successfulAt).getTime() : Date.now();
+        if (actual <= limit) onTime++;
+
+        if (d.creationDate && d.successfulAt) {
+          const elapsedMs = new Date(d.successfulAt).getTime() - new Date(d.creationDate).getTime();
+          const elapsedMins = Math.round(elapsedMs / 60000);
+          if (elapsedMins > 0) {
+            totalMins += elapsedMins;
+            countWithTime++;
+          }
+        }
+      });
+
+      const slaPct = (onTime / totalOrders * 100).toFixed(1) + '%';
+      const avgMins = countWithTime > 0 ? Math.round(totalMins / countWithTime) : null;
+      return { sla: slaPct, avgTime: formatMins(avgMins) };
+    };
+
+    const metricsToday = calcStoreMetrics('today');
+    const metricsYest = calcStoreMetrics('yesterday');
+    
+    slaToday = metricsToday.sla;
+    slaYesterday = metricsYest.sla;
+    timeToday = metricsToday.avgTime;
+    timeYesterday = metricsYest.avgTime;
+  }
+
+  // NPS Average (Hoje vs Ontem)
+  const ratedToday = tabDeliveries.filter(d => d.dayType === 'today' && d.npsDelivery != null);
+  const ratedYesterday = tabDeliveries.filter(d => d.dayType === 'yesterday' && d.npsDelivery != null);
+  
+  const formatNps = (arr) => {
+    return arr.length > 0 
+      ? (arr.reduce((sum, d) => sum + d.npsDelivery, 0) / arr.length).toFixed(1) + ' ★' 
+      : '—';
+  };
+  const npsToday = formatNps(ratedToday);
+  const npsYesterday = formatNps(ratedYesterday);
+
+  // Completed deliveries count (Hoje vs Ontem)
+  const countToday = tabDeliveries.filter(d => 
+    d.dayType === 'today' && ['SUCCESSFUL', 'DELIVERED'].includes((d.status || '').toUpperCase())
+  ).length;
+  const countYesterday = tabDeliveries.filter(d => 
+    d.dayType === 'yesterday' && ['SUCCESSFUL', 'DELIVERED'].includes((d.status || '').toUpperCase())
+  ).length;
+
+  document.getElementById('kpi-logistics-sla-today').textContent = slaToday;
+  document.getElementById('kpi-logistics-sla-desc').innerHTML = `Ontem: <strong>${slaYesterday}</strong>`;
+  
+  document.getElementById('kpi-logistics-time-today').textContent = timeToday;
+  document.getElementById('kpi-logistics-time-desc').innerHTML = `Ontem: <strong>${timeYesterday}</strong>`;
+  
+  document.getElementById('kpi-logistics-nps-today').textContent = npsToday;
+  document.getElementById('kpi-logistics-nps-desc').innerHTML = `Ontem: <strong>${npsYesterday}</strong>`;
+  
+  document.getElementById('kpi-logistics-count-today').textContent = countToday.toLocaleString('pt-BR');
+  document.getElementById('kpi-logistics-count-desc').innerHTML = `Ontem: <strong>${countYesterday.toLocaleString('pt-BR')}</strong>`;
+
+  // 2. Carrier Modals Share
+  const carrierCounts = {};
+  const carrierTranslations = {
+    'TAKEOUT': 'Retirada (Cliente Retira)',
+    'Takeout': 'Retirada (Cliente Retira)',
+    'takeout': 'Retirada (Cliente Retira)'
+  };
+  tabDeliveries.forEach(d => {
+    let modal = d.deliveryMethod || 'Outros';
+    if (carrierTranslations[modal]) modal = carrierTranslations[modal];
+    carrierCounts[modal] = (carrierCounts[modal] || 0) + 1;
+  });
+
+  const sortedCarriers = Object.entries(carrierCounts).sort((a, b) => b[1] - a[1]);
+  const totalDeliveries = tabDeliveries.length || 1;
+  
+  const carrierListEl = document.getElementById('logistics-carrier-list');
+  if (sortedCarriers.length === 0) {
+    carrierListEl.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum modal registrado</span>`;
+  } else {
+    carrierListEl.innerHTML = sortedCarriers.map(([name, count]) => {
+      const pct = (count / totalDeliveries * 100).toFixed(1);
+      return `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; font-size:0.82rem; font-weight:600;">
+            <span style="color:var(--text-primary);">${name}</span>
+            <span style="color:var(--text-secondary);">${count} ped. (${pct}%)</span>
+          </div>
+          <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:var(--color-blue); border-radius:3px;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 2.5 Stores with most delays (Hemos/Abbiamo)
+  const nowTs = Date.now();
+  const delayedCounts = {};
+  tabDeliveries.forEach(d => {
+    if (d.deliveryWindowEnd) {
+      const endLimit = new Date(d.deliveryWindowEnd).getTime();
+      const actualEnd = d.successfulAt ? new Date(d.successfulAt).getTime() : nowTs;
+      if (actualEnd > endLimit) {
+        delayedCounts[d.storeName] = (delayedCounts[d.storeName] || 0) + 1;
+      }
+    }
+  });
+
+  const sortedDelayed = Object.entries(delayedCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const delayedListEl = document.getElementById('logistics-delayed-stores');
+  if (delayedListEl) {
+    if (sortedDelayed.length === 0) {
+      delayedListEl.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 10px;">Nenhum atraso registrado</span>`;
+    } else {
+      delayedListEl.innerHTML = sortedDelayed.map(([name, count]) => {
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.02);">
+            <span style="color:var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">${name}</span>
+            <span class="status-badge badge-red" style="font-size:0.72rem; font-weight:800; padding: 2px 8px; min-width: 80px; text-align: center;">${count} atraso${count > 1 ? 's' : ''}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // 3. Render delivery funnel comparative
+  const funnelTodayEl = document.getElementById('logistics-funnel-today');
+  const funnelYesterdayEl = document.getElementById('logistics-funnel-yesterday');
+  if (funnelTodayEl) funnelTodayEl.innerHTML = drawDeliveryFunnelColumn('today', tabDeliveries);
+  if (funnelYesterdayEl) funnelYesterdayEl.innerHTML = drawDeliveryFunnelColumn('yesterday', tabDeliveries);
+
+  // 4. Render Table
+  renderLogisticsTable();
+
+  // 5. Bind listeners if not done yet
+  if (!logisticsListenersBound) {
+    const searchInput = document.getElementById('logistics-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        logisticsSearchQuery = e.target.value;
+        renderLogisticsTable();
+      });
+    }
+
+    const storeSelectEl = document.getElementById('select-logistics-store');
+    if (storeSelectEl) {
+      storeSelectEl.addEventListener('change', (e) => {
+        logisticsStoreFilter = e.target.value;
+        renderLogisticsTab();
+      });
+    }
+
+    const filterSelect = document.getElementById('select-logistics-status');
+    if (filterSelect) {
+      filterSelect.addEventListener('change', (e) => {
+        logisticsStatusFilter = e.target.value;
+        renderLogisticsTable();
+      });
+    }
+
+    // Bind table headers sorting click listeners
+    document.querySelectorAll('#tab-logistics thead th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const field = th.getAttribute('data-sort');
+        if (logisticsSortField === field) {
+          logisticsSortAsc = !logisticsSortAsc;
+        } else {
+          logisticsSortField = field;
+          // default descending for NPS and SLA status, ascending for others
+          logisticsSortAsc = (field !== 'npsDelivery' && field !== 'sla');
+        }
+        renderLogisticsTable();
+      });
+    });
+
+    logisticsListenersBound = true;
+  }
+}
+
+function drawDeliveryFunnelColumn(dayType, deliveries) {
+  const dayDeliveries = deliveries.filter(d => d.dayType === dayType);
+  const total = dayDeliveries.length;
+  
+  // Filter out canceled / failed for the progression funnel
+  const activeDeliveries = dayDeliveries.filter(d => !['CANCELED', 'ORDER_FAILED'].includes((d.status || '').toUpperCase()));
+  const activeTotal = activeDeliveries.length;
+
+  const count5 = activeDeliveries.filter(d => ['DELIVERED', 'SUCCESSFUL'].includes((d.status || '').toUpperCase())).length;
+  const count4 = count5 + activeDeliveries.filter(d => ['DISPATCHED', 'START_DELIVERY', 'IN_TRANSIT', 'RETURNED'].includes((d.status || '').toUpperCase())).length;
+  const count3 = count4 + activeDeliveries.filter(d => ['PICKING_UP', 'COLLECTED'].includes((d.status || '').toUpperCase())).length;
+  const count2 = count3 + activeDeliveries.filter(d => ['ASSIGNED', 'SEARCHING_DRIVER'].includes((d.status || '').toUpperCase())).length;
+  const count1 = activeTotal;
+
+  const getPct = (c) => (activeTotal > 0 ? (c / activeTotal * 100).toFixed(0) : 0);
+
+  const levels = [
+    { label: '1. Pendente', count: count1, pct: getPct(count1), color: 'linear-gradient(135deg, #a78bfa, #818cf8)', width: '100%', title: 'Pedidos recebidos ou agendados no Hemos/Abbiamo aguardando atribuição de motorista.' },
+    { label: '2. Atribuído', count: count2, pct: getPct(count2), color: 'linear-gradient(135deg, #818cf8, #60a5fa)', width: '85%', title: 'Pedidos com motorista parceiro vinculado aceito para a corrida.' },
+    { label: '3. Coletando', count: count3, pct: getPct(count3), color: 'linear-gradient(135deg, #60a5fa, #2dd4bf)', width: '70%', title: 'Motorista a caminho ou já na filial para retirar os produtos.' },
+    { label: '4. Em Rota', count: count4, pct: getPct(count4), color: 'linear-gradient(135deg, #2dd4bf, #34d399)', width: '55%', title: 'Pedidos despachados em trânsito (a caminho da residência do cliente).' },
+    { label: '5. Entregue', count: count5, pct: getPct(count5), color: 'linear-gradient(135deg, #34d399, #10b981)', width: '40%', title: 'Entregas finalizadas com sucesso no destino final.' }
+  ];
+
+  const levelHtml = levels.map((lvl, index) => {
+    return `
+      <div class="funnel-stage-container" style="width: ${lvl.width}; margin: 0 auto; transition: all 0.3s ease;" title="${lvl.title}">
+        <div class="funnel-stage-bar" style="background: ${lvl.color}; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; overflow: hidden; margin-bottom: 6px; cursor: help;">
+          <div style="position: absolute; top:0; left:0; right:0; height:50%; background: rgba(255,255,255,0.08); pointer-events: none;"></div>
+          <span style="font-size: 0.78rem; font-weight: 700; color: #fff; z-index: 1;">${lvl.label}</span>
+          <div style="display: flex; align-items: center; gap: 8px; z-index: 1;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: #fff;">${lvl.count}</span>
+            <span style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.25); padding: 1px 5px; border-radius: 8px;">${lvl.pct}%</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const canceledCount = total - activeTotal;
+  const canceledHtml = `
+    <div style="margin-top: 8px; font-size: 0.72rem; color: var(--text-secondary); display: flex; justify-content: space-between; width: 100%; padding: 0 6px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 8px;">
+      <span>Total Recebidos: <strong>${total}</strong></span>
+      <span style="color: var(--color-red);">Cancelados/Falhas: <strong>${canceledCount}</strong></span>
+    </div>
+  `;
+
+  return levelHtml + canceledHtml;
+}
+
+function renderLogisticsTable() {
+  const tbody = document.getElementById('logistics-table-body');
+  if (!tbody) return;
+  if (!monitorData || !monitorData.abbiamoDeliveries) return;
+  const deliveries = monitorData.abbiamoDeliveries;
+
+  const now = Date.now();
+
+  const filtered = deliveries.filter(d => {
+    // Store filter
+    if (logisticsStoreFilter !== 'ALL' && d.storeName !== logisticsStoreFilter) {
+      return false;
+    }
+
+    // Search
+    if (logisticsSearchQuery) {
+      const q = logisticsSearchQuery.toLowerCase();
+      const match = d.orderId.toLowerCase().includes(q) || d.storeName.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+
+    // Status filter
+    if (logisticsStatusFilter === 'ACTIVE') {
+      return !['SUCCESSFUL', 'DELIVERED', 'CANCELED'].includes((d.status || '').toUpperCase());
+    } else if (logisticsStatusFilter === 'DELIVERED') {
+      return ['SUCCESSFUL', 'DELIVERED'].includes((d.status || '').toUpperCase());
+    } else if (logisticsStatusFilter === 'NPS_RATED') {
+      return d.npsDelivery != null;
+    } else if (logisticsStatusFilter === 'DELAYED') {
+      if (!d.deliveryWindowEnd) return false;
+      const endLimit = new Date(d.deliveryWindowEnd).getTime();
+      const actualEnd = d.successfulAt ? new Date(d.successfulAt).getTime() : now;
+      return actualEnd > endLimit;
+    }
+    
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+          Nenhuma entrega corresponde aos filtros atuais.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Sort filtered deliveries
+  const sorted = [...filtered].sort((a, b) => {
+    let valA = a[logisticsSortField];
+    let valB = b[logisticsSortField];
+
+    if (logisticsSortField === 'sla') {
+      const limitA = a.deliveryWindowEnd ? new Date(a.deliveryWindowEnd).getTime() : 0;
+      const actualA = a.successfulAt ? new Date(a.successfulAt).getTime() : now;
+      valA = limitA > 0 ? (actualA > limitA ? 1 : 0) : -1;
+
+      const limitB = b.deliveryWindowEnd ? new Date(b.deliveryWindowEnd).getTime() : 0;
+      const actualB = b.successfulAt ? new Date(b.successfulAt).getTime() : now;
+      valB = limitB > 0 ? (actualB > limitB ? 1 : 0) : -1;
+    } else if (logisticsSortField === 'elapsedMs') {
+      const startA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
+      const endA = a.successfulAt ? new Date(a.successfulAt).getTime() : now;
+      valA = startA > 0 ? (endA - startA) : 9999999999;
+
+      const startB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
+      const endB = b.successfulAt ? new Date(b.successfulAt).getTime() : now;
+      valB = startB > 0 ? (endB - startB) : 9999999999;
+    }
+
+    if (valA === undefined || valA === null) return logisticsSortAsc ? 1 : -1;
+    if (valB === undefined || valB === null) return logisticsSortAsc ? -1 : 1;
+
+    if (typeof valA === 'string') {
+      return logisticsSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    } else {
+      return logisticsSortAsc ? valA - valB : valB - valA;
+    }
+  });
+
+  // Update sort icons in table headers
+  document.querySelectorAll('#tab-logistics th[data-sort]').forEach(th => {
+    const field = th.getAttribute('data-sort');
+    const iconSpan = th.querySelector('.sort-icon');
+    if (iconSpan) {
+      if (logisticsSortField === field) {
+        iconSpan.textContent = logisticsSortAsc ? ' ▲' : ' ▼';
+        iconSpan.style.opacity = '1';
+      } else {
+        iconSpan.textContent = '';
+        iconSpan.style.opacity = '0.3';
+      }
+    }
+  });
+
+  const statusTranslations = {
+    'CREATED': 'Criado',
+    'ASSIGNED': 'Motorista Atribuído',
+    'SEARCHING_DRIVER': 'Buscando Motorista',
+    'PICKING_UP': 'Coletando',
+    'COLLECTED': 'Coletado',
+    'IN_TRANSIT': 'Em Rota',
+    'START_DELIVERY': 'Em Rota',
+    'DISPATCHED': 'Em Rota',
+    'DELIVERED': 'Entregue',
+    'SUCCESSFUL': 'Entregue',
+    'CANCELED': 'Cancelado',
+    'RETURNED': 'Devolvido',
+    'PENDING': 'Pendente',
+    'SCHEDULED': 'Agendado',
+    'ORDER_FAILED': 'Falha no Pedido'
+  };
+
+  const carrierTranslations = {
+    'TAKEOUT': 'Retirada (Cliente Retira)',
+    'Takeout': 'Retirada (Cliente Retira)',
+    'takeout': 'Retirada (Cliente Retira)'
+  };
+
+  tbody.innerHTML = sorted.map(d => {
+    // 1. Status badge
+    let statusUpper = (d.status || 'Pendente').toUpperCase();
+    let statusText = statusTranslations[statusUpper] || d.status || 'Pendente';
+    
+    let statusClass = 'badge-orange';
+    if (['SUCCESSFUL', 'DELIVERED'].includes(statusUpper)) {
+      statusClass = 'badge-green';
+    } else if (['DISPATCHED', 'START_DELIVERY', 'IN_TRANSIT', 'ASSIGNED', 'SEARCHING_DRIVER', 'PICKING_UP', 'COLLECTED'].includes(statusUpper)) {
+      statusClass = 'badge-blue';
+    } else if (['CANCELED', 'ORDER_FAILED'].includes(statusUpper)) {
+      statusClass = 'badge-red';
+    } else if (['RETURNED'].includes(statusUpper)) {
+      statusClass = 'badge-grey';
+    }
+
+    // 2. SLA badge
+    let slaBadge = '—';
+    let slaLimitStr = '—';
+    if (d.deliveryWindowEnd) {
+      const endLimit = new Date(d.deliveryWindowEnd).getTime();
+      const actualEnd = d.successfulAt ? new Date(d.successfulAt).getTime() : now;
+      const isDelayed = actualEnd > endLimit;
+      
+      const dateObj = new Date(d.deliveryWindowEnd);
+      const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      slaLimitStr = d.dayType === 'yesterday' ? `Ontem ${timeStr}` : timeStr;
+
+      if (isDelayed) {
+        slaBadge = `<span class="status-badge badge-red" title="Prazo limite: ${slaLimitStr}">Atrasado</span>`;
+      } else {
+        slaBadge = `<span class="status-badge badge-green" title="Prazo limite: ${slaLimitStr}">No Prazo</span>`;
+      }
+    }
+
+    // 2.5 Elapsed time (delivery duration)
+    let elapsedStr = '—';
+    if (d.creationDate) {
+      const start = new Date(d.creationDate).getTime();
+      const end = d.successfulAt ? new Date(d.successfulAt).getTime() : now;
+      const elapsedMins = Math.round((end - start) / 60000);
+      if (elapsedMins >= 0) {
+        const isFinished = ['SUCCESSFUL', 'DELIVERED'].includes(statusUpper);
+        const suffix = isFinished ? '' : ' <span style="font-size:0.7rem; color:var(--color-blue); font-weight:600;">(ativo)</span>';
+        if (elapsedMins >= 60) {
+          const h = Math.floor(elapsedMins / 60);
+          const m = elapsedMins % 60;
+          elapsedStr = `${h}h ${m}m${suffix}`;
+        } else {
+          elapsedStr = `${elapsedMins} min${suffix}`;
+        }
+      }
+    }
+
+    // 3. NPS stars
+    const npsValue = d.npsDelivery != null ? `${d.npsDelivery} ★` : '—';
+    const comment = d.feedbackComment || '—';
+
+    let carrierName = d.deliveryMethod || 'Padrão';
+    if (carrierTranslations[carrierName]) carrierName = carrierTranslations[carrierName];
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--color-blue);">${d.orderId}</td>
+        <td style="font-weight:600;">${d.storeName}</td>
+        <td style="font-weight:600; color:var(--text-primary);">${carrierName}</td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        <td>${slaBadge}</td>
+        <td style="font-weight:700; color:var(--text-primary);">${slaLimitStr}</td>
+        <td style="font-weight:600; color:var(--text-primary);">${elapsedStr}</td>
+        <td class="text-center" style="font-weight:700; color: var(--color-yellow);">${npsValue}</td>
+        <td style="color:var(--text-secondary); max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comment}">${comment}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 

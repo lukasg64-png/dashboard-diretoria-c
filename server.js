@@ -5,6 +5,7 @@ const path = require('path');
 
 const XLSX = require('xlsx');
 const vtexSync = require('./vtexSync');
+const abbiamoSync = require('./abbiamoSync');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -400,6 +401,58 @@ function getOrdersCache() {
   return cachedOrders;
 }
 
+// Abbiamo delivery metrics helpers
+function enrichDeliveryMetrics(metrics, abData, vtexOrder) {
+  // SLA: compare delivery_window_end with successfulAt
+  if (abData.deliveryWindowEnd && abData.successfulAt) {
+    const windowEnd = new Date(abData.deliveryWindowEnd).getTime();
+    const deliveredAt = new Date(abData.successfulAt).getTime();
+    if (!isNaN(windowEnd) && !isNaN(deliveredAt)) {
+      if (deliveredAt <= windowEnd) {
+        metrics.slaOnTime++;
+      } else {
+        metrics.slaDelayed++;
+      }
+    }
+  }
+
+  // Delivery time: from VTEX creationDate to Abbiamo successfulAt
+  if (abData.successfulAt && vtexOrder.creationDate) {
+    const created = new Date(vtexOrder.creationDate).getTime();
+    const delivered = new Date(abData.successfulAt).getTime();
+    if (!isNaN(created) && !isNaN(delivered) && delivered > created) {
+      const minutes = (delivered - created) / 60000;
+      metrics.totalDeliveryMinutes += minutes;
+      metrics.deliveredWithTime++;
+    }
+  }
+
+  // NPS
+  if (abData.npsDelivery && typeof abData.npsDelivery === 'number') {
+    metrics.npsSum += abData.npsDelivery;
+    metrics.npsCount++;
+  }
+
+  // Modal breakdown
+  const modal = abData.deliveryMethod || 'Desconhecido';
+  metrics.modals[modal] = (metrics.modals[modal] || 0) + 1;
+}
+
+function summarizeDeliveryMetrics(metrics) {
+  const totalSla = metrics.slaOnTime + metrics.slaDelayed;
+  return {
+    slaOnTime: metrics.slaOnTime,
+    slaDelayed: metrics.slaDelayed,
+    slaPct: totalSla > 0 ? Math.round((metrics.slaOnTime / totalSla) * 1000) / 10 : null,
+    avgDeliveryMinutes: metrics.deliveredWithTime > 0 ? Math.round(metrics.totalDeliveryMinutes / metrics.deliveredWithTime) : null,
+    npsAvg: metrics.npsCount > 0 ? Math.round((metrics.npsSum / metrics.npsCount) * 10) / 10 : null,
+    npsCount: metrics.npsCount,
+    modals: Object.entries(metrics.modals)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  };
+}
+
 // Main processing logic
 function processStoreHealth() {
   const storesBase = loadStoresBase();
@@ -512,10 +565,21 @@ function processStoreHealth() {
   let totalSuccessfulValueToday = 0;
 
   const todayOrders = [];
-  const funnelToday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0 };
-  const funnelYesterday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0 };
-  const funnelSevenDaysAgo = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0 };
+  const funnelToday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0, dispatched: 0, delivered: 0, totalChecked: 0 };
+  const funnelYesterday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0, dispatched: 0, delivered: 0, totalChecked: 0 };
+  const funnelSevenDaysAgo = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0, dispatched: 0, delivered: 0, totalChecked: 0 };
   const activeOrdersQueue = [];
+  const abbiamoDeliveries = [];
+
+  // Abbiamo delivery metrics accumulators
+  const deliveryMetrics = {
+    today: { slaOnTime: 0, slaDelayed: 0, totalDeliveryMinutes: 0, deliveredWithTime: 0, npsSum: 0, npsCount: 0, modals: {} },
+    yesterday: { slaOnTime: 0, slaDelayed: 0, totalDeliveryMinutes: 0, deliveredWithTime: 0, npsSum: 0, npsCount: 0, modals: {} },
+    sevenDaysAgo: { slaOnTime: 0, slaDelayed: 0, totalDeliveryMinutes: 0, deliveredWithTime: 0, npsSum: 0, npsCount: 0, modals: {} }
+  };
+
+  // Load Abbiamo cache for delivery enrichment
+  const abbiamoCache = abbiamoSync.getAbbiamoCache();
 
   // Aggregate order metrics
   for (const o of orders) {
@@ -535,6 +599,32 @@ function processStoreHealth() {
     const orderSeconds = detailsBrt.hour * 3600 + detailsBrt.minute * 60 + detailsBrt.second;
     const value = (o.value || 0) / 100;
 
+    // Build Abbiamo deliveries list for the logistics tab (Today and Yesterday only)
+    const abData = abbiamoCache[o.orderId];
+    if (abData && isInvoiced && abData.status !== 'NOT_FOUND' && (dayStr === todayStr || dayStr === yesterdayStr)) {
+      let storeName = 'sjdigital';
+      if (o.sellers && o.sellers.length > 0) {
+        const s = o.sellers.find(sel => sel.id !== '1' && sel.id !== 'sjdigital' && sel.name !== 'sjdigital') || o.sellers[0];
+        const cleanName = (s.name || s.id).split(' - ')[0].trim();
+        const orgInfo = lookupStore(cleanName);
+        storeName = orgInfo ? orgInfo.rawName : cleanName;
+      }
+      abbiamoDeliveries.push({
+        orderId: o.orderId,
+        storeName,
+        creationDate: o.creationDate,
+        dayType: dayStr === todayStr ? 'today' : 'yesterday',
+        status: abData.status,
+        subStatus: abData.subStatus,
+        deliveryMethod: abData.deliveryMethod,
+        deliveryWindowEnd: abData.deliveryWindowEnd,
+        deliveryEta: abData.deliveryEta,
+        successfulAt: abData.successfulAt,
+        npsDelivery: abData.npsDelivery,
+        feedbackComment: abData.feedbackComment
+      });
+    }
+
     // Populating funnel stats
     if (dayStr === todayStr) {
       funnelToday.total++;
@@ -542,6 +632,22 @@ function processStoreHealth() {
       if (isApproved) funnelToday.approved++;
       if (isInvoiced) funnelToday.invoiced++;
       if (isCanceled) funnelToday.canceled++;
+
+      // Enrich with Abbiamo delivery data
+      const abData = abbiamoCache[o.orderId];
+      if (abData && isInvoiced) {
+        const abStatus = (abData.status || '').toUpperCase();
+        if (abStatus !== 'NOT_FOUND') {
+          funnelToday.totalChecked++;
+          if (['DISPATCHED','START_DELIVERY','SUCCESSFUL','DELIVERED','RETURNED'].includes(abStatus)) {
+            funnelToday.dispatched++;
+          }
+          if (abStatus === 'SUCCESSFUL' || abStatus === 'DELIVERED') {
+            funnelToday.delivered++;
+            enrichDeliveryMetrics(deliveryMetrics.today, abData, o);
+          }
+        }
+      }
 
       // If active order (pending or approved but not invoiced/canceled), push to active queue
       const statusLower = status.toLowerCase();
@@ -570,6 +676,21 @@ function processStoreHealth() {
         if (isApproved) funnelYesterday.approved++;
         if (isInvoiced) funnelYesterday.invoiced++;
         if (isCanceled) funnelYesterday.canceled++;
+
+        const abData = abbiamoCache[o.orderId];
+        if (abData && isInvoiced) {
+          const abStatus = (abData.status || '').toUpperCase();
+          if (abStatus !== 'NOT_FOUND') {
+            funnelYesterday.totalChecked++;
+            if (['DISPATCHED','START_DELIVERY','SUCCESSFUL','DELIVERED','RETURNED'].includes(abStatus)) {
+              funnelYesterday.dispatched++;
+            }
+            if (abStatus === 'SUCCESSFUL' || abStatus === 'DELIVERED') {
+              funnelYesterday.delivered++;
+              enrichDeliveryMetrics(deliveryMetrics.yesterday, abData, o);
+            }
+          }
+        }
       }
     } else if (dayStr === sevenDaysStr) {
       if (orderSeconds <= currentSeconds) {
@@ -578,6 +699,21 @@ function processStoreHealth() {
         if (isApproved) funnelSevenDaysAgo.approved++;
         if (isInvoiced) funnelSevenDaysAgo.invoiced++;
         if (isCanceled) funnelSevenDaysAgo.canceled++;
+
+        const abData = abbiamoCache[o.orderId];
+        if (abData && isInvoiced) {
+          const abStatus = (abData.status || '').toUpperCase();
+          if (abStatus !== 'NOT_FOUND') {
+            funnelSevenDaysAgo.totalChecked++;
+            if (['DISPATCHED','START_DELIVERY','SUCCESSFUL','DELIVERED','RETURNED'].includes(abStatus)) {
+              funnelSevenDaysAgo.dispatched++;
+            }
+            if (abStatus === 'SUCCESSFUL' || abStatus === 'DELIVERED') {
+              funnelSevenDaysAgo.delivered++;
+              enrichDeliveryMetrics(deliveryMetrics.sevenDaysAgo, abData, o);
+            }
+          }
+        }
       }
     }
 
@@ -754,14 +890,16 @@ function processStoreHealth() {
         stats.revenueToday += value;
         stats.hourlySales[hour]++;
 
-        // Aggregate payment methods and delivery channels for today's orders
-        if (o.paymentNames) {
-          o.paymentNames.forEach(pm => {
+        // Aggregate payment methods and delivery channels for today's orders (deduplicated per order)
+        if (o.paymentNames && o.paymentNames.length > 0) {
+          const uniquePayments = [...new Set(o.paymentNames)];
+          uniquePayments.forEach(pm => {
             stats.paymentMethods[pm] = (stats.paymentMethods[pm] || 0) + 1;
           });
         }
-        if (o.deliveryChannels) {
-          o.deliveryChannels.forEach(dc => {
+        if (o.deliveryChannels && o.deliveryChannels.length > 0) {
+          const uniqueChannels = [...new Set(o.deliveryChannels)];
+          uniqueChannels.forEach(dc => {
             const dcFriendly = dc === 'pickup-in-point' ? 'Retirada' : (dc === 'delivery' ? 'Entrega' : dc);
             stats.deliveryChannels[dcFriendly] = (stats.deliveryChannels[dcFriendly] || 0) + 1;
           });
@@ -1175,6 +1313,8 @@ function processStoreHealth() {
     .map(([paymentName, count]) => ({ paymentName, count }))
     .sort((a, b) => b.count - a.count);
 
+  // Use only raw Abbiamo tracking data from the cache without any extrapolation or fallbacks
+
   return {
     referenceDate: todayStr,
     referenceTime: refTimeStr,
@@ -1233,9 +1373,16 @@ function processStoreHealth() {
     funnelAnalytics: {
       today: funnelToday,
       yesterday: funnelYesterday,
-      sevenDaysAgo: funnelSevenDaysAgo
+      sevenDaysAgo: funnelSevenDaysAgo,
+      deliveryMetrics: {
+        today: summarizeDeliveryMetrics(deliveryMetrics.today),
+        yesterday: summarizeDeliveryMetrics(deliveryMetrics.yesterday),
+        sevenDaysAgo: summarizeDeliveryMetrics(deliveryMetrics.sevenDaysAgo)
+      }
     },
-    activeOrdersQueue: activeOrdersQueue
+    abbiamoSyncState: abbiamoSync.getAbbiamoSyncState(),
+    activeOrdersQueue: activeOrdersQueue,
+    abbiamoDeliveries: abbiamoDeliveries
   };
 }
 
@@ -1391,4 +1538,20 @@ app.listen(PORT, () => {
       updateMonitorCache();
     }).catch(err => console.error('[Interval Sync] Failed:', err.message));
   }, 20 * 60 * 1000);
+
+  // Abbiamo sync: run 30 seconds after VTEX startup sync, then every 30 minutes
+  setTimeout(() => {
+    console.log('[Init Sync] Iniciando primeira sincronização Abbiamo...');
+    abbiamoSync.syncAbbiamoData().then(() => {
+      console.log('[Abbiamo Sync] Primeira sincronização concluída.');
+      updateMonitorCache();
+    }).catch(err => console.error('[Abbiamo Sync] Failed:', err.message));
+  }, 30000);
+
+  setInterval(() => {
+    console.log('[Interval] Executando sincronização programada com Abbiamo...');
+    abbiamoSync.syncAbbiamoData().then(() => {
+      updateMonitorCache();
+    }).catch(err => console.error('[Abbiamo Interval Sync] Failed:', err.message));
+  }, 30 * 60 * 1000);
 });
