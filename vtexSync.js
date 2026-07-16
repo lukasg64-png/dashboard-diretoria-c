@@ -190,32 +190,39 @@ async function fetchOrderDetails(orderIds, cache) {
 async function syncPeriod(daysAgo, cache) {
   progressPercent = 0;
 
-  // Incremental sync for today: find the latest order already in cache and only fetch from there
+  // For today (daysAgo=0):
+  //   - ALWAYS scan the full day's listing to capture status changes (payment-approved → invoiced etc.)
+  //   - Only fetch ORDER DETAILS for orders not yet in cache (new orders)
+  //   - This ensures "Faturado" count stays accurate even without re-fetching all details
+  //
+  // For past days (daysAgo=1,7):
+  //   - Use incremental fetch from the last cached order to save API calls
+
   let startFromIso = null;
-  if (daysAgo === 0) {
+  if (daysAgo !== 0) {
+    // Non-today: incremental from last order in cache for that day
     const utcOffset = -3;
-    const todayBrt = new Date(Date.now() + utcOffset * 3600000).toISOString().slice(0, 10);
-    // Find latest order from today BRT
-    const todayOnly = Object.values(cache).filter(o => {
+    const targetBrt = new Date(Date.now() + utcOffset * 3600000 - daysAgo * 86400000).toISOString().slice(0, 10);
+    const dayOnly = Object.values(cache).filter(o => {
       if (!o.creationDate) return false;
       const brt = new Date(new Date(o.creationDate).getTime() + utcOffset * 3600000);
-      return brt.toISOString().slice(0, 10) === todayBrt;
+      return brt.toISOString().slice(0, 10) === targetBrt;
     });
-    if (todayOnly.length > 0) {
-      const latestMs = Math.max(...todayOnly.map(o => new Date(o.creationDate).getTime()));
-      // Go back 5 minutes to avoid missing orders due to clock skew
+    if (dayOnly.length > 0) {
+      const latestMs = Math.max(...dayOnly.map(o => new Date(o.creationDate).getTime()));
       const fromMs = latestMs - 5 * 60 * 1000;
       startFromIso = new Date(fromMs).toISOString().slice(0, 19) + 'Z';
-      console.log(`[VTEX Sync] Incremental sync daysAgo=0 a partir de ${startFromIso} (${todayOnly.length} pedidos hoje em cache)`);
+      console.log(`[VTEX Sync] Incremental sync daysAgo=${daysAgo} a partir de ${startFromIso} (${dayOnly.length} pedidos em cache)`);
     } else {
-      console.log(`[VTEX Sync] Sync completo daysAgo=0 (sem pedidos de hoje em cache)`);
+      console.log(`[VTEX Sync] Sync completo daysAgo=${daysAgo} (sem pedidos em cache)`);
     }
   } else {
-    console.log(`[VTEX Sync] Buscando ordens para daysAgo=${daysAgo}...`);
+    // Today: always full-day scan to capture all status updates
+    console.log(`[VTEX Sync] Full-day listing scan daysAgo=0 (garante status atualizados)`);
   }
 
   const blocks = getDayRange(daysAgo, startFromIso);
-  let allListItems = []; // store full list items, not just IDs
+  let allListItems = []; // store full list items
 
   for (let b = 0; b < blocks.length; b++) {
     const block = blocks[b];
@@ -243,10 +250,14 @@ async function syncPeriod(daysAgo, cache) {
           if (list.length > 0) {
             allListItems.push(...list);
 
-            // Update status of already-cached orders from the listing
+            // ✅ KEY FIX: Update status of ALL already-cached orders from listing
+            // This captures payment-approved→invoiced transitions without re-fetching details
             list.forEach(o => {
-              if (cache[o.orderId] && cache[o.orderId].status !== o.status) {
-                cache[o.orderId].status = o.status;
+              if (cache[o.orderId]) {
+                if (cache[o.orderId].status !== o.status) {
+                  console.log(`[VTEX Sync] Status atualizado ${o.orderId}: ${cache[o.orderId].status} → ${o.status}`);
+                  cache[o.orderId].status = o.status;
+                }
               }
             });
 
@@ -278,13 +289,15 @@ async function syncPeriod(daysAgo, cache) {
   console.log(`[VTEX Sync] IDs localizados para daysAgo=${daysAgo}: ${orderIds.length}`);
 
   if (orderIds.length > 0) {
-    // Determine which orders need full detail fetch
-    // Orders need fetch if: (a) not in cache at all, or (b) missing sellers (key field), or (c) canceled and missing items
+    // Determine which orders need full detail fetch:
+    // (a) not in cache at all → needs full fetch
+    // (b) missing sellers (key field) → needs full fetch
+    // (c) canceled and missing items (for canceledAnalytics) → needs full fetch
+    // Already-cached orders with updated status have been handled above
     const toFetch = orderIds.filter(id => {
       const cached = cache[id];
       if (!cached) return true;
       if (!cached.sellers || cached.sellers.length === 0) return true;
-      // Re-fetch canceled orders that lack items (for canceledAnalytics)
       if (cached.status === 'canceled' && (!cached.items || cached.items.length === 0)) return true;
       return false;
     });
