@@ -17,6 +17,7 @@ const fs      = require('fs');
 const readline = require('readline');
 const multer  = require('multer');
 const { Storage } = require('@google-cloud/storage');
+const vtexSync = require('./vtexSync');
 
 const app  = express();
 const PORT = process.env.PORT || 3005;
@@ -47,6 +48,152 @@ function loadFiliaisCadastro() {
   }
 }
 loadFiliaisCadastro();
+
+// ── Mapeamento Fuzzy para Associação com a VTEX ────────────────────────────────
+function normalizeStoreName(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const ABBREVIATION_MAP = {
+  'baln': 'balneario',
+  'bal': 'balneario',
+  'floripa': 'florianopolis',
+  'sta': 'santa',
+  'sto': 'santo',
+  'eng': 'engenheiro',
+  'mal': 'marechal',
+  'dioni': 'dionisio',
+  'cnel': 'coronel',
+  'fco': 'francisco',
+  'franc': 'francisco',
+  'gal': 'galeria',
+  'hosp': 'hospital',
+  'louren': 'lourenco',
+  'terez': 'terezinha',
+  'ant': 'antonio',
+  's': 'sao',
+};
+
+const CITY_SUFFIX_MAP = {
+  'sapucaia': 'sapucaia sul',
+  'venancio': 'venancio aires',
+  'rosario': 'rosario do sul',
+  'cachoeira': 'cachoeira do sul',
+  'sao lourenco do sul': 'sao lourenco',
+  'sao lourenco oeste': 'sao lourenco do oeste',
+  'sao sebastiao cai': 'sao sebastiao',
+  'julio castilhos': 'julio de castilhos',
+  'quedas iguacu': 'quedas do iguacu',
+  'cruzeiro oeste': 'cruzeiro do oeste',
+  'sao miguel iguacu': 'sao miguel do iguacu',
+  'encruzilhada sul': 'encruzilhada do sul',
+  'cerro grande sul': 'cerro grande',
+  'cerro grande do sul': 'cerro grande',
+  'sao miguel oeste': 'sao miguel do oeste',
+  'bela vista paraiso': 'bela vista do paraiso',
+  'balneario arroio silva': 'balneario arroio do silva',
+  'sao pedro sul': 'sao pedro do sul',
+};
+
+const SPECIAL_VTEX_TO_CSV = {
+  'farmacias sao joao delivery': 'porto alegre dark store',
+  'pf': 'pf matriz',
+  'pf matriz': 'pf matriz',
+  'pf modelo': 'pf loja modelo',
+  'pf uruguai': 'pf uruguai',
+  'pf shopping bella': 'pf shopping',
+  'pf general netto': 'pf general neto',
+  'gruarapuava': 'guarapuava',
+  'santo amaro': 'santo amaro imperatriz',
+  'sao francisco paula': 'sao fran paula',
+  'sao francisco de paula': 'sao fran paula',
+  'santa terezinha de itaipu': 'santa terezinha do itaipu',
+  'santa terezinha itaipu': 'santa terezinha do itaipu',
+  'santo antonio missoes': 'santo antonio das missoes',
+  'caxias 21': 'caxias 20',
+  'sjdigital1601': 'santo antonio das missoes',
+};
+
+function canonicalize(normName) {
+  let res = normName;
+  if (SPECIAL_VTEX_TO_CSV[res] && SPECIAL_VTEX_TO_CSV[res] !== res) {
+    return canonicalize(SPECIAL_VTEX_TO_CSV[res]);
+  }
+  res = res.replace(/([a-z])(\d)/g, '$1 $2');
+  res = res.replace(/\b0+(\d+)\b/g, '$1');
+  res = res.replace(/\s+(rs|pr|sc)\s*$/g, '');
+  res = res.replace(/\s+(rs|pr|sc)\s+(\d)/g, ' $2');
+  res = res
+    .replace(/\s*-\s*(nova|shop|gal|hosp|merc|pr|sc|rs)\b/gi, '')
+    .replace(/\b(nova|shop|gal|hosp|merc)\b/gi, '')
+    .replace(/\bnv\b/g, '')
+    .replace(/\bnov\b/g, '')
+    .replace(/\b1nov\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const words = res.split(' ');
+  const expanded = words.map(w => ABBREVIATION_MAP[w] || w);
+  res = expanded.join(' ');
+  res = res.replace(/d\s+/g, 'd').replace(/d'/g, 'd');
+
+  const numberMatch = res.match(/^(.+?)\s+(\d+)$/);
+  if (numberMatch) {
+    const baseName = numberMatch[1].trim();
+    const num = numberMatch[2];
+    if (CITY_SUFFIX_MAP[baseName]) {
+      res = CITY_SUFFIX_MAP[baseName] + ' ' + num;
+    }
+  } else {
+    if (CITY_SUFFIX_MAP[res]) {
+      res = CITY_SUFFIX_MAP[res];
+    }
+  }
+
+  const finalNumMatch = res.match(/^(.+?)\s+(\d+)$/);
+  if (finalNumMatch) {
+      const bName = finalNumMatch[1].trim();
+      if (SPECIAL_VTEX_TO_CSV[bName] && SPECIAL_VTEX_TO_CSV[bName] !== bName) {
+          res = SPECIAL_VTEX_TO_CSV[bName] + ' ' + finalNumMatch[2];
+      }
+  }
+
+  if (SPECIAL_VTEX_TO_CSV[res] && SPECIAL_VTEX_TO_CSV[res] !== res) {
+    return canonicalize(SPECIAL_VTEX_TO_CSV[res]);
+  }
+  return res.replace(/\s+/g, ' ').trim();
+}
+
+function lookupStore(vtexCleanName) {
+  const normName = normalizeStoreName(vtexCleanName);
+  if (filiaisCadastro[normName]) return filiaisCadastro[normName];
+  
+  const canon = canonicalize(normName);
+  const keys = Object.keys(filiaisCadastro);
+  for (const key of keys) {
+    if (canonicalize(key) === canon) {
+      return filiaisCadastro[key];
+    }
+  }
+  
+  const numMatch = canon.match(/^(.+?)\s+(\d+)$/);
+  if (numMatch) {
+    const baseName = numMatch[1].trim();
+    for (const key of keys) {
+      if (canonicalize(key) === baseName) {
+        return filiaisCadastro[key];
+      }
+    }
+  }
+  return null;
+}
 
 // [subgrupos desativado temporariamente]
 
@@ -870,6 +1017,41 @@ app.post('/api/refresh', async (req, res) => {
   }
 });
 
+app.get('/api/coupons', (req, res) => {
+  try {
+    const cache = vtexSync.getOrdersCache();
+    const list = [];
+    
+    Object.values(cache).forEach(order => {
+      // Filtra pedidos que têm cupom e que não estão cancelados
+      if (order.coupon && order.status !== 'canceled') {
+        const seller = order.sellers?.[0]?.name || '';
+        const storeInfo = lookupStore(seller) || {};
+        
+        list.push({
+          orderId: order.orderId,
+          date: order.creationDate ? new Date(order.creationDate).toISOString().slice(0, 10) : '',
+          coupon: String(order.coupon).toUpperCase().trim(),
+          value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
+          store: storeInfo.rawName || seller || 'Outros/Site',
+          coordenador: storeInfo.coordenador || 'Outros',
+          distrital: storeInfo.distrital || 'Outros',
+          diretor: storeInfo.diretor || 'Outros'
+        });
+      }
+    });
+
+    res.json({
+      status: 'success',
+      sync: vtexSync.getSyncState(),
+      data: list
+    });
+  } catch (err) {
+    console.error('[/api/coupons] Erro:', err.message);
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status:        'ok',
@@ -916,4 +1098,14 @@ app.listen(PORT, () => {
     console.log(`💓 Keep-alive ativo: pingando ${RENDER_URL}/api/health a cada 10 min`);
   }
   */
+
+  // Inicializa o sync de cupons em segundo plano após 5 segundos da inicialização
+  setTimeout(() => {
+    vtexSync.syncVtexData().catch(err => console.error('[Startup Sync] Falhou:', err.message));
+  }, 5000);
+
+  // Executa o sync a cada 60 minutos
+  setInterval(() => {
+    vtexSync.syncVtexData().catch(err => console.error('[Interval Sync] Falhou:', err.message));
+  }, 60 * 60 * 1000);
 });

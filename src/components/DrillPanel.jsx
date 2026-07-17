@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter } f
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
 import GeoMapPage from './GeoMapPage';
+import CuponsPage from './CuponsPage';
 
 // ── Formatadores ────────────────────────────────────────────────────────────
 const fmtR = v => {
@@ -1425,66 +1426,70 @@ export default function DrillPanel({ onUpload }) {
           </div>
           
           {/* Seletor de Perspectiva */}
-          <div style={{ 
-            display: 'flex', 
-            gap: 4, 
-            alignItems: 'center', 
-            background: 'rgba(255,255,255,0.06)', 
-            padding: 3, 
-            borderRadius: 8, 
-            border: '1px solid rgba(255,255,255,0.1)' 
-          }}>
-            {[
-              { key: 'venda', label: '💰 Faturamento' },
-              { key: 'cup', label: '🎟️ Cupons' },
-              { key: 'tm', label: '🎫 Ticket Médio' }
-            ].map(item => (
-              <button
-                key={item.key}
-                onClick={() => setViewMode(item.key)}
-                style={{
-                  background: viewMode === item.key ? 'rgba(123,97,255,0.3)' : 'transparent',
-                  border: 'none',
-                  color: viewMode === item.key ? '#fff' : 'rgba(255,255,255,0.6)',
-                  borderRadius: 6,
-                  padding: '5px 14px',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
+          {activeTab !== 'cupons' && (
+            <div style={{ 
+              display: 'flex', 
+              gap: 4, 
+              alignItems: 'center', 
+              background: 'rgba(255,255,255,0.06)', 
+              padding: 3, 
+              borderRadius: 8, 
+              border: '1px solid rgba(255,255,255,0.1)' 
+            }}>
+              {[
+                { key: 'venda', label: '💰 Faturamento' },
+                { key: 'cup', label: '🎟️ Cupons' },
+                { key: 'tm', label: '🎫 Ticket Médio' }
+              ].map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => setViewMode(item.key)}
+                  style={{
+                    background: viewMode === item.key ? 'rgba(123,97,255,0.3)' : 'transparent',
+                    border: 'none',
+                    color: viewMode === item.key ? '#fff' : 'rgba(255,255,255,0.6)',
+                    borderRadius: 6,
+                    padding: '5px 14px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {activeTab !== 'cupons' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button 
+                onClick={() => setShowFilters(!showFilters)} 
+                title={showFilters ? "Esconder Filtros" : "Mostrar Filtros"} 
+                style={{ 
+                  ...btnS, 
+                  background: showFilters ? 'rgba(123,97,255,0.25)' : 'rgba(255,255,255,0.1)', 
+                  borderColor: showFilters ? 'rgba(123,97,255,0.5)' : 'rgba(255,255,255,0.2)',
+                  color: showFilters ? '#c4b5fd' : '#fff'
                 }}
               >
-                {item.label}
+                <Filter size={13} /> {showFilters ? 'Esconder Filtros' : 'Filtros'} {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
               </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button 
-              onClick={() => setShowFilters(!showFilters)} 
-              title={showFilters ? "Esconder Filtros" : "Mostrar Filtros"} 
-              style={{ 
-                ...btnS, 
-                background: showFilters ? 'rgba(123,97,255,0.25)' : 'rgba(255,255,255,0.1)', 
-                borderColor: showFilters ? 'rgba(123,97,255,0.5)' : 'rgba(255,255,255,0.2)',
-                color: showFilters ? '#c4b5fd' : '#fff'
-              }}
-            >
-              <Filter size={13} /> {showFilters ? 'Esconder Filtros' : 'Filtros'} {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
-            </button>
-            {onUpload && (
-              <button onClick={onUpload} style={btnS}>
-                <Upload size={13} /> Atualizar Excel
+              {onUpload && (
+                <button onClick={onUpload} style={btnS}>
+                  <Upload size={13} /> Atualizar Excel
+                </button>
+              )}
+              <button onClick={load} title="Recarregar" style={{ ...btnS, padding: '5px 8px' }}>
+                <RefreshCw size={13} className={loading ? 'spinning' : ''} />
               </button>
-            )}
-            <button onClick={load} title="Recarregar" style={{ ...btnS, padding: '5px 8px' }}>
-              <RefreshCw size={13} className={loading ? 'spinning' : ''} />
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Linha 2: Filtros */}
-        {showFilters && (
+        {activeTab !== 'cupons' && showFilters && (
           <div style={{
             display: 'flex', alignItems: 'flex-end', gap: 16,
             paddingBottom: 10, paddingTop: 4, flexWrap: 'wrap',
@@ -1924,6 +1929,7 @@ export default function DrillPanel({ onUpload }) {
               { key: 'hierarquia', label: 'Hierarquia — Distrital · Coord. · Filial' },
               { key: 'categorias', label: 'Grupos / Categorias → Linhas' },
               { key: 'mapa', label: '🗺️ Mapa de Vendas & Metas' },
+              { key: 'cupons', label: '🎟️ Cupons VTEX' },
             ].map(tab => {
               const disabledByViewMode = (viewMode === 'cup' || viewMode === 'tm') && tab.key === 'hierarquia';
               return (
@@ -1975,6 +1981,8 @@ export default function DrillPanel({ onUpload }) {
               viewMode={viewMode}
             />
           )
+        ) : activeTab === 'cupons' ? (
+          <CuponsPage />
         ) : (
           /* ── Tabela ── */
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>

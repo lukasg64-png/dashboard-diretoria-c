@@ -16,6 +16,7 @@ export default {
   getMetas: (filters = {}) => req('/metas', filters),
   getDetalhes: (filters = {}) => req('/detalhes', filters),
   getFiltros: () => req('/filtros'),
+  getCoupons: () => req('/coupons'),
   refresh: () => fetch(`${BASE}/refresh`, { method: 'POST' }).then(r => r.json()),
   health: () => req('/health'),
   uploadExcel: async (file, token) => {
