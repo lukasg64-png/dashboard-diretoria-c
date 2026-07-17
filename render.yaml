@@ -2,7 +2,7 @@ services:
   - type: web
     name: dashboard-diretoria-c
     env: node
-    buildCommand: npm install && npm run build && cd server && npm install
+    buildCommand: npm install --include=dev && npm run build && cd server && npm install
     startCommand: cd server && node --max-old-space-size=460 server.js
     envVars:
       - key: NODE_ENV
