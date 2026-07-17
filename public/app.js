@@ -3,6 +3,10 @@ let monitorData = null;
 let allStores = [];
 let filteredStores = [];
 let displayLimit = 50;
+let ordersDisplayLimit = 50;
+let ordersSearchQuery = '';
+let ordersCancelFilter = 'ALL';
+
 
 // Filter values
 let currentStatusFilter = 'ALL';
@@ -11,6 +15,13 @@ let currentDirector = '';
 let currentDistrital = '';
 let currentCoordinator = '';
 let currentState = '';
+let currentFilialFilter = '';
+let currentCategoryFilter = '';
+let currentPaymentFilter = '';
+let currentProductFilter = '';
+let currentReasonFilter = '';
+let queueSearchQuery = '';
+let queueStatusFilter = 'ALL';
 
 // Sorting state
 let storesSortField = 'status'; // default status priority
@@ -55,9 +66,17 @@ const selectDirector = document.getElementById('select-director');
 const selectDistrital = document.getElementById('select-distrital');
 const selectCoordinator = document.getElementById('select-coordinator');
 const selectState = document.getElementById('select-state');
+const selectFilial = document.getElementById('select-filial');
+const selectCategory = document.getElementById('select-category');
+const selectPayment = document.getElementById('select-payment');
+const selectProduct = document.getElementById('select-product');
+const selectReason = document.getElementById('select-reason');
 const storesCountLabel = document.getElementById('stores-count-label');
 const storesTableBody = document.getElementById('stores-table-body');
 const btnLoadMore = document.getElementById('btn-load-more');
+
+const queueSearchInput = document.getElementById('queue-search-input');
+const selectQueueStatus = document.getElementById('select-queue-status');
 
 const btnChartDrillBack = document.getElementById('btn-chart-drill-back');
 const chartDrillTitle = document.getElementById('chart-drill-title');
@@ -82,10 +101,23 @@ const syncProgressContainer = document.getElementById('sync-progress-container')
 const syncProgressFill = document.getElementById('sync-progress-fill');
 
 // API call to fetch data
-async function loadMonitorData() {
-  setLoadingState(true);
+async function fetchWithTimeout(url, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch('/api/monitor');
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+async function loadMonitorData(isRetry = false) {
+  if (!isRetry) setLoadingState(true);
+  try {
+    const res = await fetchWithTimeout('/api/monitor', 45000);
     const json = await res.json();
     
     if (json.status === 'success') {
@@ -96,18 +128,63 @@ async function loadMonitorData() {
       updateKPIs(monitorData.summary, monitorData.referenceDate, monitorData.referenceTime);
       updateRegionTables(monitorData.stateAnalytics, monitorData.cityAnalytics, monitorData.coordinatorAnalytics, monitorData.distritalAnalytics);
       populateDropdowns(allStores);
+      populateOrderLevelFilters();
       applyFilters();
+
+      // Calculate global channel distribution (Hoje)
+      let totalDelivery = 0;
+      let totalPickup = 0;
+      if (allStores) {
+        allStores.forEach(s => {
+          if (s.deliveryChannels) {
+            totalDelivery += s.deliveryChannels.Entrega || 0;
+            totalPickup += s.deliveryChannels.Retirada || 0;
+          }
+        });
+      }
+      const totalChannels = totalDelivery + totalPickup || 1;
+      const deliveryPct = (totalDelivery / totalChannels * 100).toFixed(1);
+      const pickupPct = (totalPickup / totalChannels * 100).toFixed(1);
+      
+      const elDelPct = document.getElementById('global-channel-delivery-pct');
+      const elPickPct = document.getElementById('global-channel-pickup-pct');
+      const elDelBar = document.getElementById('global-channel-delivery-bar');
+      const elPickBar = document.getElementById('global-channel-pickup-bar');
+      const elDelCount = document.getElementById('global-channel-delivery-count');
+      const elPickCount = document.getElementById('global-channel-pickup-count');
+      
+      if (elDelPct) elDelPct.textContent = `Entrega: ${deliveryPct}%`;
+      if (elPickPct) elPickPct.textContent = `Retirada: ${pickupPct}%`;
+      if (elDelBar) elDelBar.style.width = `${deliveryPct}%`;
+      if (elPickBar) elPickBar.style.width = `${pickupPct}%`;
+      if (elDelCount) elDelCount.textContent = `${totalDelivery.toLocaleString('pt-BR')} ped.`;
+      if (elPickCount) elPickCount.textContent = `${totalPickup.toLocaleString('pt-BR')} ped.`;
       
       syncStatusText.textContent = `Atualizado: ${monitorData.referenceTime}`;
       syncStatusText.parentElement.firstElementChild.className = 'pulse-indicator status-green';
     } else {
-      showError(json.message || 'Erro no processamento dos dados.');
+      // Server is up but data not ready (syncing)
+      const syncInfo = json.sync;
+      const pct = syncInfo && syncInfo.progressPercent ? syncInfo.progressPercent : 0;
+      const msg = syncInfo && syncInfo.isSyncing 
+        ? `Sincronizando dados da VTEX (${pct}%)... Aguarde.`
+        : (json.message || 'Erro no processamento dos dados.');
+      showError(msg);
+      // Auto-retry while syncing
+      if (syncInfo && syncInfo.isSyncing) {
+        setTimeout(() => loadMonitorData(true), 10000);
+      } else {
+        setTimeout(() => loadMonitorData(true), 15000);
+      }
     }
   } catch (err) {
     console.error('[App] Fetch error:', err);
-    showError('Erro ao se conectar com o servidor monitor.');
+    syncStatusText.textContent = 'Reconectando ao servidor...';
+    syncStatusText.parentElement.firstElementChild.className = 'pulse-indicator status-yellow';
+    // Always auto-retry on network errors (cold start, timeout, etc.)
+    setTimeout(() => loadMonitorData(true), 10000);
   } finally {
-    setLoadingState(false);
+    if (!isRetry) setLoadingState(false);
   }
 }
 
@@ -219,9 +296,9 @@ function updateGlobalStatusBanner(summary) {
   const ratioZero = zeroToday / Math.max(baselineZero, 1);
   let levelZero = 1; // Default normal
   if (ratioZero <= 0.85) levelZero = 0; // Excelente
-  else if (ratioZero <= 1.15) levelZero = 1; // Normal
-  else if (ratioZero <= 1.4) levelZero = 2; // Atenção
-  else if (ratioZero <= 2.0) levelZero = 3; // Crítico
+  else if (ratioZero <= 1.20) levelZero = 1; // Normal
+  else if (ratioZero <= 1.50) levelZero = 2; // Atenção
+  else if (ratioZero <= 2.20) levelZero = 3; // Crítico
   else levelZero = 4; // Severo
 
   // 2. Calculate Critical Inactivity stress level
@@ -229,13 +306,46 @@ function updateGlobalStatusBanner(summary) {
   const ratioCrit = criticalToday / Math.max(baselineCrit, 5); // Base min of 5 to avoid noise
   let levelCrit = 1; // Default normal
   if (ratioCrit <= 0.85) levelCrit = 0; // Excelente
-  else if (ratioCrit <= 1.2) levelCrit = 1; // Normal
-  else if (ratioCrit <= 1.5) levelCrit = 2; // Atenção
-  else if (ratioCrit <= 2.2) levelCrit = 3; // Crítico
+  else if (ratioCrit <= 1.25) levelCrit = 1; // Normal
+  else if (ratioCrit <= 1.65) levelCrit = 2; // Atenção
+  else if (ratioCrit <= 2.50) levelCrit = 3; // Crítico
   else levelCrit = 4; // Severo
 
   // Final level is the maximum of both
-  const finalLevel = Math.max(levelZero, levelCrit);
+  let finalLevel = Math.max(levelZero, levelCrit);
+
+  // Gating based on overall Health Score to ensure proportionality
+  const health = summary.healthScore;
+  const pctOffline = summary.offlineCount / Math.max(summary.totalMonitored, 1);
+  const pctCritical = summary.criticalCount / Math.max(summary.totalMonitored, 1);
+
+  // Downgrade rules (much smoother and realistic)
+  if (health >= 94) {
+    finalLevel = Math.min(finalLevel, 1); // Max Normal
+    if (pctOffline < 0.015 && pctCritical < 0.008) {
+      finalLevel = 0; // Excelente
+    }
+  } else if (health >= 84) {
+    finalLevel = Math.min(finalLevel, 2); // Max Atenção
+  } else if (health >= 70) {
+    finalLevel = Math.min(finalLevel, 3); // Max Crítico
+  }
+
+  // Hard limit for Severo (Level 4): only if more than 15% of stores are offline OR 8% are critically inactive
+  if (finalLevel === 4) {
+    if (pctOffline < 0.15 && pctCritical < 0.08) {
+      finalLevel = 3; // Downgrade to Crítico
+    }
+  }
+
+  // Upgrade if overall health is poor
+  if (health < 60) {
+    finalLevel = Math.max(finalLevel, 4); // Severo
+  } else if (health < 72) {
+    finalLevel = Math.max(finalLevel, 3); // Crítico
+  } else if (health < 84) {
+    finalLevel = Math.max(finalLevel, 2); // Atenção
+  }
 
   const clusters = ['excelente', 'normal', 'atencao', 'critico', 'severo'];
   const cluster = clusters[finalLevel];
@@ -254,28 +364,32 @@ function updateGlobalStatusBanner(summary) {
     if (levelCrit > levelZero) {
       descText = `Alerta de Inatividade Recente: Há um aumento de lojas ativas que pararam de vender nas últimas 2h (${criticalToday} vs média de ${Math.round(baselineCrit)}).`;
     } else {
-      descText = `Volume de lojas sem venda hoje está acima do esperado (${zeroToday} vs média de ${Math.round(baselineZero)}). Fique de olho.`;
+      descText = `Volume de lojas sem venda hoje está acima do esperado (${zeroToday} vs média de ${Math.round(baselineZero)}).`;
     }
   } else if (finalLevel === 3) {
-    titleText = 'Termômetro Operacional: CRÍTICO';
+    titleText = 'Termômetro Operacional: DESVIO CRÍTICO';
     if (levelCrit > levelZero) {
-      descText = `Desvio Operacional Grave: Pico anômalo de lojas em inatividade crítica (${criticalToday} vs média de ${Math.round(baselineCrit)}). Várias filiais pararam de faturar nas últimas 2 horas! Sugerimos verificar integrações de TI.`;
+      descText = `Desvio Operacional Identificado: Aumento de lojas em inatividade nas últimas 2 horas (${criticalToday} vs média de ${Math.round(baselineCrit)}). Recomendamos verificar a estabilidade de comunicação das filiais.`;
     } else {
-      descText = `Muitas lojas paradas em comparação com o histórico (${zeroToday} vs média de ${Math.round(baselineZero)}). Possível instabilidade sistêmica em andamento.`;
+      descText = `Volume de lojas sem faturamento acumulado hoje está acima da média esperada (${zeroToday} vs média de ${Math.round(baselineZero)}).`;
     }
   } else if (finalLevel === 4) {
-    titleText = 'Termômetro Operacional: INCIDENTE / SEVERO';
+    titleText = 'Termômetro Operacional: INCIDENTE SISTÊMICO';
     if (levelCrit > levelZero) {
-      descText = `INCIDENTE GRAVE DETECTADO: Interrupção repentina de faturamento em massa! ${criticalToday} lojas em inatividade crítica (média histórica para o horário: ${Math.round(baselineCrit)}). Acione imediatamente os times de T.I. e Infraestrutura!`;
+      descText = `INCIDENTE DETECTADO: Queda acentuada no ritmo de faturamento das filiais. ${criticalToday} lojas sem vendas nas últimas 2 horas (média histórica: ${Math.round(baselineCrit)}). Recomendamos verificação das integrações de TI e servidores centrais.`;
     } else {
-      descText = `Volume massivo de lojas sem venda hoje (${zeroToday} vs média de ${Math.round(baselineZero)}). Desvio grave na operação!`;
+      descText = `Volume crítico de lojas sem vendas registrado hoje (${zeroToday} vs média de ${Math.round(baselineZero)}). Desvio acentuado na operação geral.`;
     }
   }
 
   // Update classes
   banner.className = `global-status-banner status-${cluster}`;
   title.textContent = titleText;
-  desc.textContent = descText;
+  
+  const zeroOffline = summary.offlineCount || 0;
+  const zeroAlert = (summary.zeroSalesToday || 0) - zeroOffline;
+  desc.innerHTML = descText + `<br><span style="opacity:0.9; font-size:0.82rem; display:block; margin-top:6px; border-top: 1px solid rgba(255,255,255,0.08); padding-top:6px;"><i data-lucide="info" style="width:13px; height:13px; display:inline-block; vertical-align:middle; margin-right:4px; margin-top:-2px;"></i> <strong>Diagnóstico de Estresse:</strong> Das ${zeroToday} lojas sem vendas acumuladas hoje, <strong>${zeroOffline}</strong> são de alto volume (classificadas como <strong>Offline</strong>) e <strong>${zeroAlert > 0 ? zeroAlert : 0}</strong> são de baixo volume esperado (em <strong>Atenção</strong>).</span>`;
+  lucide.createIcons();
 
   // Update clusters UI
   clusters.forEach(c => {
@@ -1076,12 +1190,14 @@ function populateDropdowns(stores) {
   const coordinators = new Set();
   const distritals = new Set();
   const states = new Set();
+  const filiais = new Set();
   
   stores.forEach(s => {
     if (s.diretor && s.diretor !== 'Desconhecido') directors.add(s.diretor);
     if (s.coordenador && s.coordenador !== 'Desconhecido') coordinators.add(s.coordenador);
     if (s.distrital && s.distrital !== 'Desconhecido') distritals.add(s.distrital);
     if (s.state) states.add(s.state);
+    if (s.name && s.status !== 'INATIVA') filiais.add(s.name);
   });
 
   // Keep existing selection if any
@@ -1089,6 +1205,7 @@ function populateDropdowns(stores) {
   const prevCoord = selectCoordinator.value;
   const prevDist = selectDistrital.value;
   const prevSt = selectState.value;
+  const prevFil = selectFilial ? selectFilial.value : '';
 
   selectDirector.innerHTML = '<option value="">Diretor: Todos</option>' + 
     Array.from(directors).sort().map(d => `<option value="${d}">${d}</option>`).join('');
@@ -1102,10 +1219,68 @@ function populateDropdowns(stores) {
   selectState.innerHTML = '<option value="">Estado: Todos</option>' + 
     Array.from(states).sort().map(st => `<option value="${st}">${st}</option>`).join('');
 
+  if (selectFilial) {
+    selectFilial.innerHTML = '<option value="">Filial: Todas</option>' + 
+      Array.from(filiais).sort().map(f => `<option value="${f}">${f}</option>`).join('');
+    selectFilial.value = filiais.has(prevFil) ? prevFil : '';
+  }
+
   selectDirector.value = prevDir;
   selectCoordinator.value = prevCoord;
   selectDistrital.value = prevDist;
   selectState.value = prevSt;
+}
+
+function populateOrderLevelFilters() {
+  if (!monitorData || !monitorData.cancellationsAnalytics) return;
+  const analytics = monitorData.cancellationsAnalytics;
+  const todayOrders = analytics.todayOrders || [];
+
+  const categories = new Set();
+  const payments = new Set();
+  const products = new Set();
+  const reasons = new Set();
+
+  todayOrders.forEach(o => {
+    o.paymentNames.forEach(p => payments.add(p));
+    o.items.forEach(item => {
+      if (item.category) categories.add(item.category);
+      if (item.name) products.add(item.name);
+    });
+    const statusLower = (o.status || '').toLowerCase();
+    if (statusLower === 'canceled' || statusLower === 'cancel') {
+      const normReason = normalizeCancelReason(o.cancelReason);
+      reasons.add(normReason);
+    }
+  });
+
+  if (selectCategory) {
+    const curVal = selectCategory.value;
+    selectCategory.innerHTML = '<option value="">Categoria: Todas</option>' + 
+      Array.from(categories).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+    selectCategory.value = categories.has(curVal) ? curVal : '';
+  }
+
+  if (selectPayment) {
+    const curVal = selectPayment.value;
+    selectPayment.innerHTML = '<option value="">Pagamento: Todos</option>' + 
+      Array.from(payments).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    selectPayment.value = payments.has(curVal) ? curVal : '';
+  }
+
+  if (selectProduct) {
+    const curVal = selectProduct.value;
+    selectProduct.innerHTML = '<option value="">Produto: Todos</option>' + 
+      Array.from(products).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+    selectProduct.value = products.has(curVal) ? curVal : '';
+  }
+
+  if (selectReason) {
+    const curVal = selectReason.value;
+    selectReason.innerHTML = '<option value="">Motivo: Todos</option>' + 
+      Array.from(reasons).sort().map(r => `<option value="${r}">${r}</option>`).join('');
+    selectReason.value = reasons.has(curVal) ? curVal : '';
+  }
 }
 
 // Dynamic summary calculator for organization filters
@@ -1216,15 +1391,96 @@ function calculateSummary(storesSubset) {
   };
 }
 
+// Clean/normalize cancellation reason comments (matches backend)
+function normalizeCancelReason(reason) {
+  if (!reason) return 'Problema de pagamento / gateway';
+  const r = reason.toLowerCase();
+  if (r.includes('estoque') || r.includes('divergencia') || r.includes('divergência')) return 'Divergência de estoque';
+  if (r.includes('receita') || r.includes('controlado')) return 'Falta de receita do controlado';
+  if (r.includes('pagamento') || r.includes('autorização') || r.includes('autorizacao') || r.includes('recusa')) return 'Problema no pagamento';
+  if (r.includes('desistiu') || r.includes('desistencia') || r.includes('desistência') || r.includes('cliente quis')) return 'Desistência do cliente';
+  if (r.includes('duplicado') || r.includes('duplicidade')) return 'Pedido duplicado';
+  if (r.includes('teste')) return 'Pedido de teste';
+  
+  const trimmed = reason.trim().replace(/[\r\n\t]+/g, ' ');
+  if (!trimmed) return 'Problema de pagamento / gateway';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 // Apply reactive filters
 function applyFilters() {
+  // Pre-process store sales counts if order-level filters are active
+  const todayOrders = (monitorData && monitorData.cancellationsAnalytics && monitorData.cancellationsAnalytics.todayOrders) || [];
+  
+  // Clone stores list to avoid mutating global data
+  const storesCopy = allStores.map(s => {
+    if (s._origSalesToday === undefined) s._origSalesToday = s.salesToday;
+    if (s._origCanceledToday === undefined) s._origCanceledToday = s.canceledToday;
+    if (s._origPendingToday === undefined) s._origPendingToday = s.pendingToday;
+    return { ...s };
+  });
+
+  if (currentCategoryFilter || currentPaymentFilter || currentProductFilter || currentReasonFilter) {
+    // Zero out count for all stores
+    storesCopy.forEach(s => {
+      s.salesToday = 0;
+      s.canceledToday = 0;
+      s.pendingToday = 0;
+    });
+
+    todayOrders.forEach(o => {
+      if (currentCategoryFilter) {
+        const hasCat = o.items.some(i => i.category === currentCategoryFilter);
+        if (!hasCat) return;
+      }
+      if (currentPaymentFilter) {
+        if (!o.paymentNames.includes(currentPaymentFilter)) return;
+      }
+      if (currentProductFilter) {
+        const hasProd = o.items.some(i => i.name === currentProductFilter);
+        if (!hasProd) return;
+      }
+      if (currentReasonFilter) {
+        const normReason = normalizeCancelReason(o.cancelReason);
+        if (normReason !== currentReasonFilter) return;
+      }
+
+      const store = storesCopy.find(s => s.name === o.storeName);
+      if (store) {
+        const statusLower = (o.status || '').toLowerCase();
+        if (statusLower === 'canceled' || statusLower === 'cancel') {
+          store.canceledToday++;
+        } else if (statusLower === 'payment-pending') {
+          store.pendingToday++;
+        } else {
+          store.salesToday++;
+        }
+      }
+    });
+  } else {
+    // Restore original values
+    storesCopy.forEach(s => {
+      s.salesToday = s._origSalesToday;
+      s.canceledToday = s._origCanceledToday;
+      s.pendingToday = s._origPendingToday;
+    });
+  }
+
   // First, filter by organizational/search criteria (without status filter)
-  const orgFilteredStores = allStores.filter(s => {
+  const orgFilteredStores = storesCopy.filter(s => {
     // Dropdown selectors
     if (currentDirector && s.diretor !== currentDirector) return false;
     if (currentDistrital && s.distrital !== currentDistrital) return false;
     if (currentCoordinator && s.coordenador !== currentCoordinator) return false;
     if (currentState && s.state !== currentState) return false;
+    if (currentFilialFilter && s.name !== currentFilialFilter) return false;
+
+    // Filter out stores that had zero transactions under order-level filters
+    if (currentCategoryFilter || currentPaymentFilter || currentProductFilter || currentReasonFilter) {
+      if (s.salesToday === 0 && s.canceledToday === 0 && s.pendingToday === 0) {
+        return false;
+      }
+    }
 
     // Search match
     if (currentSearchQuery) {
@@ -1309,10 +1565,17 @@ function applyFilters() {
   // Dynamic charts update based on filtered stores!
   updateAnalyticsCharts(filteredStores);
 
-  // Re-render orders tab if it is currently active
+  // Re-render active tab if currently active
   const activeTabBtn = document.querySelector('.btn-tab.active');
-  if (activeTabBtn && activeTabBtn.getAttribute('data-tab') === 'tab-orders') {
-    renderOrdersTab();
+  if (activeTabBtn) {
+    const tab = activeTabBtn.getAttribute('data-tab');
+    if (tab === 'tab-orders') {
+      renderOrdersTab();
+    } else if (tab === 'tab-funnel') {
+      renderFunnelTab();
+    } else if (tab === 'tab-logistics') {
+      renderLogisticsTab();
+    }
   }
 }
 
@@ -1638,6 +1901,33 @@ selectState.addEventListener('change', (e) => {
   applyFilters();
 });
 
+selectCategory.addEventListener('change', (e) => {
+  currentCategoryFilter = e.target.value;
+  applyFilters();
+});
+
+selectPayment.addEventListener('change', (e) => {
+  currentPaymentFilter = e.target.value;
+  applyFilters();
+});
+
+selectProduct.addEventListener('change', (e) => {
+  currentProductFilter = e.target.value;
+  applyFilters();
+});
+
+selectReason.addEventListener('change', (e) => {
+  currentReasonFilter = e.target.value;
+  applyFilters();
+});
+
+if (selectFilial) {
+  selectFilial.addEventListener('change', (e) => {
+    currentFilialFilter = e.target.value;
+    applyFilters();
+  });
+}
+
 // Status buttons interaction
 document.querySelectorAll('.btn-status').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1753,15 +2043,25 @@ if (btnClearFilters) {
     currentDistrital = '';
     currentCoordinator = '';
     currentState = '';
+    currentFilialFilter = '';
     currentSearchQuery = '';
     currentStatusFilter = 'ALL';
+    currentCategoryFilter = '';
+    currentPaymentFilter = '';
+    currentProductFilter = '';
+    currentReasonFilter = '';
     
     // Reset inputs
     selectDirector.value = '';
     selectDistrital.value = '';
     selectCoordinator.value = '';
     selectState.value = '';
+    if (selectFilial) selectFilial.value = '';
     searchInput.value = '';
+    if (selectCategory) selectCategory.value = '';
+    if (selectPayment) selectPayment.value = '';
+    if (selectProduct) selectProduct.value = '';
+    if (selectReason) selectReason.value = '';
     
     // Reset status buttons
     document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('active'));
@@ -1828,6 +2128,10 @@ document.querySelectorAll('.btn-tab').forEach(btn => {
     
     if (targetTab === 'tab-orders') {
       renderOrdersTab();
+    } else if (targetTab === 'tab-funnel') {
+      renderFunnelTab();
+    } else if (targetTab === 'tab-logistics') {
+      renderLogisticsTab();
     }
   });
 });
@@ -1876,16 +2180,195 @@ function renderOrdersTab() {
   document.getElementById('kpi-orders-pending').textContent = totalPendingToday.toLocaleString('pt-BR');
   document.getElementById('kpi-orders-cancel-rate').textContent = cancelRateToday.toFixed(1) + '%';
 
-  // Set comparison labels
-  document.getElementById('kpi-orders-invoiced-desc').innerHTML = `Ontem: <strong>${totalSalesYesterday}</strong> | 7d: <strong>${totalSales7DaysAgo}</strong>`;
-  document.getElementById('kpi-orders-canceled-desc').innerHTML = `Ontem: <strong>${totalCanceledYesterday}</strong> | 7d: <strong>${totalCanceled7DaysAgo}</strong>`;
+  // Set comparison labels with monetary values if available
+  const analytics = monitorData.cancellationsAnalytics || {};
+  const formattedCanceledVal = analytics.totalCanceledValueToday ? ` | Val: <strong>R$ ${analytics.totalCanceledValueToday.toLocaleString('pt-BR')}</strong>` : '';
+  const formattedInvoicedVal = analytics.totalSuccessfulValueToday ? ` | Val: <strong>R$ ${analytics.totalSuccessfulValueToday.toLocaleString('pt-BR')}</strong>` : '';
+
+  document.getElementById('kpi-orders-invoiced-desc').innerHTML = `Ontem: <strong>${totalSalesYesterday}</strong> | 7d: <strong>${totalSales7DaysAgo}</strong>${formattedInvoicedVal}`;
+  document.getElementById('kpi-orders-canceled-desc').innerHTML = `Ontem: <strong>${totalCanceledYesterday}</strong> | 7d: <strong>${totalCanceled7DaysAgo}</strong>${formattedCanceledVal}`;
   document.getElementById('kpi-orders-cancel-rate-desc').innerHTML = `Ontem: <strong>${cancelRateYesterday.toFixed(1)}%</strong> | 7d: <strong>${cancelRate7DaysAgo.toFixed(1)}%</strong>`;
 
   // Update Charts
   updateOrdersCharts(totalSalesToday, totalCanceledToday, totalPendingToday, nonInactiveStores);
+  // Render the cancellations table
+  renderOrdersTable();
+  // Render the cancellations widgets (items, categories, payment methods)
+  renderCancellationsInsights();
+}
 
-  // Update Table
-  renderCancellationRankingTable(nonInactiveStores);
+function renderCancellationsInsights() {
+  const pList = document.getElementById('cancellation-top-products');
+  const cList = document.getElementById('cancellation-top-categories');
+  const payList = document.getElementById('cancellation-top-payments');
+  const reasonList = document.getElementById('cancellation-top-reasons');
+  const operatorList = document.getElementById('cancellation-top-operators');
+  
+  if (!pList || !cList || !payList || !reasonList || !operatorList) return;
+
+  if (!monitorData || !monitorData.cancellationsAnalytics) {
+    pList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    cList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    payList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    reasonList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    operatorList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum dado disponível</span>`;
+    return;
+  }
+
+  const analytics = monitorData.cancellationsAnalytics;
+
+  // Render Top Canceled Products
+  const canceledProds = analytics.topCanceledProducts || [];
+  if (canceledProds.length === 0) {
+    pList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem produtos cancelados hoje</span>`;
+  } else {
+    const maxQty = Math.max(...canceledProds.map(p => p.quantity), 1);
+    pList.innerHTML = canceledProds.map(p => {
+      const pct = (p.quantity / maxQty) * 100;
+      const formattedPrice = (p.price ? `R$ ${(p.price/100).toFixed(2)}` : 'R$ 0,00');
+      const escapedName = p.name.replace(/'/g, "\\'");
+      return `
+        <div onclick="clickFilterProduct('${escapedName}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom: 2px;">
+            <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${p.name}">${p.name}</span>
+            <span style="color:var(--color-red); font-weight:800; flex-shrink:0;">${p.quantity} un</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; color:var(--text-secondary); font-size:0.72rem; margin-bottom:4px;">
+            <span>${p.category} | ${p.brand}</span>
+            <span>Un: ${formattedPrice}</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Canceled Categories
+  const canceledCats = analytics.topCanceledCategories || [];
+  if (canceledCats.length === 0) {
+    cList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem categorias canceladas hoje</span>`;
+  } else {
+    const maxCat = Math.max(...canceledCats.map(c => c.count), 1);
+    cList.innerHTML = canceledCats.map(c => {
+      const pct = (c.count / maxCat) * 100;
+      const escapedCat = c.category.replace(/'/g, "\\'");
+      return `
+        <div onclick="clickFilterCategory('${escapedCat}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary);">${c.category}</span>
+            <span style="color:var(--color-red); font-weight:800;">${c.count} un</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Canceled Payments
+  const canceledPays = analytics.topCanceledPayments || [];
+  if (canceledPays.length === 0) {
+    payList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem pagamentos cancelados hoje</span>`;
+  } else {
+    const maxPay = Math.max(...canceledPays.map(p => p.count), 1);
+    payList.innerHTML = canceledPays.map(p => {
+      const pct = (p.count / maxPay) * 100;
+      const escapedPay = p.paymentName.replace(/'/g, "\\'");
+      return `
+        <div onclick="clickFilterPayment('${escapedPay}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary);">${p.paymentName}</span>
+            <span style="color:var(--color-red); font-weight:800;">${p.count} ped.</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Cancellation Reasons
+  const canceledReasons = analytics.topCanceledReasons || [];
+  if (canceledReasons.length === 0) {
+    reasonList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem motivos de cancelamento hoje</span>`;
+  } else {
+    const maxReason = Math.max(...canceledReasons.map(r => r.count), 1);
+    reasonList.innerHTML = canceledReasons.map(r => {
+      const pct = (r.count / maxReason) * 100;
+      const escapedReason = r.reason.replace(/'/g, "\\'");
+      return `
+        <div onclick="clickFilterReason('${escapedReason}')" style="cursor:pointer; font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${r.reason}">${r.reason}</span>
+            <span style="color:var(--color-red); font-weight:800;">${r.count} ped.</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Top Cancellation Operators
+  const canceledOperators = analytics.topCanceledOperators || [];
+  if (canceledOperators.length === 0) {
+    operatorList.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 20px 0;">Sem operadores hoje</span>`;
+  } else {
+    const maxOp = Math.max(...canceledOperators.map(o => o.count), 1);
+    operatorList.innerHTML = canceledOperators.map(o => {
+      const pct = (o.count / maxOp) * 100;
+      return `
+        <div style="font-size: 0.8rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.02); padding: 4px 6px; margin-bottom: 2px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            <span style="font-weight:700; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:210px;" title="${o.operator}">${o.operator}</span>
+            <span style="color:var(--color-red); font-weight:800;">${o.count} ped.</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); height:4px; border-radius:2px; overflow:hidden;">
+            <div style="background:var(--color-red); width:${pct}%; height:100%;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  lucide.createIcons();
+}
+
+function clickFilterProduct(prodName) {
+  if (selectProduct) {
+    selectProduct.value = prodName;
+    currentProductFilter = prodName;
+    applyFilters();
+  }
+}
+
+function clickFilterCategory(catName) {
+  if (selectCategory) {
+    selectCategory.value = catName;
+    currentCategoryFilter = catName;
+    applyFilters();
+  }
+}
+
+function clickFilterPayment(payName) {
+  if (selectPayment) {
+    selectPayment.value = payName;
+    currentPaymentFilter = payName;
+    applyFilters();
+  }
+}
+
+function clickFilterReason(reasonName) {
+  if (selectReason) {
+    selectReason.value = reasonName;
+    currentReasonFilter = reasonName;
+    applyFilters();
+  }
 }
 
 function updateOrdersCharts(sales, canceled, pending, storesList) {
@@ -1960,158 +2443,8 @@ function updateOrdersCharts(sales, canceled, pending, storesList) {
       }
     }
   });
-
-  // Populate Canceled Items & Groups Analysis
-  const analytics = monitorData.canceledAnalytics || { products: [], brands: [], categories: [] };
-  
-  // Products
-  const prodTableBody = document.getElementById('canceled-products-table-body');
-  if (prodTableBody) {
-    if (!analytics.products || analytics.products.length === 0) {
-      prodTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhum item cancelado hoje.</td></tr>`;
-    } else {
-      prodTableBody.innerHTML = analytics.products.map(p => `
-        <tr>
-          <td><span style="color:var(--color-blue); font-weight:bold;">${p.id || 'N/A'}</span></td>
-          <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${p.name}">${p.name}</td>
-          <td class="text-center" style="font-weight:bold;">${p.quantity}</td>
-          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${p.value.toLocaleString('pt-BR')}</td>
-        </tr>
-      `).join('');
-    }
-  }
-
-  // Categories
-  const catTableBody = document.getElementById('canceled-categories-table-body');
-  if (catTableBody) {
-    if (!analytics.categories || analytics.categories.length === 0) {
-      catTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhuma categoria cancelada hoje.</td></tr>`;
-    } else {
-      catTableBody.innerHTML = analytics.categories.map(c => `
-        <tr>
-          <td style="font-weight:bold;">${c.name}</td>
-          <td class="text-center" style="font-weight:bold;">${c.quantity}</td>
-          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${c.value.toLocaleString('pt-BR')}</td>
-        </tr>
-      `).join('');
-    }
-  }
-
-  // Brands
-  const brandTableBody = document.getElementById('canceled-brands-table-body');
-  if (brandTableBody) {
-    if (!analytics.brands || analytics.brands.length === 0) {
-      brandTableBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Nenhuma marca cancelada hoje.</td></tr>`;
-    } else {
-      brandTableBody.innerHTML = analytics.brands.map(b => `
-        <tr>
-          <td style="font-weight:bold;">${b.name}</td>
-          <td class="text-center" style="font-weight:bold;">${b.quantity}</td>
-          <td class="text-center" style="font-weight:bold; color:var(--color-red);">R$ ${b.value.toLocaleString('pt-BR')}</td>
-        </tr>
-      `).join('');
-    }
-  }
   lucide.createIcons();
 }
-
-function renderCancellationRankingTable(storesList) {
-  const tableBody = document.getElementById('orders-ranking-table-body');
-  const label = document.getElementById('orders-ranking-count-label');
-  if (!tableBody) return;
-
-  // Filter stores that have at least 1 order (total) to calculate cancel rate, or any cancel count
-  const activeRanking = storesList.map(s => {
-    const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
-    const rate = total > 0 ? ((s.canceledToday || 0) / total) * 100 : 0;
-    return { ...s, totalOrders: total, cancelRate: rate };
-  }).filter(s => s.totalOrders > 0 || s.canceledToday > 0);
-
-  // Sort dynamically
-  activeRanking.sort((a, b) => {
-    let valA = a[rankingSortField];
-    let valB = b[rankingSortField];
-
-    if (typeof valA === 'string') {
-      valA = valA.toLowerCase();
-      valB = (valB || '').toLowerCase();
-    }
-    
-    if (valA == null) return 1;
-    if (valB == null) return -1;
-
-    if (valA < valB) return rankingSortAsc ? -1 : 1;
-    if (valA > valB) return rankingSortAsc ? 1 : -1;
-    return 0;
-  });
-
-  // Update header arrow indicators
-  updateHeaderIcons();
-
-  label.textContent = `${activeRanking.length} filiais com movimentação hoje`;
-
-  if (activeRanking.length === 0) {
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="9" style="text-align:center; padding: 32px; color: var(--text-secondary);">
-          <i data-lucide="info" style="margin: 0 auto 8px; width: 24px; height: 24px;"></i>
-          Nenhum pedido registrado hoje para as filiais selecionadas.
-        </td>
-      </tr>
-    `;
-    lucide.createIcons();
-    return;
-  }
-
-  tableBody.innerHTML = activeRanking.slice(0, 50).map(s => {
-    let rowClass = 'row-online';
-    let badgeClass = 'badge-green';
-    
-    if (s.status === 'OFFLINE') { rowClass = 'row-offline'; badgeClass = 'badge-red'; }
-    else if (s.status === 'CRITICO') { rowClass = 'row-critical'; badgeClass = 'badge-orange'; }
-    else if (s.status === 'ALERTA') { rowClass = 'row-alert'; badgeClass = 'badge-yellow'; }
-    else if (s.status === 'INATIVA') { rowClass = 'row-inativa'; badgeClass = 'badge-grey'; }
-
-    // Red cancel rate highlight if rate > 30% and total orders > 2
-    const isCriticalRate = s.cancelRate > 30 && s.totalOrders >= 3;
-
-    return `
-      <tr class="${rowClass}" onclick="openStoreDetails('${s.name}')" style="cursor:pointer;">
-        <td style="font-weight:800;">${s.name}</td>
-        <td>
-          <span class="store-meta-region">
-            <i data-lucide="map-pin"></i>
-            ${s.city} - ${s.state}
-          </span>
-        </td>
-        <td class="text-center" style="font-weight:800; font-size: 0.95rem;">${s.salesToday}</td>
-        <td class="text-center" style="color:var(--color-red); font-weight:800;">${s.canceledToday || 0}</td>
-        <td class="text-center" style="color:var(--color-yellow); font-weight:800;">${s.pendingToday || 0}</td>
-        <td class="text-center" style="font-weight:800; ${isCriticalRate ? 'color:var(--color-red); background:rgba(239,68,68,0.08);' : 'color:var(--text-primary);'}">
-          ${s.cancelRate.toFixed(1)}%
-          ${isCriticalRate ? '<span style="font-size:0.65rem; display:block; color:var(--color-red); font-weight:bold;">TAXA ALTA</span>' : ''}
-        </td>
-        <td>
-          <div class="store-org-cell">
-            <span class="coord">${s.coordenador || 'Desconhecido'}</span>
-            <span class="dist">D: ${s.distrital || 'Desconhecido'}</span>
-          </div>
-        </td>
-        <td>
-          <span class="status-badge ${badgeClass}">
-            ${s.status}
-          </span>
-        </td>
-        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:240px; white-space:normal;">
-          ${s.details}
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  lucide.createIcons();
-}
-
 function updateHeaderIcons() {
   // Table 1
   document.querySelectorAll('#tab-monitor th[data-sort]').forEach(th => {
@@ -2127,8 +2460,67 @@ function updateHeaderIcons() {
       }
     }
   });
+}
 
-  // Table 2
+// Render dynamic cancellations table
+function renderOrdersTable() {
+  const tableBody = document.getElementById('orders-table-body');
+  const countLabel = document.getElementById('orders-table-count-label');
+  const btnLoadMore = document.getElementById('btn-orders-load-more');
+  
+  if (!tableBody || !filteredStores) return;
+
+  // We filter out INATIVA stores from the cancellations view
+  let storesList = filteredStores.filter(s => s.status !== 'INATIVA');
+
+  // Apply tab-local search query
+  if (ordersSearchQuery) {
+    const q = ordersSearchQuery.toLowerCase();
+    storesList = storesList.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      s.city.toLowerCase().includes(q)
+    );
+  }
+
+  // Apply local cancellation filter dropdown
+  if (ordersCancelFilter === 'WITH_CANCELLATIONS') {
+    storesList = storesList.filter(s => (s.canceledToday || 0) > 0);
+  } else if (ordersCancelFilter === 'HIGH_CANCEL_RATE') {
+    storesList = storesList.filter(s => {
+      const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+      const rate = total > 0 ? (s.canceledToday / total) * 100 : 0;
+      return rate > 10;
+    });
+  } else if (ordersCancelFilter === 'WITH_PENDING') {
+    storesList = storesList.filter(s => (s.pendingToday || 0) > 0);
+  }
+
+  // Calculate totalOrders and cancelRate helper properties for sorting
+  storesList.forEach(s => {
+    s.totalOrders = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+    s.cancelRate = s.totalOrders > 0 ? (s.canceledToday / s.totalOrders) * 100 : 0;
+  });
+
+  // Sort stores dynamically
+  storesList.sort((a, b) => {
+    let valA = a[rankingSortField];
+    let valB = b[rankingSortField];
+
+    // If sorting by name or city, compare as strings
+    if (rankingSortField === 'name' || rankingSortField === 'city') {
+      valA = (valA || '').toLowerCase();
+      valB = (valB || '').toLowerCase();
+    } else {
+      valA = Number(valA || 0);
+      valB = Number(valB || 0);
+    }
+
+    if (valA < valB) return rankingSortAsc ? -1 : 1;
+    if (valA > valB) return rankingSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  // Update header arrow indicators for Table 2
   document.querySelectorAll('#tab-orders th[data-sort]').forEach(th => {
     const field = th.getAttribute('data-sort');
     const iconSpan = th.querySelector('.sort-icon');
@@ -2142,6 +2534,860 @@ function updateHeaderIcons() {
       }
     }
   });
+
+  countLabel.textContent = `${storesList.length} lojas encontradas`;
+
+  const slice = storesList.slice(0, ordersDisplayLimit);
+
+  if (slice.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align:center; padding: 32px; color: var(--text-secondary);">
+          <i data-lucide="info" style="margin: 0 auto 8px; width: 24px; height: 24px;"></i>
+          Nenhuma loja com pedidos corresponde aos filtros selecionados.
+        </td>
+      </tr>
+    `;
+    if (btnLoadMore) btnLoadMore.classList.add('hide');
+    lucide.createIcons();
+    return;
+  }
+
+  tableBody.innerHTML = slice.map((s, idx) => {
+    let statusColor = 'var(--text-secondary)';
+    let diagText = 'Sem cancelamentos hoje';
+    
+    if (s.canceledToday > 0) {
+      if (s.cancelRate > 30) {
+        statusColor = 'var(--color-red)';
+        diagText = `Crítico: Taxa de cancelamento elevada (${s.cancelRate.toFixed(1)}%)`;
+      } else if (s.cancelRate > 15) {
+        statusColor = 'var(--color-orange)';
+        diagText = `Alerta: Taxa de cancelamento média (${s.cancelRate.toFixed(1)}%)`;
+      } else {
+        statusColor = 'var(--color-yellow)';
+        diagText = `Taxa sob controle (${s.cancelRate.toFixed(1)}%)`;
+      }
+    } else if (s.pendingToday > 0) {
+      statusColor = 'var(--color-yellow)';
+      diagText = `${s.pendingToday} pedido(s) aguardando aprovação`;
+    }
+
+    return `
+      <tr onclick="openStoreDetails('${s.name}')" style="cursor:pointer;">
+        <td style="font-weight:800;">${s.name}</td>
+        <td>
+          <span class="store-meta-region">
+            <i data-lucide="map-pin"></i>
+            ${s.city} - ${s.state}
+          </span>
+        </td>
+        <td class="text-center" style="font-weight:700;">${s.salesToday}</td>
+        <td class="text-center" style="color:var(--color-red); font-weight:700;">${s.canceledToday || 0}</td>
+        <td class="text-center" style="color:var(--color-yellow); font-weight:700;">${s.pendingToday || 0}</td>
+        <td class="text-center" style="font-weight:800; font-size: 0.95rem;">${s.totalOrders}</td>
+        <td class="text-center" style="color:${statusColor}; font-weight:800;">${s.cancelRate.toFixed(1)}%</td>
+        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:240px; white-space:normal;">
+          ${diagText}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (btnLoadMore) {
+    if (storesList.length > ordersDisplayLimit) {
+      btnLoadMore.classList.remove('hide');
+    } else {
+      btnLoadMore.classList.add('hide');
+    }
+  }
+
+  lucide.createIcons();
 }
+
+function exportOrdersCSV() {
+  if (!filteredStores || filteredStores.length === 0) {
+    alert('Nenhuma loja para exportar.');
+    return;
+  }
+  
+  let storesList = filteredStores.filter(s => s.status !== 'INATIVA');
+  
+  if (ordersSearchQuery) {
+    const q = ordersSearchQuery.toLowerCase();
+    storesList = storesList.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      s.city.toLowerCase().includes(q)
+    );
+  }
+
+  if (ordersCancelFilter === 'WITH_CANCELLATIONS') {
+    storesList = storesList.filter(s => (s.canceledToday || 0) > 0);
+  } else if (ordersCancelFilter === 'HIGH_CANCEL_RATE') {
+    storesList = storesList.filter(s => {
+      const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+      const rate = total > 0 ? (s.canceledToday / total) * 100 : 0;
+      return rate > 10;
+    });
+  } else if (ordersCancelFilter === 'WITH_PENDING') {
+    storesList = storesList.filter(s => (s.pendingToday || 0) > 0);
+  }
+
+  let csvContent = '\uFEFF'; // UTF-8 BOM
+  csvContent += 'Filial,Cidade/UF,Pedidos Faturados,Pedidos Cancelados,Pedidos Pendentes,Total Pedidos,Taxa de Cancelamento\n';
+  
+  storesList.forEach(s => {
+    const total = (s.salesToday || 0) + (s.canceledToday || 0) + (s.pendingToday || 0);
+    const rate = total > 0 ? (s.canceledToday / total) * 100 : 0;
+    csvContent += `"${s.name}","${s.city} - ${s.state}",${s.salesToday},${s.canceledToday || 0},${s.pendingToday || 0},${total},${rate.toFixed(2)}%\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `monitor_cancelamentos_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Bind Order Tab specific event listeners
+const ordersSearchInput = document.getElementById('orders-search-input');
+if (ordersSearchInput) {
+  ordersSearchInput.addEventListener('input', (e) => {
+    ordersSearchQuery = e.target.value;
+    renderOrdersTable();
+  });
+}
+
+const selectCancelFilter = document.getElementById('select-cancel-filter');
+if (selectCancelFilter) {
+  selectCancelFilter.addEventListener('change', (e) => {
+    ordersCancelFilter = e.target.value;
+    ordersDisplayLimit = 50; // reset pagination
+    renderOrdersTable();
+  });
+}
+
+const btnOrdersLoadMore = document.getElementById('btn-orders-load-more');
+if (btnOrdersLoadMore) {
+  btnOrdersLoadMore.addEventListener('click', () => {
+    ordersDisplayLimit += 50;
+    renderOrdersTable();
+  });
+}
+
+const btnExportOrdersCSV = document.getElementById('btn-export-orders-csv');
+if (btnExportOrdersCSV) {
+  btnExportOrdersCSV.addEventListener('click', exportOrdersCSV);
+}
+
+
+// =============================================
+// TRANSACTIONAL SALES FUNNEL TAB
+// =============================================
+
+function renderFunnelTab() {
+  if (!monitorData || !monitorData.funnelAnalytics) return;
+  const f = monitorData.funnelAnalytics;
+
+  // 1. Calculate KPI values
+  const convToday = f.today.total > 0 ? (f.today.approved / f.today.total * 100) : 0;
+  const convYesterday = f.yesterday.total > 0 ? (f.yesterday.approved / f.yesterday.total * 100) : 0;
+  const conv7Days = f.sevenDaysAgo.total > 0 ? (f.sevenDaysAgo.approved / f.sevenDaysAgo.total * 100) : 0;
+
+  const payToday = (f.today.approved + f.today.canceled) > 0 
+    ? (f.today.approved / (f.today.approved + f.today.canceled) * 100) 
+    : 0;
+
+  const fulfillmentToday = f.today.approved > 0 ? (f.today.invoiced / f.today.approved * 100) : 0;
+
+  // 2. Update DOM elements
+  document.getElementById('kpi-funnel-conversion').textContent = convToday.toFixed(1) + '%';
+  document.getElementById('kpi-funnel-conversion-desc').innerHTML = `Ontem: <strong>${convYesterday.toFixed(1)}%</strong> | 7d: <strong>${conv7Days.toFixed(1)}%</strong>`;
+  
+  document.getElementById('kpi-funnel-payment-success').textContent = payToday.toFixed(1) + '%';
+  document.getElementById('kpi-funnel-fulfillment-rate').textContent = fulfillmentToday.toFixed(1) + '%';
+
+  // 3. Render visual funnel columns
+  document.getElementById('funnel-container-today').innerHTML = drawFunnelColumn(f.today);
+  document.getElementById('funnel-container-yesterday').innerHTML = drawFunnelColumn(f.yesterday);
+  document.getElementById('funnel-container-7days').innerHTML = drawFunnelColumn(f.sevenDaysAgo);
+
+  // 4. Render Active Queue Table
+  renderQueueTable();
+}
+
+function drawFunnelColumn(data) {
+  const total = data.total || 0;
+  const pending = data.pending || 0;
+  const approved = data.approved || 0;
+  const invoiced = data.invoiced || 0;
+  const canceled = data.canceled || 0;
+
+  // approved includes both payment-approved AND invoiced orders (cumulative)
+  // invoiced is the subset that actually reached invoiced status
+  const paymentApprovedOnly = approved - invoiced; // payment-approved but not yet invoiced
+
+  const appPct = total > 0 ? (approved / total * 100).toFixed(1) : '0.0';
+  const invPct = total > 0 ? (invoiced / total * 100).toFixed(1) : '0.0';
+  const cancPct = total > 0 ? (canceled / total * 100).toFixed(1) : '0.0';
+  const pendPct = total > 0 ? (pending / total * 100).toFixed(1) : '0.0';
+
+  const widthLevel1 = 100;
+  const widthLevel2 = total > 0 ? Math.max(60, Math.min(90, (approved / total) * 100)) : 80;
+  const widthLevel3 = total > 0 ? Math.max(38, Math.min(72, (invoiced / total) * 100)) : 55;
+
+  const minHeight = '420px';
+
+  const tooltipStep1 = 'Todos os pedidos registrados na VTEX neste período. Inclui pagamentos aprovados, faturados, cancelados e pendentes.';
+  const tooltipStep2 = 'Pedidos com pagamento confirmado pela operadora. Inclui tanto os já faturados pelas filiais quanto os aprovados ainda aguardando faturamento.';
+  const tooltipStep3 = 'Pedidos que atingiram o status "invoiced" na VTEX, ou seja, já foram faturados e integrados pelas filiais físicas. Representa o sucesso real da operação.';
+
+  return `
+    <div class="visual-funnel-wrapper" style="position: relative; display: flex; flex-direction: column; align-items: center; padding: 24px 0 10px; gap: 18px; min-height: ${minHeight};">
+      
+      <!-- Central vertical arrow passing through the funnel stages -->
+      <div style="position: absolute; top: 10px; bottom: 30px; width: 24px; background: linear-gradient(to bottom, rgba(255,255,255,0.01), rgba(255,255,255,0.08) 80%, rgba(255,255,255,0.12)); border-radius: 12px; z-index: 1;">
+        <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 18px solid rgba(255,255,255,0.12);"></div>
+      </div>
+
+      <!-- Level 1: Created -->
+      <div style="width: ${widthLevel1}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(12deg); cursor: help;" title="${tooltipStep1}">
+        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.45)); border: 2px solid var(--color-blue); border-radius: 40px; padding: 12px 20px; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.72rem; color: var(--color-blue); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">① Pedidos Criados</div>
+          <div style="font-size: 1.2rem; font-weight: 900; color: #fff;">${total.toLocaleString('pt-BR')} <span style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="font-size: 0.68rem; color: rgba(255,255,255,0.45); font-weight: 600; margin-top: 2px;">Inclui todos os status</div>
+        </div>
+      </div>
+
+      <!-- Level 2: Approved (payment-approved + invoiced) -->
+      <div style="width: ${widthLevel2}%; z-index: 3; transition: all 0.3s; transform: perspective(500px) rotateX(12deg); position: relative; cursor: help;" title="${tooltipStep2}">
+        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.45)); border: 2px solid var(--color-yellow); border-radius: 40px; padding: 12px 20px; box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.72rem; color: var(--color-yellow); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">② Pagamento Aprovado</div>
+          <div style="font-size: 1.2rem; font-weight: 900; color: #fff;">${approved.toLocaleString('pt-BR')} <span style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="display: flex; justify-content: center; gap: 6px; margin-top: 3px; flex-wrap: wrap;">
+            <span style="font-size: 0.7rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.25); display: inline-block; padding: 1px 7px; border-radius: 10px;">${appPct}% do total</span>
+            ${paymentApprovedOnly > 0 ? `<span style="font-size: 0.68rem; color: rgba(255,200,80,0.9); font-weight: 700; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 7px; border-radius: 10px;">⏳ ${paymentApprovedOnly.toLocaleString('pt-BR')} aguard. fat.</span>` : ''}
+          </div>
+        </div>
+
+        <!-- Leak Bubble: Cancelados -->
+        <div style="position: absolute; right: -80px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; align-items: center; gap: 4px;">
+          <div style="width: 18px; height: 2px; background: rgba(239, 68, 68, 0.4); border-top: 2px dashed rgba(239,68,68,0.4);"></div>
+          <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.45)); border: 2px solid var(--color-red); border-radius: 20px; padding: 5px 10px; box-shadow: 0 6px 15px rgba(239, 68, 68, 0.3); text-align: center; min-width: 72px; backdrop-filter: blur(4px);">
+            <div style="font-size: 0.58rem; color: var(--color-red); font-weight: 800; text-transform: uppercase;">Cancelados</div>
+            <div style="font-size: 0.82rem; font-weight: 800; color: #fff;">${canceled.toLocaleString('pt-BR')}</div>
+            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.7); font-weight: 700;">${cancPct}%</div>
+          </div>
+        </div>
+
+        ${pending > 0 ? `<!-- Leak Bubble: Pendentes -->
+        <div style="position: absolute; left: -78px; top: 50%; transform: translateY(-50%); z-index: 4; display: flex; align-items: center; gap: 4px; flex-direction: row-reverse;">
+          <div style="width: 18px; height: 2px; background: rgba(234,179,8,0.4); border-top: 2px dashed rgba(234,179,8,0.4);"></div>
+          <div style="background: linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.4)); border: 2px solid #eab308; border-radius: 20px; padding: 5px 10px; text-align: center; min-width: 72px; backdrop-filter: blur(4px);">
+            <div style="font-size: 0.58rem; color: #eab308; font-weight: 800; text-transform: uppercase;">Pendentes</div>
+            <div style="font-size: 0.82rem; font-weight: 800; color: #fff;">${pending}</div>
+            <div style="font-size: 0.6rem; color: rgba(255,255,255,0.7); font-weight: 700;">${pendPct}%</div>
+          </div>
+        </div>` : ''}
+      </div>
+
+      <!-- Level 3: Invoiced (only status=invoiced) -->
+      <div style="width: ${widthLevel3}%; z-index: 2; transition: all 0.3s; transform: perspective(500px) rotateX(12deg); cursor: help;" title="${tooltipStep3}">
+        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.45)); border: 2px solid var(--color-green); border-radius: 40px; padding: 12px 20px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25); text-align: center; backdrop-filter: blur(4px);">
+          <div style="font-size: 0.72rem; color: var(--color-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">③ Faturado pela Filial</div>
+          <div style="font-size: 1.2rem; font-weight: 900; color: #fff;">${invoiced.toLocaleString('pt-BR')} <span style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.7);">ped.</span></div>
+          <div style="display: flex; justify-content: center; gap: 6px; margin-top: 3px;">
+            <span style="font-size: 0.7rem; color: #fff; font-weight: 800; background: rgba(0,0,0,0.25); display: inline-block; padding: 1px 7px; border-radius: 10px;">${invPct}% do total</span>
+            <span style="font-size: 0.68rem; color: rgba(100,255,180,0.9); font-weight: 700; background: rgba(0,0,0,0.2); display: inline-block; padding: 1px 7px; border-radius: 10px;">${approved > 0 ? (invoiced/approved*100).toFixed(0) : 0}% dos aprovados</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+function renderQueueTable() {
+  const tbody = document.getElementById('queue-table-body');
+  if (!tbody || !monitorData) return;
+
+  const queue = monitorData.activeOrdersQueue || [];
+  
+  // Filter queue
+  const filteredQueue = queue.filter(o => {
+    // Status filter
+    if (queueStatusFilter !== 'ALL' && o.status !== queueStatusFilter) return false;
+
+    // Search query match (store name or order ID)
+    if (queueSearchQuery) {
+      const q = queueSearchQuery.toLowerCase();
+      const match = o.orderId.toLowerCase().includes(q) || o.storeName.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  if (filteredQueue.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+          Nenhum pedido correspondente na fila.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const now = new Date();
+  tbody.innerHTML = filteredQueue.map(o => {
+    const elapsedMs = now - new Date(o.creationDate);
+    const elapsedMinutes = Math.floor(elapsedMs / (60 * 1000));
+    
+    let elapsedStr = '';
+    if (elapsedMinutes < 60) {
+      elapsedStr = `Há ${elapsedMinutes} min`;
+    } else {
+      const hrs = Math.floor(elapsedMinutes / 60);
+      const mins = elapsedMinutes % 60;
+      elapsedStr = `Há ${hrs}h ${mins}m`;
+    }
+
+    const valueStr = `R$ ${o.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    const paymentsStr = o.paymentNames.join(', ') || 'Desconhecido';
+    
+    let statusBadge = '';
+    if (o.status === 'payment-pending') {
+      statusBadge = `<span class="badge badge-yellow">Aguardando Pagamento</span>`;
+    } else {
+      statusBadge = `<span class="badge badge-blue">Aprovado p/ Faturamento</span>`;
+    }
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--color-blue);">${o.orderId}</td>
+        <td>${o.storeName}</td>
+        <td>${statusBadge}</td>
+        <td style="font-weight: 600; color: var(--text-primary);">${elapsedStr}</td>
+        <td style="font-weight: 700;">${valueStr}</td>
+        <td style="color: var(--text-secondary); font-size: 0.78rem;">${paymentsStr}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Queue filters listeners
+if (queueSearchInput) {
+  queueSearchInput.addEventListener('input', (e) => {
+    queueSearchQuery = e.target.value;
+    renderQueueTable();
+  });
+}
+
+if (selectQueueStatus) {
+  selectQueueStatus.addEventListener('change', (e) => {
+    queueStatusFilter = e.target.value;
+    renderQueueTable();
+  });
+}
+
+// =============================================
+// LOGISTICS MONITORING TAB (ABBiamo / Hemos)
+// =============================================
+
+let logisticsSearchQuery = '';
+let logisticsStatusFilter = 'ALL';
+let logisticsStoreFilter = 'ALL';
+let logisticsSortField = 'creationDate';
+let logisticsSortAsc = false;
+let logisticsListenersBound = false;
+
+function renderLogisticsTab() {
+  if (!monitorData || !monitorData.abbiamoDeliveries) return;
+  const deliveries = monitorData.abbiamoDeliveries;
+
+  // Filter deliveries by store
+  let tabDeliveries = deliveries;
+  if (logisticsStoreFilter !== 'ALL') {
+    tabDeliveries = deliveries.filter(d => d.storeName === logisticsStoreFilter);
+  }
+
+  // Populate store filter dropdown if not focused
+  const storeSelect = document.getElementById('select-logistics-store');
+  if (storeSelect) {
+    const currentVal = storeSelect.value || 'ALL';
+    const uniqueStores = [...new Set(deliveries.map(d => d.storeName))].sort((a, b) => a.localeCompare(b));
+    let optionsHtml = `<option value="ALL">Filial: Todas</option>`;
+    uniqueStores.forEach(st => {
+      optionsHtml += `<option value="${st}">${st}</option>`;
+    });
+    storeSelect.innerHTML = optionsHtml;
+    storeSelect.value = currentVal;
+  }
+
+  // 1. Calculate KPI values
+  const dm = monitorData.funnelAnalytics && monitorData.funnelAnalytics.deliveryMetrics;
+  
+  let slaToday = '—';
+  let slaYesterday = '—';
+  let timeToday = '—';
+  let timeYesterday = '—';
+
+  const formatMins = (mins) => {
+    if (mins === null || mins === undefined) return '—';
+    if (mins >= 60) {
+      return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    }
+    return `${mins} min`;
+  };
+
+  if (logisticsStoreFilter === 'ALL') {
+    slaToday = dm && dm.today && dm.today.slaPct !== null ? `${dm.today.slaPct.toFixed(1)}%` : '—';
+    slaYesterday = dm && dm.yesterday && dm.yesterday.slaPct !== null ? `${dm.yesterday.slaPct.toFixed(1)}%` : '—';
+    timeToday = dm && dm.today ? formatMins(dm.today.avgDeliveryMinutes) : '—';
+    timeYesterday = dm && dm.yesterday ? formatMins(dm.yesterday.avgDeliveryMinutes) : '—';
+  } else {
+    // Dynamic store-specific calculation
+    const calcStoreMetrics = (dayType) => {
+      const dayOrders = tabDeliveries.filter(d => d.dayType === dayType);
+      const withWindow = dayOrders.filter(d => d.deliveryWindowEnd);
+      const totalOrders = withWindow.length;
+      if (totalOrders === 0) return { sla: '—', avgTime: '—' };
+      
+      let onTime = 0;
+      let totalMins = 0;
+      let countWithTime = 0;
+
+      withWindow.forEach(d => {
+        const limit = new Date(d.deliveryWindowEnd).getTime();
+        const actual = d.successfulAt ? new Date(d.successfulAt).getTime() : Date.now();
+        if (actual <= limit) onTime++;
+
+        if (d.creationDate && d.successfulAt) {
+          const elapsedMs = new Date(d.successfulAt).getTime() - new Date(d.creationDate).getTime();
+          const elapsedMins = Math.round(elapsedMs / 60000);
+          if (elapsedMins > 0) {
+            totalMins += elapsedMins;
+            countWithTime++;
+          }
+        }
+      });
+
+      const slaPct = (onTime / totalOrders * 100).toFixed(1) + '%';
+      const avgMins = countWithTime > 0 ? Math.round(totalMins / countWithTime) : null;
+      return { sla: slaPct, avgTime: formatMins(avgMins) };
+    };
+
+    const metricsToday = calcStoreMetrics('today');
+    const metricsYest = calcStoreMetrics('yesterday');
+    
+    slaToday = metricsToday.sla;
+    slaYesterday = metricsYest.sla;
+    timeToday = metricsToday.avgTime;
+    timeYesterday = metricsYest.avgTime;
+  }
+
+  // NPS Average (Hoje vs Ontem)
+  const ratedToday = tabDeliveries.filter(d => d.dayType === 'today' && d.npsDelivery != null);
+  const ratedYesterday = tabDeliveries.filter(d => d.dayType === 'yesterday' && d.npsDelivery != null);
+  
+  const formatNps = (arr) => {
+    return arr.length > 0 
+      ? (arr.reduce((sum, d) => sum + d.npsDelivery, 0) / arr.length).toFixed(1) + ' ★' 
+      : '—';
+  };
+  const npsToday = formatNps(ratedToday);
+  const npsYesterday = formatNps(ratedYesterday);
+
+  // Completed deliveries count (Hoje vs Ontem)
+  const countToday = tabDeliveries.filter(d => 
+    d.dayType === 'today' && ['SUCCESSFUL', 'DELIVERED'].includes((d.status || '').toUpperCase())
+  ).length;
+  const countYesterday = tabDeliveries.filter(d => 
+    d.dayType === 'yesterday' && ['SUCCESSFUL', 'DELIVERED'].includes((d.status || '').toUpperCase())
+  ).length;
+
+  document.getElementById('kpi-logistics-sla-today').textContent = slaToday;
+  document.getElementById('kpi-logistics-sla-desc').innerHTML = `Ontem: <strong>${slaYesterday}</strong>`;
+  
+  document.getElementById('kpi-logistics-time-today').textContent = timeToday;
+  document.getElementById('kpi-logistics-time-desc').innerHTML = `Ontem: <strong>${timeYesterday}</strong>`;
+  
+  document.getElementById('kpi-logistics-nps-today').textContent = npsToday;
+  document.getElementById('kpi-logistics-nps-desc').innerHTML = `Ontem: <strong>${npsYesterday}</strong>`;
+  
+  document.getElementById('kpi-logistics-count-today').textContent = countToday.toLocaleString('pt-BR');
+  document.getElementById('kpi-logistics-count-desc').innerHTML = `Ontem: <strong>${countYesterday.toLocaleString('pt-BR')}</strong>`;
+
+  // 2. Carrier Modals Share
+  const carrierCounts = {};
+  const carrierTranslations = {
+    'TAKEOUT': 'Retirada (Cliente Retira)',
+    'Takeout': 'Retirada (Cliente Retira)',
+    'takeout': 'Retirada (Cliente Retira)'
+  };
+  tabDeliveries.forEach(d => {
+    let modal = d.deliveryMethod || 'Outros';
+    if (carrierTranslations[modal]) modal = carrierTranslations[modal];
+    carrierCounts[modal] = (carrierCounts[modal] || 0) + 1;
+  });
+
+  const sortedCarriers = Object.entries(carrierCounts).sort((a, b) => b[1] - a[1]);
+  const totalDeliveries = tabDeliveries.length || 1;
+  
+  const carrierListEl = document.getElementById('logistics-carrier-list');
+  if (sortedCarriers.length === 0) {
+    carrierListEl.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Nenhum modal registrado</span>`;
+  } else {
+    carrierListEl.innerHTML = sortedCarriers.map(([name, count]) => {
+      const pct = (count / totalDeliveries * 100).toFixed(1);
+      return `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; font-size:0.82rem; font-weight:600;">
+            <span style="color:var(--text-primary);">${name}</span>
+            <span style="color:var(--text-secondary);">${count} ped. (${pct}%)</span>
+          </div>
+          <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:var(--color-blue); border-radius:3px;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 2.5 Stores with most delays (Hemos/Abbiamo)
+  const nowTs = Date.now();
+  const delayedCounts = {};
+  tabDeliveries.forEach(d => {
+    if (d.deliveryWindowEnd) {
+      const endLimit = new Date(d.deliveryWindowEnd).getTime();
+      const actualEnd = d.successfulAt ? new Date(d.successfulAt).getTime() : nowTs;
+      if (actualEnd > endLimit) {
+        delayedCounts[d.storeName] = (delayedCounts[d.storeName] || 0) + 1;
+      }
+    }
+  });
+
+  const sortedDelayed = Object.entries(delayedCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const delayedListEl = document.getElementById('logistics-delayed-stores');
+  if (delayedListEl) {
+    if (sortedDelayed.length === 0) {
+      delayedListEl.innerHTML = `<span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto; padding: 10px;">Nenhum atraso registrado</span>`;
+    } else {
+      delayedListEl.innerHTML = sortedDelayed.map(([name, count]) => {
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; font-weight:600; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.02);">
+            <span style="color:var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">${name}</span>
+            <span class="status-badge badge-red" style="font-size:0.72rem; font-weight:800; padding: 2px 8px; min-width: 80px; text-align: center;">${count} atraso${count > 1 ? 's' : ''}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // 3. Render delivery funnel comparative
+  const funnelTodayEl = document.getElementById('logistics-funnel-today');
+  const funnelYesterdayEl = document.getElementById('logistics-funnel-yesterday');
+  if (funnelTodayEl) funnelTodayEl.innerHTML = drawDeliveryFunnelColumn('today', tabDeliveries);
+  if (funnelYesterdayEl) funnelYesterdayEl.innerHTML = drawDeliveryFunnelColumn('yesterday', tabDeliveries);
+
+  // 4. Render Table
+  renderLogisticsTable();
+
+  // 5. Bind listeners if not done yet
+  if (!logisticsListenersBound) {
+    const searchInput = document.getElementById('logistics-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        logisticsSearchQuery = e.target.value;
+        renderLogisticsTable();
+      });
+    }
+
+    const storeSelectEl = document.getElementById('select-logistics-store');
+    if (storeSelectEl) {
+      storeSelectEl.addEventListener('change', (e) => {
+        logisticsStoreFilter = e.target.value;
+        renderLogisticsTab();
+      });
+    }
+
+    const filterSelect = document.getElementById('select-logistics-status');
+    if (filterSelect) {
+      filterSelect.addEventListener('change', (e) => {
+        logisticsStatusFilter = e.target.value;
+        renderLogisticsTable();
+      });
+    }
+
+    // Bind table headers sorting click listeners
+    document.querySelectorAll('#tab-logistics thead th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const field = th.getAttribute('data-sort');
+        if (logisticsSortField === field) {
+          logisticsSortAsc = !logisticsSortAsc;
+        } else {
+          logisticsSortField = field;
+          // default descending for NPS and SLA status, ascending for others
+          logisticsSortAsc = (field !== 'npsDelivery' && field !== 'sla');
+        }
+        renderLogisticsTable();
+      });
+    });
+
+    logisticsListenersBound = true;
+  }
+}
+
+function drawDeliveryFunnelColumn(dayType, deliveries) {
+  const dayDeliveries = deliveries.filter(d => d.dayType === dayType);
+  const total = dayDeliveries.length;
+  
+  // Filter out canceled / failed for the progression funnel
+  const activeDeliveries = dayDeliveries.filter(d => !['CANCELED', 'ORDER_FAILED'].includes((d.status || '').toUpperCase()));
+  const activeTotal = activeDeliveries.length;
+
+  const count5 = activeDeliveries.filter(d => ['DELIVERED', 'SUCCESSFUL'].includes((d.status || '').toUpperCase())).length;
+  const count4 = count5 + activeDeliveries.filter(d => ['DISPATCHED', 'START_DELIVERY', 'IN_TRANSIT', 'RETURNED'].includes((d.status || '').toUpperCase())).length;
+  const count3 = count4 + activeDeliveries.filter(d => ['PICKING_UP', 'COLLECTED'].includes((d.status || '').toUpperCase())).length;
+  const count2 = count3 + activeDeliveries.filter(d => ['ASSIGNED', 'SEARCHING_DRIVER'].includes((d.status || '').toUpperCase())).length;
+  const count1 = activeTotal;
+
+  const getPct = (c) => (activeTotal > 0 ? (c / activeTotal * 100).toFixed(0) : 0);
+
+  const levels = [
+    { label: '1. Pendente', count: count1, pct: getPct(count1), color: 'linear-gradient(135deg, #a78bfa, #818cf8)', width: '100%', title: 'Pedidos recebidos ou agendados no Hemos/Abbiamo aguardando atribuição de motorista.' },
+    { label: '2. Atribuído', count: count2, pct: getPct(count2), color: 'linear-gradient(135deg, #818cf8, #60a5fa)', width: '85%', title: 'Pedidos com motorista parceiro vinculado aceito para a corrida.' },
+    { label: '3. Coletando', count: count3, pct: getPct(count3), color: 'linear-gradient(135deg, #60a5fa, #2dd4bf)', width: '70%', title: 'Motorista a caminho ou já na filial para retirar os produtos.' },
+    { label: '4. Em Rota', count: count4, pct: getPct(count4), color: 'linear-gradient(135deg, #2dd4bf, #34d399)', width: '55%', title: 'Pedidos despachados em trânsito (a caminho da residência do cliente).' },
+    { label: '5. Entregue', count: count5, pct: getPct(count5), color: 'linear-gradient(135deg, #34d399, #10b981)', width: '40%', title: 'Entregas finalizadas com sucesso no destino final.' }
+  ];
+
+  const levelHtml = levels.map((lvl, index) => {
+    return `
+      <div class="funnel-stage-container" style="width: ${lvl.width}; margin: 0 auto; transition: all 0.3s ease;" title="${lvl.title}">
+        <div class="funnel-stage-bar" style="background: ${lvl.color}; height: 36px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; overflow: hidden; margin-bottom: 6px; cursor: help;">
+          <div style="position: absolute; top:0; left:0; right:0; height:50%; background: rgba(255,255,255,0.08); pointer-events: none;"></div>
+          <span style="font-size: 0.78rem; font-weight: 700; color: #fff; z-index: 1;">${lvl.label}</span>
+          <div style="display: flex; align-items: center; gap: 8px; z-index: 1;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: #fff;">${lvl.count}</span>
+            <span style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.25); padding: 1px 5px; border-radius: 8px;">${lvl.pct}%</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const canceledCount = total - activeTotal;
+  const canceledHtml = `
+    <div style="margin-top: 8px; font-size: 0.72rem; color: var(--text-secondary); display: flex; justify-content: space-between; width: 100%; padding: 0 6px; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 8px;">
+      <span>Total Recebidos: <strong>${total}</strong></span>
+      <span style="color: var(--color-red);">Cancelados/Falhas: <strong>${canceledCount}</strong></span>
+    </div>
+  `;
+
+  return levelHtml + canceledHtml;
+}
+
+function renderLogisticsTable() {
+  const tbody = document.getElementById('logistics-table-body');
+  if (!tbody) return;
+  if (!monitorData || !monitorData.abbiamoDeliveries) return;
+  const deliveries = monitorData.abbiamoDeliveries;
+
+  const now = Date.now();
+
+  const filtered = deliveries.filter(d => {
+    // Store filter
+    if (logisticsStoreFilter !== 'ALL' && d.storeName !== logisticsStoreFilter) {
+      return false;
+    }
+
+    // Search
+    if (logisticsSearchQuery) {
+      const q = logisticsSearchQuery.toLowerCase();
+      const match = d.orderId.toLowerCase().includes(q) || d.storeName.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+
+    // Status filter
+    if (logisticsStatusFilter === 'ACTIVE') {
+      return !['SUCCESSFUL', 'DELIVERED', 'CANCELED'].includes((d.status || '').toUpperCase());
+    } else if (logisticsStatusFilter === 'DELIVERED') {
+      return ['SUCCESSFUL', 'DELIVERED'].includes((d.status || '').toUpperCase());
+    } else if (logisticsStatusFilter === 'NPS_RATED') {
+      return d.npsDelivery != null;
+    } else if (logisticsStatusFilter === 'DELAYED') {
+      if (!d.deliveryWindowEnd) return false;
+      const endLimit = new Date(d.deliveryWindowEnd).getTime();
+      const actualEnd = d.successfulAt ? new Date(d.successfulAt).getTime() : now;
+      return actualEnd > endLimit;
+    }
+    
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+          Nenhuma entrega corresponde aos filtros atuais.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Sort filtered deliveries
+  const sorted = [...filtered].sort((a, b) => {
+    let valA = a[logisticsSortField];
+    let valB = b[logisticsSortField];
+
+    if (logisticsSortField === 'sla') {
+      const limitA = a.deliveryWindowEnd ? new Date(a.deliveryWindowEnd).getTime() : 0;
+      const actualA = a.successfulAt ? new Date(a.successfulAt).getTime() : now;
+      valA = limitA > 0 ? (actualA > limitA ? 1 : 0) : -1;
+
+      const limitB = b.deliveryWindowEnd ? new Date(b.deliveryWindowEnd).getTime() : 0;
+      const actualB = b.successfulAt ? new Date(b.successfulAt).getTime() : now;
+      valB = limitB > 0 ? (actualB > limitB ? 1 : 0) : -1;
+    } else if (logisticsSortField === 'elapsedMs') {
+      const startA = a.creationDate ? new Date(a.creationDate).getTime() : 0;
+      const endA = a.successfulAt ? new Date(a.successfulAt).getTime() : now;
+      valA = startA > 0 ? (endA - startA) : 9999999999;
+
+      const startB = b.creationDate ? new Date(b.creationDate).getTime() : 0;
+      const endB = b.successfulAt ? new Date(b.successfulAt).getTime() : now;
+      valB = startB > 0 ? (endB - startB) : 9999999999;
+    }
+
+    if (valA === undefined || valA === null) return logisticsSortAsc ? 1 : -1;
+    if (valB === undefined || valB === null) return logisticsSortAsc ? -1 : 1;
+
+    if (typeof valA === 'string') {
+      return logisticsSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    } else {
+      return logisticsSortAsc ? valA - valB : valB - valA;
+    }
+  });
+
+  // Update sort icons in table headers
+  document.querySelectorAll('#tab-logistics th[data-sort]').forEach(th => {
+    const field = th.getAttribute('data-sort');
+    const iconSpan = th.querySelector('.sort-icon');
+    if (iconSpan) {
+      if (logisticsSortField === field) {
+        iconSpan.textContent = logisticsSortAsc ? ' ▲' : ' ▼';
+        iconSpan.style.opacity = '1';
+      } else {
+        iconSpan.textContent = '';
+        iconSpan.style.opacity = '0.3';
+      }
+    }
+  });
+
+  const statusTranslations = {
+    'CREATED': 'Criado',
+    'ASSIGNED': 'Motorista Atribuído',
+    'SEARCHING_DRIVER': 'Buscando Motorista',
+    'PICKING_UP': 'Coletando',
+    'COLLECTED': 'Coletado',
+    'IN_TRANSIT': 'Em Rota',
+    'START_DELIVERY': 'Em Rota',
+    'DISPATCHED': 'Em Rota',
+    'DELIVERED': 'Entregue',
+    'SUCCESSFUL': 'Entregue',
+    'CANCELED': 'Cancelado',
+    'RETURNED': 'Devolvido',
+    'PENDING': 'Pendente',
+    'SCHEDULED': 'Agendado',
+    'ORDER_FAILED': 'Falha no Pedido'
+  };
+
+  const carrierTranslations = {
+    'TAKEOUT': 'Retirada (Cliente Retira)',
+    'Takeout': 'Retirada (Cliente Retira)',
+    'takeout': 'Retirada (Cliente Retira)'
+  };
+
+  tbody.innerHTML = sorted.map(d => {
+    // 1. Status badge
+    let statusUpper = (d.status || 'Pendente').toUpperCase();
+    let statusText = statusTranslations[statusUpper] || d.status || 'Pendente';
+    
+    let statusClass = 'badge-orange';
+    if (['SUCCESSFUL', 'DELIVERED'].includes(statusUpper)) {
+      statusClass = 'badge-green';
+    } else if (['DISPATCHED', 'START_DELIVERY', 'IN_TRANSIT', 'ASSIGNED', 'SEARCHING_DRIVER', 'PICKING_UP', 'COLLECTED'].includes(statusUpper)) {
+      statusClass = 'badge-blue';
+    } else if (['CANCELED', 'ORDER_FAILED'].includes(statusUpper)) {
+      statusClass = 'badge-red';
+    } else if (['RETURNED'].includes(statusUpper)) {
+      statusClass = 'badge-grey';
+    }
+
+    // 2. SLA badge
+    let slaBadge = '—';
+    let slaLimitStr = '—';
+    if (d.deliveryWindowEnd) {
+      const endLimit = new Date(d.deliveryWindowEnd).getTime();
+      const actualEnd = d.successfulAt ? new Date(d.successfulAt).getTime() : now;
+      const isDelayed = actualEnd > endLimit;
+      
+      const dateObj = new Date(d.deliveryWindowEnd);
+      const timeStr = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      slaLimitStr = d.dayType === 'yesterday' ? `Ontem ${timeStr}` : timeStr;
+
+      if (isDelayed) {
+        slaBadge = `<span class="status-badge badge-red" title="Prazo limite: ${slaLimitStr}">Atrasado</span>`;
+      } else {
+        slaBadge = `<span class="status-badge badge-green" title="Prazo limite: ${slaLimitStr}">No Prazo</span>`;
+      }
+    }
+
+    // 2.5 Elapsed time (delivery duration)
+    let elapsedStr = '—';
+    if (d.creationDate) {
+      const start = new Date(d.creationDate).getTime();
+      const end = d.successfulAt ? new Date(d.successfulAt).getTime() : now;
+      const elapsedMins = Math.round((end - start) / 60000);
+      if (elapsedMins >= 0) {
+        const isFinished = ['SUCCESSFUL', 'DELIVERED'].includes(statusUpper);
+        const suffix = isFinished ? '' : ' <span style="font-size:0.7rem; color:var(--color-blue); font-weight:600;">(ativo)</span>';
+        if (elapsedMins >= 60) {
+          const h = Math.floor(elapsedMins / 60);
+          const m = elapsedMins % 60;
+          elapsedStr = `${h}h ${m}m${suffix}`;
+        } else {
+          elapsedStr = `${elapsedMins} min${suffix}`;
+        }
+      }
+    }
+
+    // 3. NPS stars
+    const npsValue = d.npsDelivery != null ? `${d.npsDelivery} ★` : '—';
+    const comment = d.feedbackComment || '—';
+
+    let carrierName = d.deliveryMethod || 'Padrão';
+    if (carrierTranslations[carrierName]) carrierName = carrierTranslations[carrierName];
+
+    return `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--color-blue);">${d.orderId}</td>
+        <td style="font-weight:600;">${d.storeName}</td>
+        <td style="font-weight:600; color:var(--text-primary);">${carrierName}</td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        <td>${slaBadge}</td>
+        <td style="font-weight:700; color:var(--text-primary);">${slaLimitStr}</td>
+        <td style="font-weight:600; color:var(--text-primary);">${elapsedStr}</td>
+        <td class="text-center" style="font-weight:700; color: var(--color-yellow);">${npsValue}</td>
+        <td style="color:var(--text-secondary); max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${comment}">${comment}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
 
 

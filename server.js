@@ -5,6 +5,7 @@ const path = require('path');
 
 const XLSX = require('xlsx');
 const vtexSync = require('./vtexSync');
+const abbiamoSync = require('./abbiamoSync');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -310,15 +311,38 @@ function lookupStore(vtexCleanName) {
   return null;
 }
 
-// Timezone safe helper
+// Timezone safe helper (High performance manual UTC-3 calculation)
 function getBrtTimeDetails(date) {
-  const options = { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-  const timeStr = date.toLocaleTimeString('en-US', options);
-  const [hour, minute, second] = timeStr.split(':').map(Number);
+  const brtMs = date.getTime() - (3 * 3600 * 1000);
+  const brtDate = new Date(brtMs);
   
-  const dateStr = date.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' }); // outputs YYYY-MM-DD
+  const hour = brtDate.getUTCHours();
+  const minute = brtDate.getUTCMinutes();
+  const second = brtDate.getUTCSeconds();
+  
+  const yyyy = brtDate.getUTCFullYear();
+  const mm = String(brtDate.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(brtDate.getUTCDate()).padStart(2, '0');
+  const dateStr = `${yyyy}-${mm}-${dd}`;
   
   return { hour, minute, second, dateStr };
+}
+
+// Clean/normalize cancellation reason comments
+function normalizeCancelReason(reason) {
+  if (!reason) return 'Problema de pagamento / gateway';
+  const r = reason.toLowerCase();
+  if (r.includes('estoque') || r.includes('divergencia') || r.includes('divergência')) return 'Divergência de estoque';
+  if (r.includes('receita') || r.includes('controlado')) return 'Falta de receita do controlado';
+  if (r.includes('pagamento') || r.includes('autorização') || r.includes('autorizacao') || r.includes('recusa')) return 'Problema no pagamento';
+  if (r.includes('desistiu') || r.includes('desistencia') || r.includes('desistência') || r.includes('cliente quis')) return 'Desistência do cliente';
+  if (r.includes('duplicado') || r.includes('duplicidade')) return 'Pedido duplicado';
+  if (r.includes('teste')) return 'Pedido de teste';
+  
+  // Format operator notes cleanly (e.g. capitalize)
+  const trimmed = reason.trim().replace(/[\r\n\t]+/g, ' ');
+  if (!trimmed) return 'Problema de pagamento / gateway';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
 // Helper to evaluate store status
@@ -355,28 +379,87 @@ function evaluateStoreStatus(sales, expectedSalesSoFar, expectedSalesFull, expec
   }
 }
 
+let cachedOrders = null;
+let lastCacheMtime = 0;
+
+function getOrdersCache() {
+  if (!fs.existsSync(CACHE_FILE)) {
+    return {};
+  }
+  try {
+    const stat = fs.statSync(CACHE_FILE);
+    const mtime = stat.mtimeMs;
+    if (!cachedOrders || mtime > lastCacheMtime) {
+      console.log(`[Cache] Carregando cache de pedidos do disco (${(stat.size / 1024 / 1024).toFixed(2)} MB)...`);
+      cachedOrders = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8')) || {};
+      lastCacheMtime = mtime;
+    }
+  } catch (err) {
+    console.error('[Cache] Erro ao carregar cache de pedidos do disco:', err.message);
+    if (!cachedOrders) cachedOrders = {};
+  }
+  return cachedOrders;
+}
+
+// Abbiamo delivery metrics helpers
+function enrichDeliveryMetrics(metrics, abData, vtexOrder) {
+  // SLA: compare delivery_window_end with successfulAt
+  if (abData.deliveryWindowEnd && abData.successfulAt) {
+    const windowEnd = new Date(abData.deliveryWindowEnd).getTime();
+    const deliveredAt = new Date(abData.successfulAt).getTime();
+    if (!isNaN(windowEnd) && !isNaN(deliveredAt)) {
+      if (deliveredAt <= windowEnd) {
+        metrics.slaOnTime++;
+      } else {
+        metrics.slaDelayed++;
+      }
+    }
+  }
+
+  // Delivery time: from VTEX creationDate to Abbiamo successfulAt
+  if (abData.successfulAt && vtexOrder.creationDate) {
+    const created = new Date(vtexOrder.creationDate).getTime();
+    const delivered = new Date(abData.successfulAt).getTime();
+    if (!isNaN(created) && !isNaN(delivered) && delivered > created) {
+      const minutes = (delivered - created) / 60000;
+      metrics.totalDeliveryMinutes += minutes;
+      metrics.deliveredWithTime++;
+    }
+  }
+
+  // NPS
+  if (abData.npsDelivery && typeof abData.npsDelivery === 'number') {
+    metrics.npsSum += abData.npsDelivery;
+    metrics.npsCount++;
+  }
+
+  // Modal breakdown
+  const modal = abData.deliveryMethod || 'Desconhecido';
+  metrics.modals[modal] = (metrics.modals[modal] || 0) + 1;
+}
+
+function summarizeDeliveryMetrics(metrics) {
+  const totalSla = metrics.slaOnTime + metrics.slaDelayed;
+  return {
+    slaOnTime: metrics.slaOnTime,
+    slaDelayed: metrics.slaDelayed,
+    slaPct: totalSla > 0 ? Math.round((metrics.slaOnTime / totalSla) * 1000) / 10 : null,
+    avgDeliveryMinutes: metrics.deliveredWithTime > 0 ? Math.round(metrics.totalDeliveryMinutes / metrics.deliveredWithTime) : null,
+    npsAvg: metrics.npsCount > 0 ? Math.round((metrics.npsSum / metrics.npsCount) * 10) / 10 : null,
+    npsCount: metrics.npsCount,
+    modals: Object.entries(metrics.modals)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  };
+}
+
 // Main processing logic
 function processStoreHealth() {
   const storesBase = loadStoresBase();
   
-  if (!fs.existsSync(CACHE_FILE)) {
-    return {
-      status: 'error',
-      message: 'Base de dados de cache da VTEX indisponível. Aguarde a sincronização do projeto principal.'
-    };
-  }
-
-  let cache;
-  try {
-    cache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
-  } catch (err) {
-    return {
-      status: 'error',
-      message: 'Erro ao carregar banco de dados de cache VTEX: ' + err.message
-    };
-  }
-
+  const cache = getOrdersCache();
   const orders = Object.values(cache);
+  
   if (orders.length === 0) {
     return {
       status: 'error',
@@ -384,15 +467,33 @@ function processStoreHealth() {
     };
   }
 
+  // 1. Calculate latest order date in cache to check for snapshot mode
+  let latestOrderDate = null;
+  if (orders.length > 0) {
+    const times = orders.map(o => new Date(o.creationDate).getTime()).filter(t => !isNaN(t));
+    if (times.length > 0) {
+      latestOrderDate = new Date(Math.max(...times));
+    }
+  }
+
+  const timeDiffHours = latestOrderDate 
+    ? (Date.now() - latestOrderDate.getTime()) / 3600000 
+    : 0;
+
+
   // 2. Determine reference date and time timezone safe
   const syncState = vtexSync.getSyncState();
   let refDate = new Date();
-  if (syncState.lastSyncTime) {
-    const lastSync = new Date(syncState.lastSyncTime);
-    // If the last sync was within 45 minutes, use it to avoid false alarms due to sync delay
-    if (Date.now() - lastSync.getTime() < 45 * 60 * 1000) {
-      refDate = lastSync;
-    }
+
+  // Only use snapshot mode when NOT actively syncing, and when the latest order is from today's BRT date
+  // (prevents using yesterday's data as today's reference during startup before sync finishes)
+  const realNowBrt = getBrtTimeDetails(refDate);
+  const latestOrderBrt = latestOrderDate ? getBrtTimeDetails(latestOrderDate) : null;
+  const isFromToday = latestOrderBrt && latestOrderBrt.dateStr === realNowBrt.dateStr;
+
+  const isSnapshotMode = !syncState.isSyncing && timeDiffHours >= 3.0 && latestOrderDate && isFromToday;
+  if (isSnapshotMode) {
+    refDate = latestOrderDate;
   }
 
   const calendarNowBrt = getBrtTimeDetails(refDate);
@@ -409,9 +510,6 @@ function processStoreHealth() {
   const sDate = new Date(refDate.getTime());
   sDate.setDate(sDate.getDate() - 7);
   const sevenDaysStr = getBrtTimeDetails(sDate).dateStr;
-
-  const latestOrderDate = new Date(Math.max(...orders.map(o => new Date(o.creationDate).getTime())));
-  const timeDiffHours = (Date.now() - latestOrderDate.getTime()) / 3600000;
 
   const currentSeconds = currentHour * 3600 + currentMinute * 60 + currentSecond;
 
@@ -453,12 +551,44 @@ function processStoreHealth() {
     };
   });
 
+  // Analytics aggregation for today's orders
+  const topCanceledProducts = {};
+  const topCanceledCategories = {};
+  const topCanceledPayments = {};
+  const topCanceledReasons = {};
+  const topCanceledOperators = {};
+  let totalCanceledValueToday = 0;
+  
+  const topSuccessfulProducts = {};
+  const topSuccessfulCategories = {};
+  const topSuccessfulPayments = {};
+  let totalSuccessfulValueToday = 0;
+
+  const todayOrders = [];
+  const funnelToday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0, dispatched: 0, delivered: 0, totalChecked: 0 };
+  const funnelYesterday = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0, dispatched: 0, delivered: 0, totalChecked: 0 };
+  const funnelSevenDaysAgo = { total: 0, pending: 0, approved: 0, invoiced: 0, canceled: 0, dispatched: 0, delivered: 0, totalChecked: 0 };
+  const activeOrdersQueue = [];
+  const abbiamoDeliveries = [];
+
+  // Abbiamo delivery metrics accumulators
+  const deliveryMetrics = {
+    today: { slaOnTime: 0, slaDelayed: 0, totalDeliveryMinutes: 0, deliveredWithTime: 0, npsSum: 0, npsCount: 0, modals: {} },
+    yesterday: { slaOnTime: 0, slaDelayed: 0, totalDeliveryMinutes: 0, deliveredWithTime: 0, npsSum: 0, npsCount: 0, modals: {} },
+    sevenDaysAgo: { slaOnTime: 0, slaDelayed: 0, totalDeliveryMinutes: 0, deliveredWithTime: 0, npsSum: 0, npsCount: 0, modals: {} }
+  };
+
+  // Load Abbiamo cache for delivery enrichment
+  const abbiamoCache = abbiamoSync.getAbbiamoCache();
+
   // Aggregate order metrics
   for (const o of orders) {
     const status = (o.status || '').toLowerCase();
     
     const isCanceled = status === 'canceled' || status === 'cancel';
-    const isPending = status === 'payment-pending';
+    const isPending = status === 'payment-pending' || status === 'waiting-for-seller-decision';
+    const isApproved = status === 'payment-approved' || status === 'invoiced';
+    const isInvoiced = status === 'invoiced';
 
     if (!o.sellers || o.sellers.length === 0) continue;
 
@@ -468,6 +598,201 @@ function processStoreHealth() {
     const hour = detailsBrt.hour;
     const orderSeconds = detailsBrt.hour * 3600 + detailsBrt.minute * 60 + detailsBrt.second;
     const value = (o.value || 0) / 100;
+
+    // Build Abbiamo deliveries list for the logistics tab (Today and Yesterday only)
+    const abData = abbiamoCache[o.orderId];
+    if (abData && isInvoiced && abData.status !== 'NOT_FOUND' && (dayStr === todayStr || dayStr === yesterdayStr)) {
+      let storeName = 'sjdigital';
+      if (o.sellers && o.sellers.length > 0) {
+        const s = o.sellers.find(sel => sel.id !== '1' && sel.id !== 'sjdigital' && sel.name !== 'sjdigital') || o.sellers[0];
+        const cleanName = (s.name || s.id).split(' - ')[0].trim();
+        const orgInfo = lookupStore(cleanName);
+        storeName = orgInfo ? orgInfo.rawName : cleanName;
+      }
+      abbiamoDeliveries.push({
+        orderId: o.orderId,
+        storeName,
+        creationDate: o.creationDate,
+        dayType: dayStr === todayStr ? 'today' : 'yesterday',
+        status: abData.status,
+        subStatus: abData.subStatus,
+        deliveryMethod: abData.deliveryMethod,
+        deliveryWindowEnd: abData.deliveryWindowEnd,
+        deliveryEta: abData.deliveryEta,
+        successfulAt: abData.successfulAt,
+        npsDelivery: abData.npsDelivery,
+        feedbackComment: abData.feedbackComment
+      });
+    }
+
+    // Populating funnel stats
+    if (dayStr === todayStr) {
+      funnelToday.total++;
+      if (isPending) funnelToday.pending++;
+      if (isApproved) funnelToday.approved++;
+      if (isInvoiced) funnelToday.invoiced++;
+      if (isCanceled) funnelToday.canceled++;
+
+      // Enrich with Abbiamo delivery data
+      const abData = abbiamoCache[o.orderId];
+      if (abData && isInvoiced) {
+        const abStatus = (abData.status || '').toUpperCase();
+        if (abStatus !== 'NOT_FOUND') {
+          funnelToday.totalChecked++;
+          if (['DISPATCHED','START_DELIVERY','SUCCESSFUL','DELIVERED','RETURNED'].includes(abStatus)) {
+            funnelToday.dispatched++;
+          }
+          if (abStatus === 'SUCCESSFUL' || abStatus === 'DELIVERED') {
+            funnelToday.delivered++;
+            enrichDeliveryMetrics(deliveryMetrics.today, abData, o);
+          }
+        }
+      }
+
+      // If active order (pending or approved but not invoiced/canceled), push to active queue
+      const statusLower = status.toLowerCase();
+      if (statusLower === 'payment-pending' || statusLower === 'waiting-for-seller-decision' || statusLower === 'payment-approved') {
+        let storeName = 'sjdigital';
+        if (o.sellers && o.sellers.length > 0) {
+          const s = o.sellers.find(sel => sel.id !== '1' && sel.id !== 'sjdigital' && sel.name !== 'sjdigital') || o.sellers[0];
+          const cleanName = (s.name || s.id).split(' - ')[0].trim();
+          const orgInfo = lookupStore(cleanName);
+          storeName = orgInfo ? orgInfo.rawName : cleanName;
+        }
+
+        activeOrdersQueue.push({
+          orderId: o.orderId,
+          status: o.status,
+          storeName,
+          creationDate: o.creationDate,
+          value: value,
+          paymentNames: o.paymentNames || []
+        });
+      }
+    } else if (dayStr === yesterdayStr) {
+      if (orderSeconds <= currentSeconds) {
+        funnelYesterday.total++;
+        if (isPending) funnelYesterday.pending++;
+        if (isApproved) funnelYesterday.approved++;
+        if (isInvoiced) funnelYesterday.invoiced++;
+        if (isCanceled) funnelYesterday.canceled++;
+
+        const abData = abbiamoCache[o.orderId];
+        if (abData && isInvoiced) {
+          const abStatus = (abData.status || '').toUpperCase();
+          if (abStatus !== 'NOT_FOUND') {
+            funnelYesterday.totalChecked++;
+            if (['DISPATCHED','START_DELIVERY','SUCCESSFUL','DELIVERED','RETURNED'].includes(abStatus)) {
+              funnelYesterday.dispatched++;
+            }
+            if (abStatus === 'SUCCESSFUL' || abStatus === 'DELIVERED') {
+              funnelYesterday.delivered++;
+              enrichDeliveryMetrics(deliveryMetrics.yesterday, abData, o);
+            }
+          }
+        }
+      }
+    } else if (dayStr === sevenDaysStr) {
+      if (orderSeconds <= currentSeconds) {
+        funnelSevenDaysAgo.total++;
+        if (isPending) funnelSevenDaysAgo.pending++;
+        if (isApproved) funnelSevenDaysAgo.approved++;
+        if (isInvoiced) funnelSevenDaysAgo.invoiced++;
+        if (isCanceled) funnelSevenDaysAgo.canceled++;
+
+        const abData = abbiamoCache[o.orderId];
+        if (abData && isInvoiced) {
+          const abStatus = (abData.status || '').toUpperCase();
+          if (abStatus !== 'NOT_FOUND') {
+            funnelSevenDaysAgo.totalChecked++;
+            if (['DISPATCHED','START_DELIVERY','SUCCESSFUL','DELIVERED','RETURNED'].includes(abStatus)) {
+              funnelSevenDaysAgo.dispatched++;
+            }
+            if (abStatus === 'SUCCESSFUL' || abStatus === 'DELIVERED') {
+              funnelSevenDaysAgo.delivered++;
+              enrichDeliveryMetrics(deliveryMetrics.sevenDaysAgo, abData, o);
+            }
+          }
+        }
+      }
+    }
+
+    // Compile global order statistics for today
+    if (dayStr === todayStr) {
+      const val = (o.value || 0) / 100;
+      
+      // Resolve clean storeName using lookupStore
+      let storeName = 'sjdigital';
+      if (o.sellers && o.sellers.length > 0) {
+        const s = o.sellers.find(sel => sel.id !== '1' && sel.id !== 'sjdigital' && sel.name !== 'sjdigital') || o.sellers[0];
+        const cleanName = (s.name || s.id).split(' - ')[0].trim();
+        const orgInfo = lookupStore(cleanName);
+        storeName = orgInfo ? orgInfo.rawName : cleanName;
+      }
+
+      todayOrders.push({
+        orderId: o.orderId,
+        status: o.status,
+        storeName,
+        value: val,
+        paymentNames: o.paymentNames || [],
+        items: o.items || [],
+        cancelReason: o.cancelReason || null,
+        cancelledBy: o.cancelledBy || null
+      });
+
+      if (isCanceled) {
+        totalCanceledValueToday += val;
+        
+        // Aggregate cancellation reasons
+        const rawReason = o.cancelReason;
+        const normReason = normalizeCancelReason(rawReason);
+        topCanceledReasons[normReason] = (topCanceledReasons[normReason] || 0) + 1;
+
+        // Aggregate cancellation operators
+        const operator = o.cancelledBy || 'Desconhecido';
+        topCanceledOperators[operator] = (topCanceledOperators[operator] || 0) + 1;
+
+        if (o.paymentNames) {
+          o.paymentNames.forEach(pm => {
+            topCanceledPayments[pm] = (topCanceledPayments[pm] || 0) + 1;
+          });
+        }
+        if (o.items) {
+          o.items.forEach(item => {
+            const itemKey = item.name || item.id;
+            if (!topCanceledProducts[itemKey]) {
+              topCanceledProducts[itemKey] = { name: item.name, category: item.category, brand: item.brand, quantity: 0, cancelCount: 0 };
+            }
+            topCanceledProducts[itemKey].quantity += (item.quantity || 1);
+            topCanceledProducts[itemKey].cancelCount++;
+
+            const cat = item.category || 'Outros';
+            topCanceledCategories[cat] = (topCanceledCategories[cat] || 0) + (item.quantity || 1);
+          });
+        }
+      } else if (!isPending) {
+        totalSuccessfulValueToday += val;
+        if (o.paymentNames) {
+          o.paymentNames.forEach(pm => {
+            topSuccessfulPayments[pm] = (topSuccessfulPayments[pm] || 0) + 1;
+          });
+        }
+        if (o.items) {
+          o.items.forEach(item => {
+            const itemKey = item.name || item.id;
+            if (!topSuccessfulProducts[itemKey]) {
+              topSuccessfulProducts[itemKey] = { name: item.name, category: item.category, brand: item.brand, quantity: 0, salesCount: 0 };
+            }
+            topSuccessfulProducts[itemKey].quantity += (item.quantity || 1);
+            topSuccessfulProducts[itemKey].salesCount++;
+
+            const cat = item.category || 'Outros';
+            topSuccessfulCategories[cat] = (topSuccessfulCategories[cat] || 0) + (item.quantity || 1);
+          });
+        }
+      }
+    }
 
     o.sellers.forEach(s => {
       if (s.id === '1' || s.id === 'sjdigital' || s.name === 'sjdigital') return;
@@ -565,14 +890,16 @@ function processStoreHealth() {
         stats.revenueToday += value;
         stats.hourlySales[hour]++;
 
-        // Aggregate payment methods and delivery channels for today's orders
-        if (o.paymentNames) {
-          o.paymentNames.forEach(pm => {
+        // Aggregate payment methods and delivery channels for today's orders (deduplicated per order)
+        if (o.paymentNames && o.paymentNames.length > 0) {
+          const uniquePayments = [...new Set(o.paymentNames)];
+          uniquePayments.forEach(pm => {
             stats.paymentMethods[pm] = (stats.paymentMethods[pm] || 0) + 1;
           });
         }
-        if (o.deliveryChannels) {
-          o.deliveryChannels.forEach(dc => {
+        if (o.deliveryChannels && o.deliveryChannels.length > 0) {
+          const uniqueChannels = [...new Set(o.deliveryChannels)];
+          uniqueChannels.forEach(dc => {
             const dcFriendly = dc === 'pickup-in-point' ? 'Retirada' : (dc === 'delivery' ? 'Entrega' : dc);
             stats.deliveryChannels[dcFriendly] = (stats.deliveryChannels[dcFriendly] || 0) + 1;
           });
@@ -949,55 +1276,44 @@ function processStoreHealth() {
     ? Math.round(((onlineCountLastWeek + alertCountLastWeek * 0.5) / totalMonitoredLastWeek) * 100)
     : 100;
 
-  // Aggregate canceled items stats for today
-  const canceledOrdersToday = orders.filter(o => o.status === 'canceled' && o.creationDate.startsWith(todayStr));
-  
-  const canceledProducts = {};
-  const canceledBrands = {};
-  const canceledCategories = {};
-
-  canceledOrdersToday.forEach(o => {
-    (o.items || []).forEach(item => {
-      // Product
-      const prodName = item.name || 'Produto Sem Nome';
-      if (!canceledProducts[prodName]) {
-        canceledProducts[prodName] = { name: prodName, quantity: 0, value: 0, id: item.id };
-      }
-      canceledProducts[prodName].quantity += (item.quantity || 1);
-      canceledProducts[prodName].value += (item.price || 0) * (item.quantity || 1);
-
-      // Brand
-      const brandName = item.brand || 'Desconhecido';
-      if (!canceledBrands[brandName]) {
-        canceledBrands[brandName] = { name: brandName, quantity: 0, value: 0 };
-      }
-      canceledBrands[brandName].quantity += (item.quantity || 1);
-      canceledBrands[brandName].value += (item.price || 0) * (item.quantity || 1);
-
-      // Category
-      const categoryName = item.category || 'Outros';
-      if (!canceledCategories[categoryName]) {
-        canceledCategories[categoryName] = { name: categoryName, quantity: 0, value: 0 };
-      }
-      canceledCategories[categoryName].quantity += (item.quantity || 1);
-      canceledCategories[categoryName].value += (item.price || 0) * (item.quantity || 1);
-    });
-  });
-
-  const topCanceledProducts = Object.values(canceledProducts)
-    .sort((a, b) => b.quantity - a.quantity || b.value - a.value)
-    .slice(0, 15)
-    .map(p => ({ ...p, value: Math.round(p.value / 100) })); // convert to R$
-
-  const topCanceledBrands = Object.values(canceledBrands)
+  // Format top items as sorted arrays
+  const topCanceledProductsList = Object.values(topCanceledProducts)
     .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10)
-    .map(b => ({ ...b, value: Math.round(b.value / 100) }));
+    .slice(0, 15);
 
-  const topCanceledCategories = Object.values(canceledCategories)
+  const topCanceledReasonsList = Object.entries(topCanceledReasons)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topCanceledOperatorsList = Object.entries(topCanceledOperators)
+    .map(([operator, count]) => ({ operator, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topCanceledCategoriesList = Object.entries(topCanceledCategories)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topCanceledPaymentsList = Object.entries(topCanceledPayments)
+    .map(([paymentName, count]) => ({ paymentName, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const topSuccessfulProductsList = Object.values(topSuccessfulProducts)
     .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10)
-    .map(c => ({ ...c, value: Math.round(c.value / 100) }));
+    .slice(0, 15);
+
+  const topSuccessfulCategoriesList = Object.entries(topSuccessfulCategories)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topSuccessfulPaymentsList = Object.entries(topSuccessfulPayments)
+    .map(([paymentName, count]) => ({ paymentName, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Use only raw Abbiamo tracking data from the cache without any extrapolation or fallbacks
 
   return {
     referenceDate: todayStr,
@@ -1041,21 +1357,71 @@ function processStoreHealth() {
     distritalAnalytics: distritalList,
     hourlyStatusHistory,
     stores: processedStores,
-    canceledAnalytics: {
-      products: topCanceledProducts,
-      brands: topCanceledBrands,
-      categories: topCanceledCategories
-    }
+    cancellationsAnalytics: {
+      totalCanceledValueToday: Math.round(totalCanceledValueToday),
+      totalSuccessfulValueToday: Math.round(totalSuccessfulValueToday),
+      topCanceledProducts: topCanceledProductsList,
+      topCanceledCategories: topCanceledCategoriesList,
+      topCanceledPayments: topCanceledPaymentsList,
+      topCanceledReasons: topCanceledReasonsList,
+      topCanceledOperators: topCanceledOperatorsList,
+      topSuccessfulProducts: topSuccessfulProductsList,
+      topSuccessfulCategories: topSuccessfulCategoriesList,
+      topSuccessfulPayments: topSuccessfulPaymentsList,
+      todayOrders: todayOrders
+    },
+    funnelAnalytics: {
+      today: funnelToday,
+      yesterday: funnelYesterday,
+      sevenDaysAgo: funnelSevenDaysAgo,
+      deliveryMetrics: {
+        today: summarizeDeliveryMetrics(deliveryMetrics.today),
+        yesterday: summarizeDeliveryMetrics(deliveryMetrics.yesterday),
+        sevenDaysAgo: summarizeDeliveryMetrics(deliveryMetrics.sevenDaysAgo)
+      }
+    },
+    abbiamoSyncState: abbiamoSync.getAbbiamoSyncState(),
+    activeOrdersQueue: activeOrdersQueue,
+    abbiamoDeliveries: abbiamoDeliveries
   };
+}
+
+let cachedMonitorData = null;
+let lastCacheUpdate = 0;
+
+function updateMonitorCache() {
+  try {
+    const result = processStoreHealth();
+    if (result && result.status !== 'error') {
+      cachedMonitorData = result;
+      lastCacheUpdate = Date.now();
+      return true;
+    }
+  } catch (err) {
+    console.error('[Monitor Cache] Erro ao pre-processar dados:', err.message);
+  }
+  return false;
 }
 
 // Endpoint
 app.get('/api/monitor', (req, res) => {
-  const result = processStoreHealth();
+  if (!cachedMonitorData) {
+    console.log('[API] Primeiro request, gerando cache de monitoramento de forma sincrona...');
+    updateMonitorCache();
+  }
+  
+  if (!cachedMonitorData) {
+    return res.json({
+      status: 'error',
+      message: 'Base de dados de cache da VTEX indisponível ou vazia. Aguarde a sincronização.',
+      sync: vtexSync.getSyncState()
+    });
+  }
+
   res.json({
     status: 'success',
     sync: vtexSync.getSyncState(),
-    data: result
+    data: cachedMonitorData
   });
 });
 
@@ -1076,10 +1442,70 @@ app.get('/ping', (req, res) => {
 });
 
 // Serve static
+
+// Debug endpoint
+app.get('/debug', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const cachePath = path.join(__dirname, 'data', 'vtex_orders_cache.json');
+    let cacheStats = 'File does not exist';
+    if (fs.existsSync(cachePath)) {
+      const stats = fs.statSync(cachePath);
+      cacheStats = `Exists, size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`;
+    }
+    
+    // Test direct VTEX OMS request (first page of today)
+    const axios = require('axios');
+    const account = process.env.VTEX_ACCOUNT || 'sjdigital';
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-VTEX-API-AppKey': process.env.VTEX_APP_KEY,
+      'X-VTEX-API-AppToken': process.env.VTEX_APP_TOKEN,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    };
+    
+    const today = new Date().toISOString().slice(0, 10);
+    const start = `${today}T00:00:00Z`;
+    const end = `${today}T23:59:59Z`;
+    const url = `https://${account}.vtexcommercestable.com.br/api/oms/pvt/orders?f_creationDate=creationDate:[${start} TO ${end}]&per_page=5&page=1`;
+    
+    const startReq = Date.now();
+    let vtexTest = '';
+    try {
+      const vtexRes = await axios.get(url, { headers, timeout: 5000 });
+      vtexTest = `Success in ${Date.now() - startReq}ms, total orders: ${vtexRes.data?.paging?.total}`;
+    } catch (err) {
+      vtexTest = `Failed in ${Date.now() - startReq}ms: ${err.message}`;
+    }
+
+    res.json({
+      memory: process.memoryUsage(),
+      cacheStats,
+      vtexTest,
+      envKeys: Object.keys(process.env).filter(k => k.includes('VTEX') || k.includes('RENDER'))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
   console.log(`🚀 Standalone Store Health Monitor running on http://localhost:${PORT}`);
+
+  // Initial pre-calculation of monitor cache
+  console.log('[Monitor Cache] Inicializando cache de monitoramento em segundo plano...');
+  setTimeout(() => {
+    updateMonitorCache();
+  }, 1000);
+
+  // Update monitor cache in the background every 30 seconds
+  setInterval(() => {
+    updateMonitorCache();
+  }, 30 * 1000);
 
   // Self-ping heartbeat to prevent Render sleep on free tier (DISABLED by user request)
   /*
@@ -1099,17 +1525,35 @@ app.listen(PORT, () => {
   }
   */
   
-  // Only sync on startup if the cache file is missing
-  if (!fs.existsSync(CACHE_FILE)) {
-    console.log('[Init Sync] Cache file missing. Running startup sync...');
-    vtexSync.syncVtexData().catch(err => console.error('[Init Sync] Failed:', err.message));
-  } else {
-    console.log('[Init Sync] Cache file found. Startup sync skipped to prevent rate limits.');
-  }
+  // Always run sync on startup in the background to catch up with new orders
+  console.log('[Init Sync] Running startup sync in background to fetch latest orders...');
+  vtexSync.syncVtexData().then(() => {
+    // Force immediate update of cache when sync finishes
+    console.log('[Monitor Cache] Sincronizacao concluida, atualizando cache...');
+    updateMonitorCache();
+  }).catch(err => console.error('[Init Sync] Failed:', err.message));
   
   // Set sync interval every 20 minutes
   setInterval(() => {
     console.log('[Interval] Executando sincronização programada com VTEX...');
-    vtexSync.syncVtexData().catch(err => console.error('[Interval Sync] Failed:', err.message));
+    vtexSync.syncVtexData().then(() => {
+      updateMonitorCache();
+    }).catch(err => console.error('[Interval Sync] Failed:', err.message));
   }, 20 * 60 * 1000);
+
+  // Abbiamo sync: run 30 seconds after VTEX startup sync, then every 30 minutes
+  setTimeout(() => {
+    console.log('[Init Sync] Iniciando primeira sincronização Abbiamo...');
+    abbiamoSync.syncAbbiamoData().then(() => {
+      console.log('[Abbiamo Sync] Primeira sincronização concluída.');
+      updateMonitorCache();
+    }).catch(err => console.error('[Abbiamo Sync] Failed:', err.message));
+  }, 30000);
+
+  setInterval(() => {
+    console.log('[Interval] Executando sincronização programada com Abbiamo...');
+    abbiamoSync.syncAbbiamoData().then(() => {
+      updateMonitorCache();
+    }).catch(err => console.error('[Abbiamo Interval Sync] Failed:', err.message));
+  }, 30 * 60 * 1000);
 });

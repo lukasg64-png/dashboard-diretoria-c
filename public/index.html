@@ -12,8 +12,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <div class="app-layout">
@@ -66,6 +66,21 @@
       <select id="select-state" class="custom-select">
         <option value="">Estado: Todos</option>
       </select>
+      <select id="select-filial" class="custom-select">
+        <option value="">Filial: Todas</option>
+      </select>
+      <select id="select-category" class="custom-select">
+        <option value="">Categoria: Todas</option>
+      </select>
+      <select id="select-payment" class="custom-select">
+        <option value="">Pagamento: Todos</option>
+      </select>
+      <select id="select-product" class="custom-select">
+        <option value="">Produto: Todos</option>
+      </select>
+      <select id="select-reason" class="custom-select">
+        <option value="">Motivo: Todos</option>
+      </select>
       <button id="btn-clear-filters" class="btn-clear-filters" title="Limpar todos os filtros">
         <i data-lucide="x-circle"></i> Limpar
       </button>
@@ -79,38 +94,66 @@
       <button class="btn-tab" data-tab="tab-orders">
         <i data-lucide="shopping-bag"></i> Status e Cancelamentos
       </button>
+      <button class="btn-tab" data-tab="tab-funnel">
+        <i data-lucide="filter"></i> Funil de Pedidos
+      </button>
+      <button class="btn-tab" data-tab="tab-logistics">
+        <i data-lucide="truck"></i> Entregas (Abbiamo)
+      </button>
     </div>
 
     <main class="app-content tab-content" id="tab-monitor">
-      <!-- Global Status Banner -->
-      <section class="global-status-banner" id="global-status-banner">
-        <div class="status-banner-header">
-          <h2 id="global-status-title">Termômetro de Estresse Operacional: CALCULANDO...</h2>
-          <p id="global-status-desc">Avaliando volume de lojas sem faturamento vs histórico...</p>
+      <!-- Global Banner Grid (Status and Channel Distribution) -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+        <!-- Global Status Banner -->
+        <section class="global-status-banner" id="global-status-banner" style="margin-bottom: 0;">
+          <div class="status-banner-header">
+            <h2 id="global-status-title">Termômetro de Estresse Operacional: CALCULANDO...</h2>
+            <p id="global-status-desc">Avaliando volume de lojas sem faturamento vs histórico...</p>
+          </div>
+          <div class="status-clusters-container">
+            <div class="cluster-step" id="cluster-excelente">
+              <div class="cluster-indicator"></div>
+              <span>Excelente</span>
+            </div>
+            <div class="cluster-step" id="cluster-normal">
+              <div class="cluster-indicator"></div>
+              <span>Normal</span>
+            </div>
+            <div class="cluster-step" id="cluster-atencao">
+              <div class="cluster-indicator"></div>
+              <span>Atenção</span>
+            </div>
+            <div class="cluster-step" id="cluster-critico">
+              <div class="cluster-indicator"></div>
+              <span>Crítico</span>
+            </div>
+            <div class="cluster-step" id="cluster-severo">
+              <div class="cluster-indicator"></div>
+              <span>Incidente / Severo</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Channel Distribution Banner Card -->
+        <div class="panel-card" style="padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+          <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; font-weight: 700;">
+            <i data-lucide="shopping-bag" style="width:14px; height:14px; color:var(--color-blue);"></i> Canais de Venda (Hoje)
+          </h3>
+          <div style="display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 6px;">
+            <span id="global-channel-delivery-pct">Entrega: —%</span>
+            <span id="global-channel-pickup-pct">Retirada: —%</span>
+          </div>
+          <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; display: flex;">
+            <div id="global-channel-delivery-bar" style="height: 100%; width: 50%; background: var(--color-blue); transition: width 0.5s ease;"></div>
+            <div id="global-channel-pickup-bar" style="height: 100%; width: 50%; background: var(--color-yellow); transition: width 0.5s ease;"></div>
+          </div>
+          <div style="display: flex; justify-inline: space-between; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 6px;">
+            <span id="global-channel-delivery-count">— ped.</span>
+            <span id="global-channel-pickup-count">— ped.</span>
+          </div>
         </div>
-        <div class="status-clusters-container">
-          <div class="cluster-step" id="cluster-excelente">
-            <div class="cluster-indicator"></div>
-            <span>Excelente</span>
-          </div>
-          <div class="cluster-step" id="cluster-normal">
-            <div class="cluster-indicator"></div>
-            <span>Normal</span>
-          </div>
-          <div class="cluster-step" id="cluster-atencao">
-            <div class="cluster-indicator"></div>
-            <span>Atenção</span>
-          </div>
-          <div class="cluster-step" id="cluster-critico">
-            <div class="cluster-indicator"></div>
-            <span>Crítico</span>
-          </div>
-          <div class="cluster-step" id="cluster-severo">
-            <div class="cluster-indicator"></div>
-            <span>Incidente / Severo</span>
-          </div>
-        </div>
-      </section>
+      </div>
 
       <!-- KPI Cards Summary -->
       <!-- KPI Cards Summary -->
@@ -457,81 +500,88 @@
         </div>
       </section>
 
-      <!-- Canceled Items and Groups Analysis -->
-      <section class="analysis-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px;">
-        <!-- Top Products Canceled -->
-        <div class="panel-card">
-          <div class="panel-card-header">
-            <h3><i data-lucide="package"></i> Produtos mais Cancelados</h3>
+      <!-- Cancellations Insights Grid -->
+      <section style="margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <!-- Top Products Canceled -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="package" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Itens mais Cancelados (Hoje)
+            </h3>
+            <div id="cancellation-top-products" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
           </div>
-          <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
-            <table class="main-table" style="font-size: 0.8rem;">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Produto</th>
-                  <th class="text-center">Qtd</th>
-                  <th class="text-center">Total</th>
-                </tr>
-              </thead>
-              <tbody id="canceled-products-table-body">
-                <tr><td colspan="4" style="text-align:center; padding: 20px; color:var(--text-secondary);">Carregando itens...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- Top Categories Canceled -->
-        <div class="panel-card">
-          <div class="panel-card-header">
-            <h3><i data-lucide="folder"></i> Categorias mais Canceladas</h3>
+          <!-- Top Categories Canceled -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="tag" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Categorias mais Canceladas
+            </h3>
+            <div id="cancellation-top-categories" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
           </div>
-          <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
-            <table class="main-table" style="font-size: 0.8rem;">
-              <thead>
-                <tr>
-                  <th>Categoria</th>
-                  <th class="text-center">Qtd</th>
-                  <th class="text-center">Total</th>
-                </tr>
-              </thead>
-              <tbody id="canceled-categories-table-body">
-                <tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Carregando categorias...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        <!-- Top Brands Canceled -->
-        <div class="panel-card">
-          <div class="panel-card-header">
-            <h3><i data-lucide="tag"></i> Marcas mais Canceladas</h3>
+          <!-- Top Payments Canceled -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="credit-card" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Pagamento nos Cancelamentos
+            </h3>
+            <div id="cancellation-top-payments" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
           </div>
-          <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
-            <table class="main-table" style="font-size: 0.8rem;">
-              <thead>
-                <tr>
-                  <th>Marca</th>
-                  <th class="text-center">Qtd</th>
-                  <th class="text-center">Total</th>
-                </tr>
-              </thead>
-              <tbody id="canceled-brands-table-body">
-                <tr><td colspan="3" style="text-align:center; padding: 20px; color:var(--text-secondary);">Carregando marcas...</td></tr>
-              </tbody>
-            </table>
+
+          <!-- Top Cancellation Reasons -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="help-circle" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Principais Motivos de Cancelamento
+            </h3>
+            <div id="cancellation-top-reasons" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
+          </div>
+
+          <!-- Top Cancellation Operators -->
+          <div class="panel-card" style="padding: 16px; min-height: 300px; display: flex; flex-direction: column;">
+            <h3 class="section-title" style="margin-bottom: 12px; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="user-x" style="color: var(--color-red); display: inline-block; vertical-align: middle; margin-right: 6px;"></i> Quem Cancelou (Operador / Gateway)
+            </h3>
+            <div id="cancellation-top-operators" style="display:flex; flex-direction:column; gap:8px; overflow-y: auto; flex-grow: 1; max-height: 320px; padding-right: 4px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando dados...</span>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Ranking of critical stores by cancel rate -->
-      <section class="stores-panel">
-        <div class="stores-panel-header">
+      <!-- Store Cancel Table Section -->
+      <section class="panel-card stores-panel" style="margin-top: 24px;">
+        <div class="panel-header">
           <h2>
             <i data-lucide="alert-triangle"></i>
-            Ranking de Filiais com Maior Cancelamento (Hoje)
+            Cancelamentos e Pedidos por Filial
           </h2>
-          <span id="orders-ranking-count-label" class="stores-count-label">-- filiais listadas</span>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+            <!-- Local Search input inside this tab -->
+            <div class="search-box" style="margin-bottom: 0;">
+              <i data-lucide="search"></i>
+              <input type="text" id="orders-search-input" placeholder="Buscar filial...">
+            </div>
+            
+            <!-- Filter dropdown -->
+            <select id="select-cancel-filter" class="custom-select" style="padding: 6px 12px; font-size: 0.85rem; height: 34px;">
+              <option value="ALL">Todos os pedidos</option>
+              <option value="WITH_CANCELLATIONS">Apenas com cancelamentos</option>
+              <option value="HIGH_CANCEL_RATE">Taxa de cancelamento > 10%</option>
+              <option value="WITH_PENDING">Apenas com pendentes</option>
+            </select>
+            
+            <span id="orders-table-count-label" class="stores-count-label">-- lojas encontradas</span>
+            <button id="btn-export-orders-csv" class="btn-export" title="Exportar dados de cancelamento como CSV">
+              <i data-lucide="download"></i> Exportar CSV
+            </button>
+          </div>
         </div>
         <div class="table-responsive">
           <table class="main-table">
@@ -539,17 +589,257 @@
               <tr>
                 <th data-sort="name" style="cursor: pointer; user-select: none;">Filial <span class="sort-icon"></span></th>
                 <th data-sort="city" style="cursor: pointer; user-select: none;">Cidade/UF <span class="sort-icon"></span></th>
-                <th data-sort="salesToday" class="text-center" style="cursor: pointer; user-select: none;">Vendas Hoje <span class="sort-icon"></span></th>
-                <th data-sort="canceledToday" class="text-center" style="cursor: pointer; user-select: none;">Cancelados Hoje <span class="sort-icon"></span></th>
-                <th data-sort="pendingToday" class="text-center" style="cursor: pointer; user-select: none;">Pendentes Hoje <span class="sort-icon"></span></th>
-                <th data-sort="cancelRate" class="text-center" style="cursor: pointer; user-select: none;">Taxa de Cancelamento <span class="sort-icon"></span></th>
-                <th data-sort="coordenador" style="cursor: pointer; user-select: none;">Coordenador / Distrital <span class="sort-icon"></span></th>
-                <th data-sort="status" style="cursor: pointer; user-select: none;">Status da Loja <span class="sort-icon"></span></th>
-                <th data-sort="details" style="cursor: pointer; user-select: none;">Diagnóstico Operacional <span class="sort-icon"></span></th>
+                <th data-sort="salesToday" class="text-center" style="cursor: pointer; user-select: none;">Faturados <span class="sort-icon"></span></th>
+                <th data-sort="canceledToday" class="text-center" style="cursor: pointer; user-select: none;">Cancelados <span class="sort-icon"></span></th>
+                <th data-sort="pendingToday" class="text-center" style="cursor: pointer; user-select: none;">Pendentes <span class="sort-icon"></span></th>
+                <th data-sort="totalOrders" class="text-center" style="cursor: pointer; user-select: none;">Total Pedidos <span class="sort-icon"></span></th>
+                <th data-sort="cancelRate" class="text-center" style="cursor: pointer; user-select: none;">Taxa Cancelamento <span class="sort-icon"></span></th>
+                <th style="user-select: none;">Diagnóstico de Pedidos</th>
               </tr>
             </thead>
-            <tbody id="orders-ranking-table-body">
+            <tbody id="orders-table-body">
               <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+        <div class="load-more-container">
+          <button id="btn-orders-load-more" class="btn-secondary">Carregar mais 50 filiais</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Funnel tab main container -->
+    <main class="app-content tab-content hide" id="tab-funnel">
+      <!-- Funnel KPIs Cards with horizontal progression arrow background -->
+      <div style="position: relative; margin-bottom: 24px;">
+        <div class="funnel-arrow-bg"></div>
+        <section class="kpi-grid kpi-grid-3" style="position: relative; z-index: 1; background: transparent;">
+          <div class="kpi-card border-blue">
+            <span class="kpi-title"><i data-lucide="percent"></i> Conversão Geral (Aprovados)</span>
+            <div class="kpi-value" id="kpi-funnel-conversion">0.0%</div>
+            <span class="kpi-desc" id="kpi-funnel-conversion-desc">Ontem: 0.0% | 7d: 0.0%</span>
+          </div>
+          <div class="kpi-card border-green">
+            <span class="kpi-title"><i data-lucide="shield-check"></i> Sucesso de Pagamento</span>
+            <div class="kpi-value" id="kpi-funnel-payment-success">0.0%</div>
+            <span class="kpi-desc" id="kpi-funnel-payment-desc">Pedidos com pagamento autorizado</span>
+          </div>
+          <div class="kpi-card border-orange">
+            <span class="kpi-title"><i data-lucide="truck"></i> Separação e Envio</span>
+            <div class="kpi-value" id="kpi-funnel-fulfillment-rate">0.0%</div>
+            <span class="kpi-desc" id="kpi-funnel-fulfillment-desc">Pedidos faturados das docas</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Visual Funnel Comparisons -->
+      <section class="panel-card" style="margin-bottom: 24px; padding: 20px;">
+        <h2 style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+          <i data-lucide="bar-chart-2"></i> Comparativo do Funil de Conversão
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+          <!-- Today Funnel Column -->
+          <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.9rem; text-align: center; margin-bottom: 16px; color: var(--color-blue); font-weight: 700;">Hoje (Tempo Real)</h3>
+            <div id="funnel-container-today" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Javascript will render bars here -->
+            </div>
+          </div>
+          
+          <!-- Yesterday Funnel Column -->
+          <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.9rem; text-align: center; margin-bottom: 16px; color: var(--text-secondary); font-weight: 700;">Ontem</h3>
+            <div id="funnel-container-yesterday" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Javascript will render bars here -->
+            </div>
+          </div>
+
+          <!-- 7 Days Ago Funnel Column -->
+          <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.9rem; text-align: center; margin-bottom: 16px; color: var(--text-secondary); font-weight: 700;">7 Dias Atrás</h3>
+            <div id="funnel-container-7days" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Javascript will render bars here -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Orders Queue Section -->
+      <section class="panel-card stores-panel" style="margin-top: 24px;">
+        <div class="panel-header">
+          <h2>
+            <i data-lucide="clock"></i>
+            Fila de Pedidos Ativos (Últimas 24h)
+          </h2>
+          <div class="panel-actions">
+            <!-- Local Search input inside this tab -->
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="queue-search-input" placeholder="Buscar pedido ou filial...">
+            </div>
+            
+            <!-- Filter dropdown -->
+            <select id="select-queue-status" class="custom-select">
+              <option value="ALL">Status: Todos</option>
+              <option value="payment-pending">Aguardando Pagamento</option>
+              <option value="payment-approved">Pagamento Aprovado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Filial / Destino</th>
+                <th>Status VTEX</th>
+                <th>Tempo Decorrido</th>
+                <th>Valor do Pedido</th>
+                <th>Meio de Pagamento</th>
+              </tr>
+            </thead>
+            <tbody id="queue-table-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                  Nenhum pedido ativo na fila de integração.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Logistics tab main container (Hemos/Abbiamo) -->
+    <main class="app-content tab-content hide" id="tab-logistics">
+      <!-- Logistics KPIs Grid (Hoje comparativo com Ontem) -->
+      <section class="kpi-grid kpi-grid-4" style="margin-bottom: 24px;">
+        <div class="kpi-card border-purple">
+          <span class="kpi-title"><i data-lucide="shield-check"></i> SLA de Entrega (Hoje)</span>
+          <div class="kpi-value" id="kpi-logistics-sla-today">—</div>
+          <span class="kpi-desc" id="kpi-logistics-sla-desc">Ontem: —</span>
+        </div>
+        <div class="kpi-card border-blue">
+          <span class="kpi-title"><i data-lucide="timer"></i> Tempo Médio (Hoje)</span>
+          <div class="kpi-value" id="kpi-logistics-time-today">—</div>
+          <span class="kpi-desc" id="kpi-logistics-time-desc">Ontem: —</span>
+        </div>
+        <div class="kpi-card border-green">
+          <span class="kpi-title"><i data-lucide="star"></i> NPS Médio da Entrega (Hoje)</span>
+          <div class="kpi-value" id="kpi-logistics-nps-today">—</div>
+          <span class="kpi-desc" id="kpi-logistics-nps-desc">Ontem: —</span>
+        </div>
+        <div class="kpi-card border-orange">
+          <span class="kpi-title"><i data-lucide="activity"></i> Entregas Concluídas (Hoje)</span>
+          <div class="kpi-value" id="kpi-logistics-count-today">0</div>
+          <span class="kpi-desc" id="kpi-logistics-count-desc">Ontem: 0</span>
+        </div>
+      </section>
+
+      <!-- Logistics Details Panel -->
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px;">
+        <!-- Left side panels: Carriers and Delays -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Carrier Modals share -->
+          <div class="panel-card" style="padding: 20px; display: flex; flex-direction: column;">
+            <h2 style="font-size: 1rem; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+              <i data-lucide="truck"></i> Modais e Transportadoras
+            </h2>
+            <div id="logistics-carrier-list" style="display:flex; flex-direction:column; gap:12px; overflow-y:auto; max-height: 180px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando modais...</span>
+            </div>
+          </div>
+
+          <!-- Stores with most delays -->
+          <div class="panel-card" style="padding: 20px; display: flex; flex-direction: column;">
+            <h2 style="font-size: 1rem; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; color: var(--color-red);">
+              <i data-lucide="alert-triangle"></i> Filiais com Mais Atrasos (Hemos)
+            </h2>
+            <div id="logistics-delayed-stores" style="display:flex; flex-direction:column; gap:10px; overflow-y:auto; max-height: 180px;">
+              <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Analisando atrasos...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logistics delivery funnel comparative -->
+        <div class="panel-card" style="padding: 20px; display: flex; flex-direction: column;">
+          <h2 style="font-size: 1rem; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+            <i data-lucide="funnel"></i> Funil de Rastreamento de Entregas (Hoje vs Ontem)
+          </h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex-grow: 1; align-items: stretch;">
+            <!-- Column Today -->
+            <div style="display: flex; flex-direction: column; align-items: center; border-right: 1px solid rgba(255,255,255,0.05); padding-right: 16px;">
+              <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--color-blue); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="display:inline-block; width:8px; height:8px; background:var(--color-blue); border-radius:50%;"></span> Hoje
+              </h3>
+              <div id="logistics-funnel-today" style="width: 100%; display: flex; flex-direction: column; gap: 8px; justify-content: center; flex-grow: 1;">
+                <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando funil de hoje...</span>
+              </div>
+            </div>
+            <!-- Column Yesterday -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="display:inline-block; width:8px; height:8px; background:var(--text-secondary); border-radius:50%;"></span> Ontem
+              </h3>
+              <div id="logistics-funnel-yesterday" style="width: 100%; display: flex; flex-direction: column; gap: 8px; justify-content: center; flex-grow: 1;">
+                <span style="color:var(--text-secondary); font-style:italic; text-align: center; margin: auto;">Carregando funil de ontem...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time Abbiamo Delivery Queue Table -->
+      <section class="panel-card stores-panel">
+        <div class="panel-header">
+          <h2>
+            <i data-lucide="clipboard-list"></i>
+            Registro de Rastreamento de Entregas Abbiamo (Real)
+          </h2>
+          <div class="panel-actions">
+            <!-- Search -->
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="logistics-search-input" placeholder="Buscar pedido ou loja...">
+            </div>
+            <!-- Store filter -->
+            <select id="select-logistics-store" class="custom-select">
+              <option value="ALL">Filial: Todas</option>
+            </select>
+            <!-- Status filter -->
+            <select id="select-logistics-status" class="custom-select">
+              <option value="ALL">Status: Todos</option>
+              <option value="ACTIVE">Apenas Ativas/Em Rota</option>
+              <option value="DELIVERED">Entregues</option>
+              <option value="DELAYED">Atrasados (Fora do Prazo)</option>
+              <option value="NPS_RATED">Apenas Avaliados (NPS)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th data-sort="orderId" style="cursor: pointer; user-select: none;">Pedido <span class="sort-icon"></span></th>
+                <th data-sort="storeName" style="cursor: pointer; user-select: none;">Filial Origem <span class="sort-icon"></span></th>
+                <th data-sort="deliveryMethod" style="cursor: pointer; user-select: none;">Transportadora / Canal <span class="sort-icon"></span></th>
+                <th data-sort="status" style="cursor: pointer; user-select: none;">Status Abbiamo <span class="sort-icon"></span></th>
+                <th data-sort="sla" style="cursor: pointer; user-select: none;">Prazo / SLA <span class="sort-icon"></span></th>
+                <th data-sort="deliveryWindowEnd" style="cursor: pointer; user-select: none;">Horário SLA <span class="sort-icon"></span></th>
+                <th data-sort="elapsedMs" style="cursor: pointer; user-select: none;">Tempo de Entrega <span class="sort-icon"></span></th>
+                <th data-sort="npsDelivery" style="cursor: pointer; user-select: none;">Avaliação (NPS) <span class="sort-icon"></span></th>
+                <th>Comentário do Cliente</th>
+              </tr>
+            </thead>
+            <tbody id="logistics-table-body">
+              <tr>
+                <td colspan="9" style="text-align: center; color: var(--text-secondary); font-style: italic; padding: 30px;">
+                  Carregando lista de entregas...
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -688,6 +978,6 @@
     lucide.createIcons();
   </script>
   <!-- App Controller -->
-  <script src="app.js"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
