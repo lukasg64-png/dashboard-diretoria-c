@@ -807,6 +807,8 @@ export default function DrillPanel({ onUpload }) {
   const [couponSearchTerm, setCouponSearchTerm] = useState('');
   const [couponChartType, setCouponChartType] = useState('hierarquia'); // hierarquia ou diario
 
+  const [hasFetchedCoupons, setHasFetchedCoupons] = useState(false);
+
   const loadCoupons = useCallback(async () => {
     setCouponLoading(true);
     try {
@@ -820,14 +822,15 @@ export default function DrillPanel({ onUpload }) {
       console.error('[DrillPanel] Erro ao buscar cupons:', err);
     } finally {
       setCouponLoading(false);
+      setHasFetchedCoupons(true);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'cupons' && couponRaw.length === 0 && !couponLoading) {
+    if (activeTab === 'cupons' && !hasFetchedCoupons && !couponLoading) {
       loadCoupons();
     }
-  }, [activeTab, couponRaw.length, couponLoading, loadCoupons]);
+  }, [activeTab, hasFetchedCoupons, couponLoading, loadCoupons]);
 
   // Quando muda para cup/tm, hierarquia não faz sentido → redirecionar para categorias
   useEffect(() => {
