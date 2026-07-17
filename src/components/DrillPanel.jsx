@@ -762,6 +762,15 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
   return <>{rows}</>;
 }
 
+// Retorna data em formato BRT (YYYY-MM-DD) para "hoje", "ontem", etc.
+function getBrtDateStr(daysAgo = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  // Ajuste manual UTC-3 para BRT
+  const brt = new Date(d.getTime() - 3 * 3600000);
+  return brt.toISOString().slice(0, 10);
+}
+
 // ── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export default function DrillPanel({ onUpload }) {
   const [data, setData] = useState(null);
@@ -777,12 +786,186 @@ export default function DrillPanel({ onUpload }) {
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('venda'); // venda, cup, tm
 
+  // Filtros (Elevados e compartilhados)
+  const [fDist, setFDist] = useState('all');
+  const [fCoord, setFCoord] = useState('all');
+  const [fFilial, setFFilial] = useState('all');
+  const [fGrupo, setFGrupo] = useState('all');
+  const [fLinha, setFLinha] = useState('all');
+  const [fUF, setFUF] = useState('all');
+  const [fCidade, setFCidade] = useState('all');
+
+  // ── Cupons VTEX (dados para gráfico principal + CuponsPage) ──
+  const [couponRaw, setCouponRaw] = useState([]);
+  const [couponSync, setCouponSync] = useState(null);
+  const [couponTotalOrders, setCouponTotalOrders] = useState(0);
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  // Filtros específicos de cupons
+  const [couponDateMode, setCouponDateMode] = useState('7d'); // hoje, ontem, 3d, 7d, 15d, custom
+  const [couponCustomDate, setCouponCustomDate] = useState(getBrtDateStr(0));
+  const [couponSearchTerm, setCouponSearchTerm] = useState('');
+  const [couponChartType, setCouponChartType] = useState('hierarquia'); // hierarquia ou diario
+
+  const loadCoupons = useCallback(async () => {
+    setCouponLoading(true);
+    try {
+      const res = await API.getCoupons();
+      if (res.status === 'success') {
+        setCouponRaw(res.data || []);
+        setCouponSync(res.sync || null);
+        setCouponTotalOrders(res.totalOrders || 0);
+      }
+    } catch (err) {
+      console.error('[DrillPanel] Erro ao buscar cupons:', err);
+    } finally {
+      setCouponLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'cupons' && couponRaw.length === 0 && !couponLoading) {
+      loadCoupons();
+    }
+  }, [activeTab, couponRaw.length, couponLoading, loadCoupons]);
+
   // Quando muda para cup/tm, hierarquia não faz sentido → redirecionar para categorias
   useEffect(() => {
     if ((viewMode === 'cup' || viewMode === 'tm') && activeTab === 'hierarquia') {
       setActiveTab('categorias');
     }
   }, [viewMode, activeTab]);
+
+  // ── Derivação reativa do nível de drill do cupom com base nos filtros globais ──
+  const couponDrillLevel = useMemo(() => {
+    if (fDist !== 'all' && fCoord !== 'all') return 'filial';
+    if (fDist !== 'all') return 'coordenador';
+    return 'distrital';
+  }, [fDist, fCoord]);
+
+  const couponDrillParent = useMemo(() => {
+    if (couponDrillLevel === 'filial') return fCoord;
+    if (couponDrillLevel === 'coordenador') return fDist;
+    return null;
+  }, [couponDrillLevel, fDist, fCoord]);
+
+  const couponDrillGrandParent = useMemo(() => {
+    if (couponDrillLevel === 'filial') return fDist;
+    return null;
+  }, [couponDrillLevel, fDist]);
+
+  // Filtro de data reutilizável para ambos os gráficos
+  const couponDateInterval = useMemo(() => {
+    let startDate, endDate;
+    const today = getBrtDateStr(0);
+
+    switch (couponDateMode) {
+      case 'hoje':
+        startDate = today;
+        endDate = today;
+        break;
+      case 'ontem':
+        startDate = getBrtDateStr(1);
+        endDate = getBrtDateStr(1);
+        break;
+      case '3d':
+        startDate = getBrtDateStr(2);
+        endDate = today;
+        break;
+      case '7d':
+        startDate = getBrtDateStr(6);
+        endDate = today;
+        break;
+      case '15d':
+        startDate = getBrtDateStr(14);
+        endDate = today;
+        break;
+      case 'custom':
+        startDate = couponCustomDate;
+        endDate = couponCustomDate;
+        break;
+      default:
+        startDate = today;
+        endDate = today;
+    }
+    return { startDate, endDate };
+  }, [couponDateMode, couponCustomDate]);
+
+  // ── Dados do gráfico de cupons (por distrital/coordenador/filial) ──
+  const couponChartData = useMemo(() => {
+    if (couponRaw.length === 0) return [];
+    const map = {};
+    const { startDate, endDate } = couponDateInterval;
+
+    const filtered = couponRaw.filter(item => {
+      // Filtro de data
+      if (item.date < startDate || item.date > endDate) return false;
+      // Filtros geográficos e código de cupom
+      if (fFilial !== 'all' && item.store !== fFilial) return false;
+      if (couponSearchTerm.trim()) {
+        const query = couponSearchTerm.toLowerCase().trim();
+        if (!item.coupon.toLowerCase().includes(query)) return false;
+      }
+
+      // Drill hierarchy
+      if (couponDrillLevel === 'coordenador') {
+        return item.distrital === couponDrillParent;
+      }
+      if (couponDrillLevel === 'filial') {
+        return item.coordenador === couponDrillParent && item.distrital === couponDrillGrandParent;
+      }
+      return true;
+    });
+
+    const keyField = couponDrillLevel === 'distrital' ? 'distrital'
+      : couponDrillLevel === 'coordenador' ? 'coordenador'
+      : 'store';
+
+    filtered.forEach(item => {
+      const key = item[keyField] || 'Outros';
+      if (!map[key]) map[key] = { nome: key, usos: 0, valor: 0 };
+      map[key].usos++;
+      map[key].valor += item.value || 0;
+    });
+    return Object.values(map).sort((a, b) => b.usos - a.usos);
+  }, [couponRaw, couponDrillLevel, couponDrillParent, couponDrillGrandParent, couponDateInterval, fFilial, couponSearchTerm]);
+
+  const couponChartTitle = couponDrillLevel === 'distrital'
+    ? 'Uso de Cupons por Distrital'
+    : couponDrillLevel === 'coordenador'
+    ? `Coordenadores de ${couponDrillParent}`
+    : `Filiais de ${couponDrillParent}`;
+
+  const couponBreadcrumb = useMemo(() => {
+    const items = [{ label: 'Distritais', level: 'distrital', parent: null, grandParent: null }];
+    if (couponDrillLevel === 'coordenador' || couponDrillLevel === 'filial') {
+      items.push({
+        label: couponDrillLevel === 'coordenador' ? couponDrillParent : couponDrillGrandParent,
+        level: 'coordenador',
+        parent: couponDrillLevel === 'coordenador' ? couponDrillParent : couponDrillGrandParent,
+        grandParent: null
+      });
+    }
+    if (couponDrillLevel === 'filial') {
+      items.push({ label: couponDrillParent, level: 'filial', parent: couponDrillParent, grandParent: couponDrillGrandParent });
+    }
+    return items;
+  }, [couponDrillLevel, couponDrillParent, couponDrillGrandParent]);
+
+  const handleCouponBarClick = useCallback((data) => {
+    if (!data || !data.activePayload || !data.activePayload[0]) return;
+    const clickedName = data.activePayload[0].payload.nome;
+    if (couponDrillLevel === 'distrital') {
+      setCouponDrillLevel('coordenador');
+      setCouponDrillParent(clickedName);
+      setCouponDrillGrandParent(null);
+    } else if (couponDrillLevel === 'coordenador') {
+      setCouponDrillLevel('filial');
+      setCouponDrillGrandParent(couponDrillParent);
+      setCouponDrillParent(clickedName);
+    }
+    // filial → não drilla mais
+  }, [couponDrillLevel, couponDrillParent]);
 
   const getMetrics = useCallback((item) => {
     if (!item) return { val26: 0, val25: 0, valJun: 0, yoy: 0, mom: 0, fmt: (v) => '0' };
@@ -866,14 +1049,7 @@ export default function DrillPanel({ onUpload }) {
     }
   }, [viewMode, chartMetric]);
 
-  // Filtros
-  const [fDist, setFDist] = useState('all');
-  const [fCoord, setFCoord] = useState('all');
-  const [fFilial, setFFilial] = useState('all');
-  const [fGrupo, setFGrupo] = useState('all');
-  const [fLinha, setFLinha] = useState('all');
-  const [fUF, setFUF] = useState('all');
-  const [fCidade, setFCidade] = useState('all');
+
 
   // Ordenação
   const [sortField, setSortField] = useState(viewMode === 'venda' ? 'venda_jul26' : 'val26');
@@ -1922,6 +2098,172 @@ export default function DrillPanel({ onUpload }) {
           </div>
         )}
 
+        {/* ── Gráfico de Cupons VTEX (quando aba cupons ativa) ── */}
+        {activeTab === 'cupons' && (
+          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
+              <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🎟️ {couponChartType === 'hierarquia' ? couponChartTitle : (couponDateInterval.startDate === couponDateInterval.endDate ? 'Evolução por Hora (Uso de Cupons)' : 'Evolução Diária do Uso de Cupons')}</span>
+              </h4>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Breadcrumb (apenas para visão hierárquica) */}
+                {couponChartType === 'hierarquia' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                    {couponBreadcrumb.map((crumb, idx) => (
+                      <React.Fragment key={idx}>
+                        {idx > 0 && <span style={{ color: '#94a3b8' }}>›</span>}
+                        <button
+                          onClick={() => {
+                            if (idx === 0) {
+                              setFDist('all');
+                              setFCoord('all');
+                              setFFilial('all');
+                            } else if (idx === 1 && couponDrillLevel === 'filial') {
+                              setFCoord('all');
+                              setFFilial('all');
+                            }
+                          }}
+                          style={{
+                            background: idx === couponBreadcrumb.length - 1 ? '#7c3aed' : '#f1f5f9',
+                            color: idx === couponBreadcrumb.length - 1 ? '#fff' : '#475569',
+                            border: 'none', borderRadius: 4, padding: '3px 10px',
+                            fontSize: 11, fontWeight: 600, cursor: idx < couponBreadcrumb.length - 1 ? 'pointer' : 'default',
+                          }}
+                        >
+                          {crumb.label}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+
+                {/* Alternador de Tipo de Gráfico */}
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 6, padding: 2 }}>
+                  <button
+                    onClick={() => setCouponChartType('hierarquia')}
+                    style={{
+                      padding: '4px 12px', fontSize: 11, fontWeight: 700,
+                      borderRadius: 4, border: 'none', cursor: 'pointer',
+                      background: couponChartType === 'hierarquia' ? '#fff' : 'transparent',
+                      color: couponChartType === 'hierarquia' ? '#0f2050' : '#64748b',
+                      boxShadow: couponChartType === 'hierarquia' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    🏢 Hierárquico
+                  </button>
+                  <button
+                    onClick={() => setCouponChartType('diario')}
+                    style={{
+                      padding: '4px 12px', fontSize: 11, fontWeight: 700,
+                      borderRadius: 4, border: 'none', cursor: 'pointer',
+                      background: couponChartType === 'diario' ? '#fff' : 'transparent',
+                      color: couponChartType === 'diario' ? '#0f2050' : '#64748b',
+                      boxShadow: couponChartType === 'diario' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    📈 Diário / Temporal
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {couponLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: 40, color: '#94a3b8' }}>
+                <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTop: '3px solid #7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              </div>
+            ) : couponChartType === 'hierarquia' ? (
+              // Visão Hierárquica
+              couponChartData.length === 0 ? (
+                <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                  🎟️ Nenhum cupom de desconto registrado ainda para os filtros selecionados.
+                </div>
+              ) : (
+                <div>
+                  <div style={{ height: Math.max(200, Math.min(320, couponChartData.length * 32)), maxHeight: 400, overflowY: 'auto' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={couponChartData}
+                        layout="vertical"
+                        margin={{ left: 10, right: 30, top: 5, bottom: 5 }}
+                        onClick={couponDrillLevel !== 'filial' ? handleCouponBarClick : undefined}
+                        style={{ cursor: couponDrillLevel !== 'filial' ? 'pointer' : 'default' }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                        <XAxis type="number" stroke="#94a3b8" fontSize={10} fontWeight={600} />
+                        <YAxis
+                          dataKey="nome"
+                          type="category"
+                          stroke="#0f2050"
+                          fontSize={10}
+                          fontWeight={600}
+                          width={140}
+                          tick={{ fontSize: 10, fill: '#0f2050' }}
+                        />
+                        <Tooltip
+                          contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 11, color: '#fff' }}
+                          formatter={(value, name) => {
+                            if (name === 'usos') return [new Intl.NumberFormat('pt-BR').format(value), 'Cupons Usados'];
+                            if (name === 'valor') return [fmtCurrency(value), 'Faturamento'];
+                            return [value, name];
+                          }}
+                        />
+                        <Bar dataKey="usos" fill="#7c3aed" radius={[0, 4, 4, 0]} maxBarSize={24}>
+                          <LabelList dataKey="usos" position="right" formatter={v => fmtInteger(v)} style={{ fontSize: 10, fill: '#0f2050', fontWeight: 700 }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 8, fontWeight: 500 }}>
+                    {couponDrillLevel !== 'filial'
+                      ? '💡 Clique em qualquer barra para detalhar (Distrital → Coordenador → Filial).'
+                      : '💡 Nível mais detalhado. Use o breadcrumb acima para voltar.'}
+                  </div>
+                </div>
+              )
+            ) : (
+              // Visão Diária / Temporal
+              couponDailyChartData.length === 0 ? (
+                <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                  🎟️ Nenhum dado para exibir no período.
+                </div>
+              ) : (
+                <div>
+                  <div style={{ height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={couponDailyChartData} margin={{ left: 10, right: 10, top: 10, bottom: 5 }}>
+                        <defs>
+                          <linearGradient id="colorDailyCupons" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis dataKey="label" stroke="#94a3b8" fontSize={10} fontWeight={600} />
+                        <YAxis stroke="#94a3b8" fontSize={10} fontWeight={600} />
+                        <Tooltip
+                          contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 11, color: '#fff' }}
+                          formatter={(value, name) => {
+                            if (name === 'usos') return [new Intl.NumberFormat('pt-BR').format(value), 'Cupons Usados'];
+                            if (name === 'valor') return [fmtCurrency(value), 'Faturamento'];
+                            return [value, name];
+                          }}
+                        />
+                        <Area type="monotone" dataKey="usos" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDailyCupons)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 8, fontWeight: 500 }}>
+                    💡 Exibindo quantidade de cupons utilizados ao longo do tempo. Filtros geográficos aplicados mantêm este gráfico atualizado.
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        )}
+
         {/* ── Tabs ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 0 }}>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -1982,7 +2324,25 @@ export default function DrillPanel({ onUpload }) {
             />
           )
         ) : activeTab === 'cupons' ? (
-          <CuponsPage />
+          <CuponsPage
+            couponRaw={couponRaw}
+            couponLoading={couponLoading}
+            couponSync={couponSync}
+            couponTotalOrders={couponTotalOrders}
+            loadCoupons={loadCoupons}
+            fDist={fDist}
+            setFDist={setFDist}
+            fCoord={fCoord}
+            setFCoord={setFCoord}
+            fFilial={fFilial}
+            setFFilial={setFFilial}
+            fDateMode={couponDateMode}
+            setFDateMode={setCouponDateMode}
+            fCustomDate={couponCustomDate}
+            setFCustomDate={setCouponCustomDate}
+            fCoupon={couponSearchTerm}
+            setFCoupon={setCouponSearchTerm}
+          />
         ) : (
           /* ── Tabela ── */
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden' }}>

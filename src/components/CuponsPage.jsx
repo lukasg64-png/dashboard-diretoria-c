@@ -1,72 +1,111 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tag, TrendingUp, DollarSign, ShoppingBag, Calendar, User, Shield, RefreshCw } from 'lucide-react';
+import { Tag, DollarSign, ShoppingBag, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import API from '../api';
 
 const fmtCurrency = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
 const fmtInteger = v => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v || 0);
 
-export default function CuponsPage() {
-  const [rawData, setRawData] = useState([]);
-  const [loading, setLoading] = useState(true);
+// Retorna data em formato BRT (YYYY-MM-DD) para "hoje", "ontem", etc.
+function getBrtDateStr(daysAgo = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  // Ajuste manual UTC-3 para BRT
+  const brt = new Date(d.getTime() - 3 * 3600000);
+  return brt.toISOString().slice(0, 10);
+}
+
+export default function CuponsPage({
+  couponRaw = [],
+  couponLoading = false,
+  couponSync = null,
+  couponTotalOrders = 0,
+  loadCoupons,
+  fDist,
+  setFDist,
+  fCoord,
+  setFCoord,
+  fFilial,
+  setFFilial,
+  fDateMode,
+  setFDateMode,
+  fCustomDate,
+  setFCustomDate,
+  fCoupon,
+  setFCoupon,
+}) {
   const [error, setError] = useState(null);
-  const [syncState, setSyncState] = useState(null);
 
-  // Filtros selecionados
-  const [fPeriod, setFPeriod] = useState(7); // default 7 dias
-  const [fDist, setFDist] = useState('all');
-  const [fCoord, setFCoord] = useState('all');
-  const [fFilial, setFFilial] = useState('all');
-  const [fCoupon, setFCoupon] = useState('');
-  
-  // Paginação da tabela
+  // View mode: resumo ou detalhes
+  const [viewTab, setViewTab] = useState('resumo');
+
+  // Paginação da tabela detalhada
   const [page, setPage] = useState(0);
-  const rowsPerPage = 10;
+  const rowsPerPage = 15;
 
-  const loadData = async () => {
-    setLoading(true);
+  // Hierarquia expandida
+  const [openDist, setOpenDist] = useState(new Set());
+  const [openCoord, setOpenCoord] = useState(new Set());
+
+  const handleRefresh = async () => {
     setError(null);
     try {
-      const res = await API.getCoupons();
-      if (res.status === 'success') {
-        setRawData(res.data || []);
-        setSyncState(res.sync || null);
-      } else {
-        throw new Error(res.error || 'Falha ao buscar cupons');
-      }
+      await loadCoupons();
     } catch (err) {
-      console.error('[CuponsPage] Erro ao carregar:', err);
-      setError(err.message || 'Erro ao carregar os cupons.');
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Erro ao recarregar.');
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Filtrar por data
+  const dataByDate = useMemo(() => {
+    if (couponRaw.length === 0) return [];
 
-  // Filtrar os dados pelo Período em dias primeiro
-  const dataByPeriod = useMemo(() => {
-    if (rawData.length === 0) return [];
-    
-    const limitDate = new Date();
-    limitDate.setDate(limitDate.getDate() - fPeriod);
-    const limitDateStr = limitDate.toISOString().slice(0, 10);
-    
-    return rawData.filter(item => item.date >= limitDateStr);
-  }, [rawData, fPeriod]);
+    let startDate, endDate;
+    const today = getBrtDateStr(0);
 
-  // Opções dinâmicas dos dropdowns com base no período filtrado
+    switch (fDateMode) {
+      case 'hoje':
+        startDate = today;
+        endDate = today;
+        break;
+      case 'ontem':
+        startDate = getBrtDateStr(1);
+        endDate = getBrtDateStr(1);
+        break;
+      case '3d':
+        startDate = getBrtDateStr(2);
+        endDate = today;
+        break;
+      case '7d':
+        startDate = getBrtDateStr(6);
+        endDate = today;
+        break;
+      case '15d':
+        startDate = getBrtDateStr(14);
+        endDate = today;
+        break;
+      case 'custom':
+        startDate = fCustomDate;
+        endDate = fCustomDate;
+        break;
+      default:
+        startDate = today;
+        endDate = today;
+    }
+
+    return couponRaw.filter(item => item.date >= startDate && item.date <= endDate);
+  }, [couponRaw, fDateMode, fCustomDate]);
+
+  // Opções dinâmicas dos dropdowns
   const filterOptions = useMemo(() => {
     const dists = new Set();
     const coords = new Set();
     const filiais = new Set();
 
-    dataByPeriod.forEach(item => {
-      if (item.distrital && item.distrital !== 'Outros') dists.add(item.distrital);
-      if (item.coordenador && item.coordenador !== 'Outros') coords.add(item.coordenador);
-      if (item.store && item.store !== 'Outros/Site') filiais.add(item.store);
+    dataByDate.forEach(item => {
+      if (item.distrital) dists.add(item.distrital);
+      if (item.coordenador) coords.add(item.coordenador);
+      if (item.store) filiais.add(item.store);
     });
 
     return {
@@ -74,236 +113,243 @@ export default function CuponsPage() {
       coordenadores: Array.from(coords).sort(),
       filiais: Array.from(filiais).sort()
     };
-  }, [dataByPeriod]);
+  }, [dataByDate]);
 
-  // Aplicar filtros de Distrital, Coordenador, Filial e Busca de Cupom
+  // Aplicar filtros
   const filteredData = useMemo(() => {
-    let result = dataByPeriod;
+    let result = dataByDate;
 
-    if (fDist !== 'all') {
-      result = result.filter(item => item.distrital === fDist);
-    }
-    if (fCoord !== 'all') {
-      result = result.filter(item => item.coordenador === fCoord);
-    }
-    if (fFilial !== 'all') {
-      result = result.filter(item => item.store === fFilial);
-    }
+    if (fDist !== 'all') result = result.filter(item => item.distrital === fDist);
+    if (fCoord !== 'all') result = result.filter(item => item.coordenador === fCoord);
+    if (fFilial !== 'all') result = result.filter(item => item.store === fFilial);
     if (fCoupon.trim()) {
       const query = fCoupon.toLowerCase().trim();
       result = result.filter(item => item.coupon.toLowerCase().includes(query));
     }
 
     return result;
-  }, [dataByPeriod, fDist, fCoord, fFilial, fCoupon]);
+  }, [dataByDate, fDist, fCoord, fFilial, fCoupon]);
 
-  // Resetar paginação ao filtrar
-  useEffect(() => {
-    setPage(0);
-  }, [fDist, fCoord, fFilial, fCoupon, fPeriod]);
+  useEffect(() => { setPage(0); }, [fDist, fCoord, fFilial, fCoupon, fDateMode, fCustomDate]);
 
-  // Cálculo de KPIs
+  // KPIs
   const kpi = useMemo(() => {
-    let totalUses = filteredData.length;
-    let totalRevenue = filteredData.reduce((sum, item) => sum + (item.value || 0), 0);
-    let avgTicket = totalUses > 0 ? totalRevenue / totalUses : 0;
+    const totalUses = filteredData.length;
+    const totalRevenue = filteredData.reduce((sum, item) => sum + (item.value || 0), 0);
+    const avgTicket = totalUses > 0 ? totalRevenue / totalUses : 0;
+    const uniqueCoupons = new Set(filteredData.map(i => i.coupon)).size;
 
-    return { totalUses, totalRevenue, avgTicket };
+    return { totalUses, totalRevenue, avgTicket, uniqueCoupons };
   }, [filteredData]);
 
-  // Agrupamento para Gráfico Temporal (Uso Diário)
+  // Ranking de cupons (resumo)
+  const couponRanking = useMemo(() => {
+    const map = {};
+    filteredData.forEach(item => {
+      if (!map[item.coupon]) {
+        map[item.coupon] = { coupon: item.coupon, uses: 0, revenue: 0 };
+      }
+      map[item.coupon].uses++;
+      map[item.coupon].revenue += item.value || 0;
+    });
+    return Object.values(map).sort((a, b) => b.uses - a.uses);
+  }, [filteredData]);
+
+  // Hierarquia: Distrital → Coordenador → Filial
+  const hierarchy = useMemo(() => {
+    const distMap = {};
+    filteredData.forEach(item => {
+      const d = item.distrital || 'Outros';
+      const c = item.coordenador || 'Outros';
+      const f = item.store || 'Sem Loja';
+
+      if (!distMap[d]) distMap[d] = { nome: d, uses: 0, revenue: 0, coords: {} };
+      distMap[d].uses++;
+      distMap[d].revenue += item.value || 0;
+
+      if (!distMap[d].coords[c]) distMap[d].coords[c] = { nome: c, uses: 0, revenue: 0, filiais: {} };
+      distMap[d].coords[c].uses++;
+      distMap[d].coords[c].revenue += item.value || 0;
+
+      if (!distMap[d].coords[c].filiais[f]) distMap[d].coords[c].filiais[f] = { nome: f, uses: 0, revenue: 0 };
+      distMap[d].coords[c].filiais[f].uses++;
+      distMap[d].coords[c].filiais[f].revenue += item.value || 0;
+    });
+
+    return Object.values(distMap)
+      .map(d => ({
+        ...d,
+        coords: Object.values(d.coords)
+          .map(c => ({
+            ...c,
+            filiais: Object.values(c.filiais).sort((a, b) => b.uses - a.uses)
+          }))
+          .sort((a, b) => b.uses - a.uses)
+      }))
+      .sort((a, b) => b.uses - a.uses);
+  }, [filteredData]);
+
+  // Gráfico temporal
   const timeChartData = useMemo(() => {
     const groups = {};
     filteredData.forEach(item => {
       const date = item.date;
-      if (!groups[date]) {
-        groups[date] = { date, 'Cupons': 0, 'Valor': 0 };
-      }
-      groups[date]['Cupons']++;
-      groups[date]['Valor'] += item.value || 0;
+      if (!groups[date]) groups[date] = { date, cupons: 0, valor: 0 };
+      groups[date].cupons++;
+      groups[date].valor += item.value || 0;
     });
-
     return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredData]);
 
-  // Agrupamento para Gráfico de Top 10 Cupons
-  const topCouponsData = useMemo(() => {
-    const counts = {};
-    filteredData.forEach(item => {
-      const c = item.coupon;
-      counts[c] = (counts[c] || 0) + 1;
-    });
-
-    return Object.entries(counts)
-      .map(([coupon, uses]) => ({ coupon, uses }))
-      .sort((a, b) => b.uses - a.uses)
-      .slice(0, 10);
-  }, [filteredData]);
+  // Top 10 cupons para gráfico
+  const topCouponsChart = useMemo(() => couponRanking.slice(0, 10), [couponRanking]);
 
   // Tabela paginada
   const paginatedData = useMemo(() => {
     const start = page * rowsPerPage;
     return filteredData.slice(start, start + rowsPerPage);
   }, [filteredData, page]);
-
   const maxPages = Math.ceil(filteredData.length / rowsPerPage);
 
-  if (loading && rawData.length === 0) {
+  // Toggle hierarquia
+  const togDist = (nome) => setOpenDist(s => { const n = new Set(s); n.has(nome) ? n.delete(nome) : n.add(nome); return n; });
+  const togCoord = (nome) => setOpenCoord(s => { const n = new Set(s); n.has(nome) ? n.delete(nome) : n.add(nome); return n; });
+
+  // Label do período selecionado
+  const periodLabel = useMemo(() => {
+    switch (fDateMode) {
+      case 'hoje': return `Hoje (${getBrtDateStr(0).split('-').reverse().join('/')})`;
+      case 'ontem': return `Ontem (${getBrtDateStr(1).split('-').reverse().join('/')})`;
+      case '3d': return 'Últimos 3 dias';
+      case '7d': return 'Últimos 7 dias';
+      case '15d': return 'Últimos 15 dias';
+      case 'custom': return fCustomDate.split('-').reverse().join('/');
+      default: return '';
+    }
+  }, [fDateMode, fCustomDate]);
+
+  if (couponLoading && couponRaw.length === 0) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '24px 0', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-        <RefreshCw className="animate-spin" size={32} style={{ color: '#7c3aed' }} />
-        <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600 }}>Carregando dados de cupons da VTEX...</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '60px 24px', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+        <div style={{ width: 48, height: 48, border: '3px solid #e2e8f0', borderTop: '3px solid #7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <span style={{ fontSize: 14, color: '#64748b', fontWeight: 600 }}>Carregando dados de cupons de desconto da VTEX...</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      
-      {/* Barra de Filtros */}
+
+      {/* ══════ BARRA DE FILTROS ══════ */}
       <div style={{
-        background: '#0f2050',
-        borderRadius: 8,
-        padding: '16px 20px',
-        color: '#fff',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 16,
-        alignItems: 'flex-end',
-        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+        background: 'linear-gradient(135deg, #0f2050 0%, #1e3a8a 100%)',
+        borderRadius: 10, padding: '16px 20px', color: '#fff',
+        display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end',
+        boxShadow: '0 4px 12px rgba(15,32,80,0.3)'
       }}>
-        
-        {/* Período */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Período</label>
-          <select 
-            value={fPeriod} 
-            onChange={e => setFPeriod(Number(e.target.value))}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', borderRadius: 6, padding: '6px 12px',
-              fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 120
-            }}
-          >
-            <option value={7} style={{ background: '#1e293b' }}>Últimos 7 dias</option>
-            <option value={10} style={{ background: '#1e293b' }}>Últimos 10 dias</option>
-            <option value={15} style={{ background: '#1e293b' }}>Últimos 15 dias</option>
-          </select>
+
+        {/* Data Mode */}
+        <div style={filterCol}>
+          <label style={filterLabel}>📅 Período</label>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {[
+              { key: 'hoje', label: 'Hoje' },
+              { key: 'ontem', label: 'Ontem' },
+              { key: '3d', label: '3 dias' },
+              { key: '7d', label: '7 dias' },
+              { key: '15d', label: '15 dias' },
+            ].map(btn => (
+              <button
+                key={btn.key}
+                onClick={() => setFDateMode(btn.key)}
+                style={{
+                  padding: '5px 10px', fontSize: 11, fontWeight: 700,
+                  borderRadius: 5, border: 'none', cursor: 'pointer',
+                  background: fDateMode === btn.key ? '#7c3aed' : 'rgba(255,255,255,0.12)',
+                  color: fDateMode === btn.key ? '#fff' : 'rgba(255,255,255,0.7)',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Data custom */}
+        <div style={filterCol}>
+          <label style={filterLabel}>Dia Específico</label>
+          <input
+            type="date"
+            value={fCustomDate}
+            onChange={e => { setFCustomDate(e.target.value); setFDateMode('custom'); }}
+            style={inputStyle}
+          />
         </div>
 
         {/* Distrital */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Distrital</label>
-          <select 
-            value={fDist} 
-            onChange={e => { setFDist(e.target.value); setFCoord('all'); setFFilial('all'); }}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', borderRadius: 6, padding: '6px 12px',
-              fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 150, maxWidth: 200
-            }}
-          >
-            <option value="all" style={{ background: '#1e293b' }}>Todos</option>
-            {filterOptions.distritais.map(d => (
-              <option key={d} value={d} style={{ background: '#1e293b' }}>{d}</option>
-            ))}
+        <div style={filterCol}>
+          <label style={filterLabel}>Distrital</label>
+          <select value={fDist} onChange={e => { setFDist(e.target.value); setFCoord('all'); setFFilial('all'); }} style={selectStyle}>
+            <option value="all">Todos</option>
+            {filterOptions.distritais.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
 
         {/* Coordenador */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Coordenação</label>
-          <select 
-            value={fCoord} 
-            onChange={e => { setFCoord(e.target.value); setFFilial('all'); }}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', borderRadius: 6, padding: '6px 12px',
-              fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 150, maxWidth: 200
-            }}
-          >
-            <option value="all" style={{ background: '#1e293b' }}>Todos</option>
-            {filterOptions.coordenadores.map(c => (
-              <option key={c} value={c} style={{ background: '#1e293b' }}>{c}</option>
-            ))}
+        <div style={filterCol}>
+          <label style={filterLabel}>Coordenação</label>
+          <select value={fCoord} onChange={e => { setFCoord(e.target.value); setFFilial('all'); }} style={selectStyle}>
+            <option value="all">Todos</option>
+            {filterOptions.coordenadores.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
         {/* Filial */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Filial</label>
-          <select 
-            value={fFilial} 
-            onChange={e => setFFilial(e.target.value)}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', borderRadius: 6, padding: '6px 12px',
-              fontSize: 12, outline: 'none', cursor: 'pointer', minWidth: 180, maxWidth: 220
-            }}
-          >
-            <option value="all" style={{ background: '#1e293b' }}>Todos</option>
-            {filterOptions.filiais.map(f => (
-              <option key={f} value={f} style={{ background: '#1e293b' }}>{f}</option>
-            ))}
+        <div style={filterCol}>
+          <label style={filterLabel}>Filial</label>
+          <select value={fFilial} onChange={e => setFFilial(e.target.value)} style={selectStyle}>
+            <option value="all">Todas</option>
+            {filterOptions.filiais.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </div>
 
         {/* Buscar Cupom */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 150 }}>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Buscar Cupom</label>
-          <input 
-            type="text" 
-            placeholder="Ex: CINTIA10..." 
-            value={fCoupon} 
+        <div style={{ ...filterCol, flex: 1, minWidth: 130 }}>
+          <label style={filterLabel}>🔍 Buscar Cupom</label>
+          <input
+            type="text"
+            placeholder="Ex: GANHOU20..."
+            value={fCoupon}
             onChange={e => setFCoupon(e.target.value)}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff', borderRadius: 6, padding: '6px 12px',
-              fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box'
-            }}
+            style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
           />
         </div>
 
-        {/* Botão de Atualizar */}
-        <button 
-          onClick={loadData} 
-          style={{
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
-            color: '#fff', display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 12, fontWeight: 600
-          }}
-        >
-          <RefreshCw size={14} /> Atualizar
+        {/* Atualizar */}
+        <button onClick={handleRefresh} style={{
+          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: 6, padding: '6px 12px', cursor: 'pointer', color: '#fff',
+          display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600
+        }}>
+          <RefreshCw size={13} /> Atualizar
         </button>
       </div>
 
-      {/* Sync Status Banner */}
-      {syncState && (
+      {/* Sync Status */}
+      {couponSync && (
         <div style={{
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: 6,
-          padding: '8px 16px',
-          fontSize: 11,
-          color: '#64748b',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6,
+          padding: '6px 16px', fontSize: 11, color: '#64748b',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <span>
-            ⏰ <strong>Sync VTEX:</strong> {syncState.isSyncing ? `Sincronizando em segundo plano (${syncState.progressPercent}%)` : 'Atualizado'}
+            ⏰ <strong>Sync VTEX:</strong> {couponSync.isSyncing ? `Sincronizando (${couponSync.progressPercent}%)…` : 'Pronto'}
+            {couponTotalOrders > 0 && <span> · {fmtInteger(couponTotalOrders)} pedidos no cache</span>}
           </span>
-          {syncState.lastSyncTime && (
-            <span>
-              Último sync completo: {new Date(syncState.lastSyncTime).toLocaleString('pt-BR')}
-            </span>
+          {couponSync.lastSyncTime && (
+            <span>Último sync: {new Date(couponSync.lastSyncTime).toLocaleString('pt-BR')}</span>
           )}
         </div>
       )}
@@ -311,228 +357,347 @@ export default function CuponsPage() {
       {/* Erro */}
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#dc2626', fontSize: 13 }}>
-          ⚠️ {error} · <button onClick={loadData} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }}>Tentar novamente</button>
+          ⚠️ {error} · <button onClick={handleRefresh} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }}>Tentar novamente</button>
         </div>
       )}
 
-      {/* KPIs Grid */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        
-        {/* KPI 1 */}
-        <div style={{
-          flex: 1, minWidth: 220, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
-          padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{ background: '#f5f3ff', color: '#7c3aed', padding: 10, borderRadius: 6 }}>
-            <Tag size={20} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Cupons Usados</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: '#0f2050', marginTop: 4 }}>{fmtInteger(kpi.totalUses)}</span>
-          </div>
-        </div>
-
-        {/* KPI 2 */}
-        <div style={{
-          flex: 1, minWidth: 220, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
-          padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{ background: '#ecfdf5', color: '#10b981', padding: 10, borderRadius: 6 }}>
-            <DollarSign size={20} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Faturamento Gerado</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: '#0f2050', marginTop: 4 }}>{fmtCurrency(kpi.totalRevenue)}</span>
-          </div>
-        </div>
-
-        {/* KPI 3 */}
-        <div style={{
-          flex: 1, minWidth: 220, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
-          padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{ background: '#eff6ff', color: '#3b82f6', padding: 10, borderRadius: 6 }}>
-            <ShoppingBag size={20} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Ticket Médio Cupom</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: '#0f2050', marginTop: 4 }}>{fmtCurrency(kpi.avgTicket)}</span>
-          </div>
-        </div>
+      {/* ══════ KPIs ══════ */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <KpiCard icon={<Tag size={18} />} color="#7c3aed" bg="#f5f3ff" label="Cupons Usados" value={fmtInteger(kpi.totalUses)} sub={`${kpi.uniqueCoupons} cupons distintos`} />
+        <KpiCard icon={<DollarSign size={18} />} color="#10b981" bg="#ecfdf5" label="Faturamento c/ Cupom" value={fmtCurrency(kpi.totalRevenue)} sub={`Período: ${periodLabel}`} />
+        <KpiCard icon={<ShoppingBag size={18} />} color="#3b82f6" bg="#eff6ff" label="Ticket Médio" value={fmtCurrency(kpi.avgTicket)} sub="Valor médio dos pedidos" />
       </div>
 
-      {/* Gráficos */}
-      {filteredData.length > 0 && (
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          
-          {/* Gráfico 1: Uso Diário */}
-          <div style={{
-            flex: 2, minWidth: 400, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
-            padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
-          }}>
-            <h4 style={{ margin: '0 0 16px', fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              📈 Histórico de Uso Diário (Cupons & Valor)
-            </h4>
-            <div style={{ height: 260 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={timeChartData}>
-                  <defs>
-                    <linearGradient id="colorUses" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#94a3b8" 
-                    fontSize={10} 
-                    fontWeight={600}
-                    tickFormatter={v => v.split('-').slice(1).reverse().join('/')} 
-                  />
-                  <YAxis stroke="#94a3b8" fontSize={10} fontWeight={600} />
-                  <Tooltip 
-                    contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 11, color: '#fff' }}
-                    labelFormatter={label => `Data: ${label.split('-').reverse().join('/')}`}
-                    formatter={(value, name) => {
-                      if (name === 'Valor') return [fmtCurrency(value), 'Faturamento'];
-                      return [fmtInteger(value), 'Cupons Usados'];
-                    }}
-                  />
-                  <Area type="monotone" dataKey="Cupons" name="Cupons" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorUses)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+      {/* ══════ TABS: Resumo / Hierarquia / Detalhes ══════ */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 0 }}>
+        {[
+          { key: 'resumo', label: '🏆 Ranking de Cupons' },
+          { key: 'hierarquia', label: '🏢 Distrital → Coord. → Filial' },
+          { key: 'detalhes', label: '📋 Detalhes (Pedido a Pedido)' },
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setViewTab(t.key)}
+            style={{
+              padding: '8px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: viewTab === t.key ? '#fff' : 'rgba(255,255,255,0.5)',
+              border: '1px solid #e2e8f0',
+              borderBottom: viewTab === t.key ? '1px solid #fff' : '1px solid #e2e8f0',
+              borderRadius: '6px 6px 0 0',
+              color: viewTab === t.key ? '#0f2050' : '#64748b',
+              position: 'relative', bottom: -1,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-          {/* Gráfico 2: Top Cupons */}
-          <div style={{
-            flex: 1, minWidth: 280, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
-            padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
-          }}>
-            <h4 style={{ margin: '0 0 16px', fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              🔥 Top 10 Cupons Mais Utilizados
-            </h4>
-            <div style={{ height: 260 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topCouponsData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={9} fontWeight={600} hide />
-                  <YAxis dataKey="coupon" type="category" stroke="#0f2050" fontSize={10} fontWeight={700} width={80} />
-                  <Tooltip 
-                    contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 11, color: '#fff' }}
-                    formatter={value => [fmtInteger(value), 'Utilizações']}
-                  />
-                  <Bar dataKey="uses" name="Uso" fill="#10b981" radius={[0, 4, 4, 0]} maxBarSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tabela de Dados Detalhados */}
+      {/* ══════ CONTEÚDO ══════ */}
       <div style={{
-        background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
+        background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0 6px 6px 6px',
         boxShadow: '0 1px 4px rgba(0,0,0,0.04)', overflow: 'hidden'
       }}>
-        
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>Relatório Detalhado de Utilizações</span>
-          <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>
-            {filteredData.length} registros
-          </span>
-        </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontWeight: 700 }}>
-                <th style={{ ...thStyle, textAlign: 'left' }}>Data</th>
-                <th style={{ ...thStyle, textAlign: 'left' }}>Código do Cupom</th>
-                <th style={{ ...thStyle, textAlign: 'left' }}>Loja (Seller)</th>
-                <th style={{ ...thStyle, textAlign: 'left' }}>Coordenador</th>
-                <th style={{ ...thStyle, textAlign: 'left' }}>Distrital</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Valor da Compra</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>
-                    Nenhuma utilização de cupom encontrada para os filtros aplicados.
-                  </td>
-                </tr>
-              ) : (
-                paginatedData.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ ...tdStyle, color: '#0f2050', fontWeight: 600 }}>{item.date ? item.date.split('-').reverse().join('/') : '—'}</td>
-                    <td style={tdStyle}><span style={badgeStyle}>{item.coupon}</span></td>
-                    <td style={{ ...tdStyle, color: '#1e3a8a', fontWeight: 600 }}>{item.store}</td>
-                    <td style={tdStyle}>{item.coordenador}</td>
-                    <td style={tdStyle}>{item.distrital}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: '#047857' }}>{fmtCurrency(item.value)}</td>
+        {/* ── TAB 1: Ranking de Cupons ── */}
+        {viewTab === 'resumo' && (
+          <div>
+            {/* Gráficos lado a lado */}
+            {filteredData.length > 0 && (
+              <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0' }}>
+
+                {/* Gráfico: Uso Diário */}
+                {timeChartData.length > 1 && (
+                  <div style={{ flex: 2, minWidth: 350, padding: 16, borderRight: '1px solid #f1f5f9' }}>
+                    <h4 style={chartTitle}>📈 Uso Diário de Cupons</h4>
+                    <div style={{ height: 220 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={timeChartData}>
+                          <defs>
+                            <linearGradient id="colorCupons" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} />
+                              <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} fontWeight={600}
+                            tickFormatter={v => v.split('-').slice(1).reverse().join('/')} />
+                          <YAxis stroke="#94a3b8" fontSize={10} fontWeight={600} />
+                          <Tooltip
+                            contentStyle={tooltipStyle}
+                            labelFormatter={l => `Data: ${l.split('-').reverse().join('/')}`}
+                            formatter={(v, name) => name === 'valor' ? [fmtCurrency(v), 'Faturamento'] : [fmtInteger(v), 'Cupons']}
+                          />
+                          <Area type="monotone" dataKey="cupons" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorCupons)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gráfico: Top Cupons */}
+                {topCouponsChart.length > 0 && (
+                  <div style={{ flex: 1, minWidth: 260, padding: 16 }}>
+                    <h4 style={chartTitle}>🔥 Top {Math.min(10, topCouponsChart.length)} Cupons</h4>
+                    <div style={{ height: 220 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topCouponsChart} layout="vertical" margin={{ left: 5, right: 10 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                          <XAxis type="number" stroke="#94a3b8" fontSize={9} fontWeight={600} hide />
+                          <YAxis dataKey="coupon" type="category" stroke="#0f2050" fontSize={9} fontWeight={700} width={80} tick={{ fontSize: 9 }} />
+                          <Tooltip contentStyle={tooltipStyle} formatter={v => [fmtInteger(v), 'Utilizações']} />
+                          <Bar dataKey="uses" fill="#10b981" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                            {topCouponsChart.map((_, i) => (
+                              <rect key={i} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tabela de Ranking */}
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
+                Ranking de Cupons de Desconto — {periodLabel}
+              </span>
+              <span style={{ fontSize: 11, color: '#64748b', marginLeft: 12, background: '#f1f5f9', borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>
+                {couponRanking.length} cupons distintos
+              </span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={tableBase}>
+                <thead>
+                  <tr style={theadRow}>
+                    <th style={{ ...thCell, textAlign: 'center', width: 40 }}>#</th>
+                    <th style={{ ...thCell, textAlign: 'left' }}>Código do Cupom</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Usos</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Faturamento</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Ticket Médio</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Paginação */}
-        {maxPages > 1 && (
-          <div style={{
-            padding: '12px 16px', borderTop: '1px solid #e2e8f0', background: '#f8fafc',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-          }}>
-            <span style={{ fontSize: 11, color: '#64748b' }}>Página <strong>{page + 1}</strong> de <strong>{maxPages}</strong></span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button 
-                disabled={page === 0} 
-                onClick={() => setPage(p => p - 1)}
-                style={{
-                  padding: '4px 10px', fontSize: 11, borderRadius: 4, border: '1px solid #cbd5e1',
-                  background: '#fff', color: page === 0 ? '#94a3b8' : '#475569',
-                  cursor: page === 0 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Anterior
-              </button>
-              <button 
-                disabled={page >= maxPages - 1} 
-                onClick={() => setPage(p => p + 1)}
-                style={{
-                  padding: '4px 10px', fontSize: 11, borderRadius: 4, border: '1px solid #cbd5e1',
-                  background: '#fff', color: page >= maxPages - 1 ? '#94a3b8' : '#475569',
-                  cursor: page >= maxPages - 1 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Próximo
-              </button>
+                </thead>
+                <tbody>
+                  {couponRanking.length === 0 ? (
+                    <tr><td colSpan={5} style={emptyCell}>Nenhum cupom encontrado no período selecionado.</td></tr>
+                  ) : (
+                    couponRanking.map((item, idx) => (
+                      <tr key={item.coupon} style={tbodyRow}>
+                        <td style={{ ...tdCell, textAlign: 'center', color: '#94a3b8', fontWeight: 700 }}>{idx + 1}</td>
+                        <td style={tdCell}><span style={badgeStyle}>{item.coupon}</span></td>
+                        <td style={{ ...tdCell, textAlign: 'right', fontWeight: 800, color: '#0f2050', fontSize: 14 }}>{fmtInteger(item.uses)}</td>
+                        <td style={{ ...tdCell, textAlign: 'right', color: '#047857', fontWeight: 700 }}>{fmtCurrency(item.revenue)}</td>
+                        <td style={{ ...tdCell, textAlign: 'right', color: '#475569' }}>{fmtCurrency(item.uses > 0 ? item.revenue / item.uses : 0)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
-      </div>
 
+        {/* ── TAB 2: Hierarquia ── */}
+        {viewTab === 'hierarquia' && (
+          <div>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
+                Cupons por Distrital → Coordenador → Filial — {periodLabel}
+              </span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={tableBase}>
+                <thead>
+                  <tr style={theadRow}>
+                    <th style={{ ...thCell, textAlign: 'left', minWidth: 280 }}>Distrital / Coordenador / Filial</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Cupons Usados</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Faturamento</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Ticket Médio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hierarchy.length === 0 ? (
+                    <tr><td colSpan={4} style={emptyCell}>Sem dados de cupons no período.</td></tr>
+                  ) : hierarchy.map(dist => {
+                    const isDistOpen = openDist.has(dist.nome);
+                    return (
+                      <React.Fragment key={`d-${dist.nome}`}>
+                        {/* Distrital Row */}
+                        <tr style={{ ...tbodyRow, background: 'rgba(15,32,80,0.04)' }}>
+                          <td style={{ ...tdCell, paddingLeft: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <button onClick={() => togDist(dist.nome)} style={expandBtn(isDistOpen)}>
+                                {isDistOpen ? '−' : '+'}
+                              </button>
+                              <span style={{ fontWeight: 700, fontSize: 13, color: '#0f2050' }}>{dist.nome}</span>
+                            </div>
+                          </td>
+                          <td style={{ ...tdCell, textAlign: 'right', fontWeight: 800, color: '#0f2050', fontSize: 15 }}>{fmtInteger(dist.uses)}</td>
+                          <td style={{ ...tdCell, textAlign: 'right', fontWeight: 700, color: '#047857' }}>{fmtCurrency(dist.revenue)}</td>
+                          <td style={{ ...tdCell, textAlign: 'right', color: '#475569' }}>{fmtCurrency(dist.uses > 0 ? dist.revenue / dist.uses : 0)}</td>
+                        </tr>
+
+                        {/* Coordenadores */}
+                        {isDistOpen && dist.coords.map(coord => {
+                          const isCoordOpen = openCoord.has(`${dist.nome}|${coord.nome}`);
+                          return (
+                            <React.Fragment key={`c-${dist.nome}-${coord.nome}`}>
+                              <tr style={tbodyRow}>
+                                <td style={{ ...tdCell, paddingLeft: 36 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <button onClick={() => togCoord(`${dist.nome}|${coord.nome}`)} style={expandBtn(isCoordOpen)}>
+                                      {isCoordOpen ? '−' : '+'}
+                                    </button>
+                                    <span style={{ fontWeight: 600, fontSize: 12, color: '#1e293b' }}>{coord.nome}</span>
+                                  </div>
+                                </td>
+                                <td style={{ ...tdCell, textAlign: 'right', fontWeight: 700, color: '#334155', fontSize: 13 }}>{fmtInteger(coord.uses)}</td>
+                                <td style={{ ...tdCell, textAlign: 'right', color: '#047857', fontWeight: 600 }}>{fmtCurrency(coord.revenue)}</td>
+                                <td style={{ ...tdCell, textAlign: 'right', color: '#475569' }}>{fmtCurrency(coord.uses > 0 ? coord.revenue / coord.uses : 0)}</td>
+                              </tr>
+
+                              {/* Filiais */}
+                              {isCoordOpen && coord.filiais.map(fil => (
+                                <tr key={`f-${dist.nome}-${coord.nome}-${fil.nome}`} style={tbodyRow}>
+                                  <td style={{ ...tdCell, paddingLeft: 60 }}>
+                                    <span style={{ fontSize: 12, color: '#64748b' }}>{fil.nome}</span>
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'right', fontWeight: 600, color: '#475569' }}>{fmtInteger(fil.uses)}</td>
+                                  <td style={{ ...tdCell, textAlign: 'right', color: '#475569' }}>{fmtCurrency(fil.revenue)}</td>
+                                  <td style={{ ...tdCell, textAlign: 'right', color: '#94a3b8' }}>{fmtCurrency(fil.uses > 0 ? fil.revenue / fil.uses : 0)}</td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+
+                {/* Totais */}
+                {hierarchy.length > 0 && (
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #e2e8f0', background: '#f8fafc' }}>
+                      <td style={{ padding: '10px 12px 10px 16px', fontWeight: 800, color: '#0f2050', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTAL GERAL</td>
+                      <td style={{ ...tdCell, textAlign: 'right', fontWeight: 800, color: '#0f2050', fontSize: 15 }}>{fmtInteger(kpi.totalUses)}</td>
+                      <td style={{ ...tdCell, textAlign: 'right', fontWeight: 800, color: '#047857' }}>{fmtCurrency(kpi.totalRevenue)}</td>
+                      <td style={{ ...tdCell, textAlign: 'right', fontWeight: 700, color: '#475569' }}>{fmtCurrency(kpi.avgTicket)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+            <div style={{ padding: '8px 16px', borderTop: '1px solid #f1f5f9', fontSize: 11, color: '#94a3b8', background: '#fafafa' }}>
+              💡 Clique no + ao lado do nome para expandir: Distrital → Coordenação → Filial
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 3: Detalhes ── */}
+        {viewTab === 'detalhes' && (
+          <div>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>Detalhes de Utilização — {periodLabel}</span>
+              <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>{filteredData.length} registros</span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={tableBase}>
+                <thead>
+                  <tr style={theadRow}>
+                    <th style={{ ...thCell, textAlign: 'left' }}>Data</th>
+                    <th style={{ ...thCell, textAlign: 'left' }}>Cupom</th>
+                    <th style={{ ...thCell, textAlign: 'left' }}>Loja</th>
+                    <th style={{ ...thCell, textAlign: 'left' }}>Coordenador</th>
+                    <th style={{ ...thCell, textAlign: 'left' }}>Distrital</th>
+                    <th style={{ ...thCell, textAlign: 'right' }}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedData.length === 0 ? (
+                    <tr><td colSpan={6} style={emptyCell}>Nenhuma utilização de cupom encontrada.</td></tr>
+                  ) : paginatedData.map((item, idx) => (
+                    <tr key={idx} style={tbodyRow}>
+                      <td style={{ ...tdCell, color: '#0f2050', fontWeight: 600 }}>{item.date ? item.date.split('-').reverse().join('/') : '—'}</td>
+                      <td style={tdCell}><span style={badgeStyle}>{item.coupon}</span></td>
+                      <td style={{ ...tdCell, color: '#1e3a8a', fontWeight: 600 }}>{item.store}</td>
+                      <td style={tdCell}>{item.coordenador}</td>
+                      <td style={tdCell}>{item.distrital}</td>
+                      <td style={{ ...tdCell, textAlign: 'right', fontWeight: 700, color: '#047857' }}>{fmtCurrency(item.value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginação */}
+            {maxPages > 1 && (
+              <div style={{ padding: '10px 16px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: '#64748b' }}>Página <strong>{page + 1}</strong> de <strong>{maxPages}</strong></span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={pagBtn(page === 0)}>Anterior</button>
+                  <button disabled={page >= maxPages - 1} onClick={() => setPage(p => p + 1)} style={pagBtn(page >= maxPages - 1)}>Próximo</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-// Estilos de suporte local
-const thStyle = {
-  padding: '10px 12px', fontSize: 10, fontWeight: 700,
-  textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b',
-};
+// ── Sub-componentes ──────────────────────────────────────────────────────────
+function KpiCard({ icon, color, bg, label, value, sub }) {
+  return (
+    <div style={{
+      flex: 1, minWidth: 200, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
+      padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
+    }}>
+      <div style={{ background: bg, color, padding: 9, borderRadius: 6, display: 'flex' }}>{icon}</div>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>{label}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f2050', marginTop: 2 }}>{value}</div>
+        {sub && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
 
-const tdStyle = {
-  padding: '10px 12px', color: '#475569', fontSize: 12,
-  verticalAlign: 'middle'
+// ── Estilos ──────────────────────────────────────────────────────────────────
+const filterCol = { display: 'flex', flexDirection: 'column', gap: 5 };
+const filterLabel = { fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.05em' };
+const selectStyle = {
+  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
+  color: '#fff', borderRadius: 6, padding: '5px 10px', fontSize: 11,
+  outline: 'none', cursor: 'pointer', minWidth: 130, maxWidth: 190
 };
-
-const badgeStyle = {
-  background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#7c3aed',
-  fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 6px',
+const inputStyle = {
+  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)',
+  color: '#fff', borderRadius: 6, padding: '5px 10px', fontSize: 11, outline: 'none'
 };
+const tooltipStyle = { background: 'rgba(15, 23, 42, 0.95)', border: 'none', borderRadius: 6, fontSize: 11, color: '#fff' };
+const chartTitle = { margin: '0 0 12px', fontSize: 11, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em' };
+const tableBase = { width: '100%', borderCollapse: 'collapse', fontSize: 12 };
+const theadRow = { background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontWeight: 700 };
+const thCell = { padding: '9px 12px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', whiteSpace: 'nowrap' };
+const tdCell = { padding: '9px 12px', color: '#475569', fontSize: 12, verticalAlign: 'middle', whiteSpace: 'nowrap' };
+const tbodyRow = { borderBottom: '1px solid #f1f5f9' };
+const emptyCell = { padding: 32, textAlign: 'center', color: '#94a3b8' };
+const badgeStyle = { background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#7c3aed', fontSize: 10, fontWeight: 700, borderRadius: 4, padding: '2px 6px' };
+const pagBtn = (disabled) => ({
+  padding: '4px 10px', fontSize: 11, borderRadius: 4, border: '1px solid #cbd5e1',
+  background: '#fff', color: disabled ? '#94a3b8' : '#475569',
+  cursor: disabled ? 'not-allowed' : 'pointer'
+});
+const expandBtn = (isOpen) => ({
+  width: 18, height: 18, borderRadius: 3,
+  border: '1px solid #1e3a8a',
+  background: isOpen ? '#1e3a8a' : '#fff',
+  color: isOpen ? '#fff' : '#1e3a8a',
+  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontSize: 13, fontWeight: 700, lineHeight: 1, flexShrink: 0,
+});

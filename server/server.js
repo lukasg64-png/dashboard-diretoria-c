@@ -1026,16 +1026,20 @@ app.get('/api/coupons', (req, res) => {
       // Filtra pedidos que têm cupom e que não estão cancelados
       if (order.coupon && order.status !== 'canceled') {
         const seller = order.sellers?.[0]?.name || '';
-        const storeInfo = lookupStore(seller) || {};
+        const storeInfo = lookupStore(seller);
+        
+        // FILTRO: Apenas lojas da Diretoria C (que estão no cadastro)
+        if (!storeInfo) return;
         
         list.push({
           orderId: order.orderId,
           date: order.creationDate ? new Date(order.creationDate).toISOString().slice(0, 10) : '',
+          creationDate: order.creationDate || '',
           coupon: String(order.coupon).toUpperCase().trim(),
           value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
-          store: storeInfo.matchedKey || seller || 'Outros/Site',
-          coordenador: storeInfo.coordenador || 'Outros',
-          distrital: storeInfo.distrital || 'Outros',
+          store: storeInfo.matchedKey || seller,
+          coordenador: storeInfo.coordenador || '',
+          distrital: storeInfo.distrital || '',
           municipio: storeInfo.municipio || '',
           uf: storeInfo.uf || ''
         });
@@ -1045,6 +1049,7 @@ app.get('/api/coupons', (req, res) => {
     res.json({
       status: 'success',
       sync: vtexSync.getSyncState(),
+      totalOrders: Object.keys(cache).length,
       data: list
     });
   } catch (err) {
