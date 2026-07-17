@@ -1081,7 +1081,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.listen(PORT, () => {
   console.log(`🚀 Standalone Store Health Monitor running on http://localhost:${PORT}`);
 
-  // Self-ping heartbeat to prevent Render sleep on free tier
+  // Self-ping heartbeat to prevent Render sleep on free tier (DISABLED by user request)
+  /*
   const selfUrl = process.env.RENDER_EXTERNAL_URL;
   if (selfUrl) {
     console.log(`[Heartbeat] Active. Self-pinging URL: ${selfUrl}/ping every 10 minutes.`);
@@ -1096,6 +1097,7 @@ app.listen(PORT, () => {
   } else {
     console.log('[Heartbeat] RENDER_EXTERNAL_URL not defined. Self-ping skipped.');
   }
+  */
   
   // Only sync on startup if the cache file is missing
   if (!fs.existsSync(CACHE_FILE)) {
