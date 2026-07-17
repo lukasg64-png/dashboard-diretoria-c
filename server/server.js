@@ -1070,6 +1070,65 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── Diagnóstico VTEX: testa conectividade e credenciais ──────────────────────
+app.get('/api/vtex-debug', async (req, res) => {
+  const key   = process.env.VTEX_APP_KEY;
+  const token = process.env.VTEX_APP_TOKEN;
+  const acct  = process.env.VTEX_ACCOUNT || 'sjdigital';
+
+  if (!key || !token) {
+    return res.json({
+      status: 'error',
+      problem: 'Credenciais VTEX não configuradas no servidor.',
+      vtex_app_key_present:   !!key,
+      vtex_app_token_present: !!token,
+      fix: 'Configure VTEX_APP_KEY e VTEX_APP_TOKEN nas Environment Variables do Render.'
+    });
+  }
+
+  try {
+    const https = require('https');
+    const testUrl = `https://${acct}.vtexcommercestable.com.br/api/oms/pvt/orders?per_page=1&page=1`;
+    const result = await new Promise((resolve, reject) => {
+      const options = {
+        headers: {
+          'X-VTEX-API-AppKey':   key,
+          'X-VTEX-API-AppToken': token,
+          'Accept': 'application/json'
+        }
+      };
+      https.get(testUrl, options, (r) => {
+        let data = '';
+        r.on('data', d => data += d);
+        r.on('end', () => resolve({ statusCode: r.statusCode, body: data.slice(0, 500) }));
+      }).on('error', reject);
+    });
+
+    const vtexOrders = vtexSync.getOrdersCache();
+    res.json({
+      status:               result.statusCode === 200 ? 'ok' : 'vtex_error',
+      vtex_http_status:     result.statusCode,
+      vtex_response_snippet: result.body,
+      vtex_app_key_present:   true,
+      vtex_app_token_present: true,
+      vtex_account:           acct,
+      cached_orders_count:    Object.keys(vtexOrders).length,
+      sync_state:             vtexSync.getSyncState()
+    });
+  } catch (err) {
+    res.json({ status: 'exception', error: err.message });
+  }
+});
+
+// ─── Trigger manual de sync VTEX (força reprocessamento completo) ──────────────
+app.post('/api/vtex-sync', async (req, res) => {
+  const forceFull = req.query.full === 'true';
+  res.json({ status: 'started', forceFull });
+  vtexSync.syncVtexData(forceFull).catch(err =>
+    console.error('[Manual Sync] Falhou:', err.message)
+  );
+});
+
 // Servir arquivos estáticos do frontend React compilados (pasta dist)
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
@@ -1088,24 +1147,24 @@ app.listen(PORT, () => {
   console.log(`📊 Excel: ${EXCEL_PATH}`);
   console.log(`   Existe: ${fs.existsSync(EXCEL_PATH) ? '✅' : '❌'}\n`);
 
-  // ─── Keep-alive: pinga o próprio servidor a cada 10 min (DESATIVADO) ─────────────────
+  // ─── Keep-alive: pinga o próprio servidor a cada 10 min ────────────────────
   // Evita que o Render Free Tier hiberne e perca os arquivos em disco.
-  /*
   const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
   if (RENDER_URL) {
-    const http = require('https');
+    const https = require('https');
     const PING_INTERVAL_MS = 10 * 60 * 1000; // 10 minutos
     setInterval(() => {
       const url = `${RENDER_URL}/api/health`;
-      http.get(url, (res) => {
-        console.log(`💓 Keep-alive ping → ${url} [${res.statusCode}]`);
+      https.get(url, (pingRes) => {
+        console.log(`💓 Keep-alive ping → ${url} [${pingRes.statusCode}]`);
       }).on('error', (err) => {
         console.warn(`⚠️ Keep-alive falhou: ${err.message}`);
       });
     }, PING_INTERVAL_MS);
     console.log(`💓 Keep-alive ativo: pingando ${RENDER_URL}/api/health a cada 10 min`);
+  } else {
+    console.log('ℹ️ Keep-alive desativado (RENDER_EXTERNAL_URL não definida — ambiente local)');
   }
-  */
 
   // Inicializa o sync de cupons em segundo plano após 5 segundos da inicialização
   setTimeout(() => {
