@@ -1577,7 +1577,7 @@ export default function DrillPanel({ onUpload }) {
       <div style={{ padding: '16px 24px', maxWidth: 1700, margin: '0 auto' }}>
 
         {/* ── KPIs — apenas para venda (cup/tm têm dupla contagem no total) ── */}
-        {viewMode === 'venda' ? (
+        {activeTab !== 'cupons' && (viewMode === 'venda' ? (
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ padding: '6px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', textAlign: 'right' }}>
               Período: <strong style={{ color: '#0f2050' }}>{labelAtual}</strong>
@@ -1612,17 +1612,17 @@ export default function DrillPanel({ onUpload }) {
               {' '}A soma total de cupons conta o mesmo cupom várias vezes (um por linha de produto). Analise os dados <strong>linha a linha</strong> na tabela abaixo.
             </span>
           </div>
-        )}
+        ))}
 
         {/* ── Erro ── */}
-        {error && (
+        {activeTab !== 'cupons' && error && (
           <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#dc2626', marginBottom: 12, fontSize: 13 }}>
             Erro: {error} · <button onClick={load} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Tentar novamente</button>
           </div>
         )}
 
         {/* ── Sem Dados — Aguardando Upload ── */}
-        {noData && !loading && (
+        {activeTab !== 'cupons' && noData && !loading && (
           <div style={{
             background: '#fff', borderRadius: 12, border: '2px dashed #cbd5e1',
             padding: '60px 32px', marginBottom: 16, textAlign: 'center',
@@ -1657,7 +1657,7 @@ export default function DrillPanel({ onUpload }) {
         )}
 
 
-        {showChart && !loading && chartItems.length > 0 && (
+        {activeTab !== 'cupons' && showChart && !loading && chartItems.length > 0 && (
           <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <h4 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#0f2050', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

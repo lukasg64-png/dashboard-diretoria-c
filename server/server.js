@@ -173,13 +173,13 @@ function canonicalize(normName) {
 
 function lookupStore(vtexCleanName) {
   const normName = normalizeStoreName(vtexCleanName);
-  if (filiaisCadastro[normName]) return filiaisCadastro[normName];
+  if (filiaisCadastro[normName]) return { ...filiaisCadastro[normName], matchedKey: normName };
   
   const canon = canonicalize(normName);
   const keys = Object.keys(filiaisCadastro);
   for (const key of keys) {
     if (canonicalize(key) === canon) {
-      return filiaisCadastro[key];
+      return { ...filiaisCadastro[key], matchedKey: key };
     }
   }
   
@@ -188,7 +188,7 @@ function lookupStore(vtexCleanName) {
     const baseName = numMatch[1].trim();
     for (const key of keys) {
       if (canonicalize(key) === baseName) {
-        return filiaisCadastro[key];
+        return { ...filiaisCadastro[key], matchedKey: key };
       }
     }
   }
@@ -1033,10 +1033,11 @@ app.get('/api/coupons', (req, res) => {
           date: order.creationDate ? new Date(order.creationDate).toISOString().slice(0, 10) : '',
           coupon: String(order.coupon).toUpperCase().trim(),
           value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
-          store: storeInfo.rawName || seller || 'Outros/Site',
+          store: storeInfo.matchedKey || seller || 'Outros/Site',
           coordenador: storeInfo.coordenador || 'Outros',
           distrital: storeInfo.distrital || 'Outros',
-          diretor: storeInfo.diretor || 'Outros'
+          municipio: storeInfo.municipio || '',
+          uf: storeInfo.uf || ''
         });
       }
     });
