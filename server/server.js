@@ -1026,7 +1026,9 @@ app.get('/api/coupons', (req, res) => {
       // Filtra pedidos que têm cupom e que não estão cancelados
       if (order.coupon && order.status !== 'canceled') {
         const seller = order.sellers?.[0]?.name || '';
-        const storeInfo = lookupStore(seller);
+        // Limpa o nome do seller da VTEX (ex: "LOJA 123 - 88.212.113/0001-00 - 123" -> "LOJA 123")
+        const cleanSeller = seller.includes(' - ') ? seller.split(' - ')[0].trim() : seller;
+        const storeInfo = lookupStore(cleanSeller);
         
         // FILTRO: Apenas lojas da Diretoria C (que estão no cadastro)
         if (!storeInfo) return;
@@ -1037,7 +1039,7 @@ app.get('/api/coupons', (req, res) => {
           creationDate: order.creationDate || '',
           coupon: String(order.coupon).toUpperCase().trim(),
           value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
-          store: storeInfo.matchedKey || seller,
+          store: storeInfo.matchedKey || cleanSeller,
           coordenador: storeInfo.coordenador || '',
           distrital: storeInfo.distrital || '',
           municipio: storeInfo.municipio || '',

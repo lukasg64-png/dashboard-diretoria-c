@@ -204,6 +204,62 @@ export default function CuponsPage({
   // Top 10 cupons para gráfico
   const topCouponsChart = useMemo(() => couponRanking.slice(0, 10), [couponRanking]);
 
+  const [chartMode, setChartMode] = useState('diario');
+
+  // Ajusta automaticamente o modo do gráfico caso o período selecionado seja de 1 dia
+  useEffect(() => {
+    if (timeChartData.length <= 1) {
+      setChartMode('geo');
+    }
+  }, [timeChartData]);
+
+  // Rótulo do drill atual
+  const geoDrillLabel = useMemo(() => {
+    if (fDist === 'all') return 'Distrital';
+    if (fCoord === 'all') return 'Coordenador';
+    return 'Filial';
+  }, [fDist, fCoord]);
+
+  // Função para voltar o drill-down
+  const handleBackDrill = () => {
+    if (fFilial !== 'all') {
+      setFFilial('all');
+    } else if (fCoord !== 'all') {
+      setFCoord('all');
+    } else if (fDist !== 'all') {
+      setFDist('all');
+    }
+  };
+
+  // Função de clique no gráfico de barras geográfico
+  const handleGeoChartClick = (name) => {
+    if (name === 'Outros') return;
+    if (fDist === 'all') {
+      setFDist(name);
+    } else if (fCoord === 'all') {
+      setFCoord(name);
+    } else if (fFilial === 'all') {
+      setFFilial(name);
+    }
+  };
+
+  // Dados do gráfico geográfico agrupado reativo
+  const geoChartData = useMemo(() => {
+    const map = {};
+    const keyField = fDist === 'all' ? 'distrital'
+      : fCoord === 'all' ? 'coordenador'
+      : 'store';
+
+    filteredData.forEach(item => {
+      const key = item[keyField] || 'Outros';
+      if (!map[key]) map[key] = { name: key, cupons: 0, valor: 0 };
+      map[key].cupons++;
+      map[key].valor += item.value || 0;
+    });
+
+    return Object.values(map).sort((a, b) => b.cupons - a.cupons);
+  }, [filteredData, fDist, fCoord]);
+
   // Tabela paginada
   const paginatedData = useMemo(() => {
     const start = page * rowsPerPage;
@@ -406,11 +462,68 @@ export default function CuponsPage({
             {filteredData.length > 0 && (
               <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0' }}>
 
-                {/* Gráfico: Uso Diário */}
-                {timeChartData.length > 1 && (
-                  <div style={{ flex: 2, minWidth: 350, padding: 16, borderRight: '1px solid #f1f5f9' }}>
-                    <h4 style={chartTitle}>📈 Uso Diário de Cupons</h4>
-                    <div style={{ height: 220 }}>
+                {/* Gráfico Esquerdo: Diário ou Geográfico (Drill-down) */}
+                <div style={{ flex: 2, minWidth: 350, padding: 16, borderRight: '1px solid #f1f5f9' }}>
+                  {/* Header do Gráfico com Toggle e Breadcrumb */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <h4 style={{ ...chartTitle, margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {chartMode === 'diario' ? '📈 Uso Diário de Cupons' : `🏢 Cupons por ${geoDrillLabel}`}
+                      {chartMode === 'geo' && (fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all') && (
+                        <span style={{ fontSize: 10, color: '#7c3aed', background: '#f5f3ff', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                          Drill Ativo
+                        </span>
+                      )}
+                    </h4>
+                    
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {chartMode === 'geo' && (fDist !== 'all' || fCoord !== 'all' || fFilial !== 'all') && (
+                        <button
+                          onClick={handleBackDrill}
+                          style={{
+                            padding: '3px 8px', fontSize: 10, fontWeight: 700, borderRadius: 4,
+                            border: '1px solid #7c3aed', background: '#fff', color: '#7c3aed',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#7c3aed'; e.currentTarget.style.color = '#fff'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#7c3aed'; }}
+                        >
+                          ⬅ Voltar Nível
+                        </button>
+                      )}
+                      
+                      <div style={{ display: 'flex', gap: 2, background: '#f1f5f9', padding: 2, borderRadius: 6 }}>
+                        <button
+                          onClick={() => setChartMode('diario')}
+                          disabled={timeChartData.length <= 1}
+                          style={{
+                            padding: '3px 8px', fontSize: 9, fontWeight: 700, borderRadius: 4,
+                            border: 'none', cursor: timeChartData.length <= 1 ? 'not-allowed' : 'pointer',
+                            background: chartMode === 'diario' ? '#7c3aed' : 'transparent',
+                            color: chartMode === 'diario' ? '#fff' : (timeChartData.length <= 1 ? '#cbd5e1' : '#64748b'),
+                            transition: 'all 0.1s'
+                          }}
+                        >
+                          Diário
+                        </button>
+                        <button
+                          onClick={() => setChartMode('geo')}
+                          style={{
+                            padding: '3px 8px', fontSize: 9, fontWeight: 700, borderRadius: 4,
+                            border: 'none', cursor: 'pointer',
+                            background: chartMode === 'geo' ? '#7c3aed' : 'transparent',
+                            color: chartMode === 'geo' ? '#fff' : '#64748b',
+                            transition: 'all 0.1s'
+                          }}
+                        >
+                          Geográfico
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ height: 220 }}>
+                    {chartMode === 'diario' && timeChartData.length > 1 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={timeChartData}>
                           <defs>
@@ -420,9 +533,9 @@ export default function CuponsPage({
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} fontWeight={600}
+                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={9} fontWeight={600}
                             tickFormatter={v => v.split('-').slice(1).reverse().join('/')} />
-                          <YAxis stroke="#94a3b8" fontSize={10} fontWeight={600} />
+                          <YAxis stroke="#94a3b8" fontSize={9} fontWeight={600} />
                           <Tooltip
                             contentStyle={tooltipStyle}
                             labelFormatter={l => `Data: ${l.split('-').reverse().join('/')}`}
@@ -431,9 +544,44 @@ export default function CuponsPage({
                           <Area type="monotone" dataKey="cupons" stroke="#7c3aed" strokeWidth={2} fillOpacity={1} fill="url(#colorCupons)" />
                         </AreaChart>
                       </ResponsiveContainer>
-                    </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={geoChartData} margin={{ top: 10, right: 5, left: -10, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                          <XAxis
+                            dataKey="name"
+                            stroke="#94a3b8"
+                            fontSize={9}
+                            fontWeight={700}
+                            tickFormatter={v => v.length > 15 ? v.slice(0, 15) + '…' : v}
+                          />
+                          <YAxis stroke="#94a3b8" fontSize={9} fontWeight={600} />
+                          <Tooltip
+                            contentStyle={tooltipStyle}
+                            formatter={(v, name) => name === 'valor' ? [fmtCurrency(v), 'Faturamento'] : [fmtInteger(v), 'Cupons']}
+                          />
+                          <Bar
+                            dataKey="cupons"
+                            fill="#7c3aed"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={30}
+                            cursor="pointer"
+                            onClick={(data) => {
+                              if (data && data.name) {
+                                handleGeoChartClick(data.name);
+                              }
+                            }}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
-                )}
+                  {chartMode === 'geo' && (
+                    <div style={{ fontSize: 9, color: '#94a3b8', textAlign: 'center', marginTop: 4, fontWeight: 500 }}>
+                      💡 Clique em uma barra para fazer drill-down: Distrital ➔ Coordenador ➔ Filial
+                    </div>
+                  )}
+                </div>
 
                 {/* Gráfico: Top Cupons */}
                 {topCouponsChart.length > 0 && (
