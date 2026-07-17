@@ -2,6 +2,7 @@ services:
   - type: web
     name: dashboard-diretoria-c
     env: node
+    plan: free
     buildCommand: npm install --include=dev && npm run build && cd server && npm install
     startCommand: cd server && node --max-old-space-size=460 server.js
     envVars:
