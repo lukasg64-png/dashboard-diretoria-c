@@ -19,16 +19,20 @@ const headers = {
 let isSyncing = false;
 let progressPercent = 0;
 let lastSyncTime = null;
+let ordersCache = null;
 
 function loadOrdersCache() {
+  if (ordersCache) return ordersCache;
   if (fs.existsSync(CACHE_FILE)) {
     try {
-      return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8')) || {};
+      ordersCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8')) || {};
+      return ordersCache;
     } catch (e) {
       console.error('[VTEX Sync] Erro ao carregar cache de pedidos:', e.message);
     }
   }
-  return {};
+  ordersCache = {};
+  return ordersCache;
 }
 
 async function saveCacheAsync(cacheObj, filePath) {
@@ -165,22 +169,20 @@ async function fetchOrderDetails(orderIds, cache) {
 
 async function syncPeriod(daysAgo, cache) {
   let startFromIso = null;
-  if (daysAgo !== 0) {
-    const utcOffset = -3;
-    const targetBrt = new Date(Date.now() + utcOffset * 3600000 - daysAgo * 86400000).toISOString().slice(0, 10);
-    const dayOnly = Object.values(cache).filter(o => {
-      if (!o.creationDate) return false;
-      const brt = new Date(new Date(o.creationDate).getTime() + utcOffset * 3600000);
-      return brt.toISOString().slice(0, 10) === targetBrt;
-    });
-    
-    // Sincronização incremental se já temos dados daquele dia no cache
-    if (dayOnly.length > 0) {
-      const latestMs = Math.max(...dayOnly.map(o => new Date(o.creationDate).getTime()));
-      const fromMs = latestMs - 10 * 60 * 1000; // 10 min de overlap
-      startFromIso = new Date(fromMs).toISOString().slice(0, 19) + 'Z';
-      console.log(`[VTEX Sync] Sync incremental dia=${daysAgo} a partir de ${startFromIso}`);
-    }
+  const utcOffset = -3;
+  const targetBrt = new Date(Date.now() + utcOffset * 3600000 - daysAgo * 86400000).toISOString().slice(0, 10);
+  const dayOnly = Object.values(cache).filter(o => {
+    if (!o.creationDate) return false;
+    const brt = new Date(new Date(o.creationDate).getTime() + utcOffset * 3600000);
+    return brt.toISOString().slice(0, 10) === targetBrt;
+  });
+  
+  // Sincronização incremental se já temos dados daquele dia no cache
+  if (dayOnly.length > 0) {
+    const latestMs = Math.max(...dayOnly.map(o => new Date(o.creationDate).getTime()));
+    const fromMs = latestMs - 10 * 60 * 1000; // 10 min de overlap
+    startFromIso = new Date(fromMs).toISOString().slice(0, 19) + 'Z';
+    console.log(`[VTEX Sync] Sync incremental dia=${daysAgo} a partir de ${startFromIso}`);
   }
 
   const blocks = getDayRange(daysAgo, startFromIso);

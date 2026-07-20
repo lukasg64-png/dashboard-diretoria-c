@@ -171,15 +171,28 @@ function canonicalize(normName) {
   return res.replace(/\s+/g, ' ').trim();
 }
 
+const lookupCache = new Map();
+
 function lookupStore(vtexCleanName) {
+  if (!vtexCleanName) return null;
+  if (lookupCache.has(vtexCleanName)) {
+    return lookupCache.get(vtexCleanName);
+  }
+
   const normName = normalizeStoreName(vtexCleanName);
-  if (filiaisCadastro[normName]) return { ...filiaisCadastro[normName], matchedKey: normName };
+  if (filiaisCadastro[normName]) {
+    const res = { ...filiaisCadastro[normName], matchedKey: normName };
+    lookupCache.set(vtexCleanName, res);
+    return res;
+  }
   
   const canon = canonicalize(normName);
   const keys = Object.keys(filiaisCadastro);
   for (const key of keys) {
     if (canonicalize(key) === canon) {
-      return { ...filiaisCadastro[key], matchedKey: key };
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
     }
   }
   
@@ -188,10 +201,14 @@ function lookupStore(vtexCleanName) {
     const baseName = numMatch[1].trim();
     for (const key of keys) {
       if (canonicalize(key) === baseName) {
-        return { ...filiaisCadastro[key], matchedKey: key };
+        const res = { ...filiaisCadastro[key], matchedKey: key };
+        lookupCache.set(vtexCleanName, res);
+        return res;
       }
     }
   }
+  
+  lookupCache.set(vtexCleanName, null);
   return null;
 }
 
