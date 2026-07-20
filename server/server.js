@@ -1076,12 +1076,16 @@ app.get('/api/vtex-debug', async (req, res) => {
   const token = process.env.VTEX_APP_TOKEN;
   const acct  = process.env.VTEX_ACCOUNT || 'sjdigital';
 
+  // Mostra preview seguro da credencial (primeiros 6 + últimos 4 chars)
+  const preview = (s) => s ? `${s.slice(0, 6)}...${s.slice(-4)} (${s.length} chars)` : 'NÃO DEFINIDA';
+
   if (!key || !token) {
     return res.json({
       status: 'error',
       problem: 'Credenciais VTEX não configuradas no servidor.',
-      vtex_app_key_present:   !!key,
-      vtex_app_token_present: !!token,
+      vtex_app_key:   preview(key),
+      vtex_app_token: preview(token),
+      vtex_account:   acct,
       fix: 'Configure VTEX_APP_KEY e VTEX_APP_TOKEN nas Environment Variables do Render.'
     });
   }
@@ -1106,14 +1110,14 @@ app.get('/api/vtex-debug', async (req, res) => {
 
     const vtexOrders = vtexSync.getOrdersCache();
     res.json({
-      status:               result.statusCode === 200 ? 'ok' : 'vtex_error',
-      vtex_http_status:     result.statusCode,
+      status:                result.statusCode === 200 ? 'ok' : 'vtex_error',
+      vtex_http_status:      result.statusCode,
       vtex_response_snippet: result.body,
-      vtex_app_key_present:   true,
-      vtex_app_token_present: true,
-      vtex_account:           acct,
-      cached_orders_count:    Object.keys(vtexOrders).length,
-      sync_state:             vtexSync.getSyncState()
+      vtex_account:          acct,
+      vtex_app_key:          preview(key),
+      vtex_app_token:        preview(token),
+      cached_orders_count:   Object.keys(vtexOrders).length,
+      sync_state:            vtexSync.getSyncState()
     });
   } catch (err) {
     res.json({ status: 'exception', error: err.message });

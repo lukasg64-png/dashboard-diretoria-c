@@ -11,4 +11,10 @@ services:
       - key: UPLOAD_TOKEN
         value: sjcomercial
       - key: RENDER_EXTERNAL_URL
-        value: https://dashboard-diretoria-cdashboard-diretoria.onrender.com
+        value: https://dashboard-diretoria-c.onrender.com
+      - key: VTEX_ACCOUNT
+        value: sjdigital
+      - key: VTEX_APP_KEY
+        sync: false
+      - key: VTEX_APP_TOKEN
+        sync: false
