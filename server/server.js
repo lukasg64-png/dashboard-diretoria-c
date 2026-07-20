@@ -1158,6 +1158,8 @@ app.get('/api/vtex-debug', async (req, res) => {
       vtex_account:          acct,
       vtex_app_key:          preview(key),
       vtex_app_token:        preview(token),
+      cadastro_keys_count:   Object.keys(filiaisCadastro).length,
+      test_lookup_maringa_5: lookupStore("MARINGA 5"),
       cached_orders_count:   Object.keys(vtexOrders).length,
       orders_with_coupon:    couponCount,
       orders_matched_cintia: matchCount,
