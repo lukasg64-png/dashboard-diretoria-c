@@ -122,7 +122,7 @@ const SPECIAL_VTEX_TO_CSV = {
 };
 
 function canonicalize(normName) {
-  let res = normName;
+  let res = String(normName).toLowerCase();
   if (SPECIAL_VTEX_TO_CSV[res] && SPECIAL_VTEX_TO_CSV[res] !== res) {
     return canonicalize(SPECIAL_VTEX_TO_CSV[res]);
   }
