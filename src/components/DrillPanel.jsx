@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
 import GeoMapPage from './GeoMapPage';
@@ -1247,6 +1247,383 @@ export default function DrillPanel({ onUpload }) {
   const grupos        = data?.grupos || [];
   const linhas        = data?.linhas || [];
 
+  const handleDownloadExcel = useCallback(() => {
+    if (!window.XLSX) {
+      alert('A biblioteca XLSX ainda está carregando no navegador. Tente novamente em alguns segundos.');
+      return;
+    }
+
+    const matchesFilter = (name) => !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const getRowVal = (row, field) => {
+      if (field === 'nome') return row.nome || '';
+      if (viewMode === 'venda') {
+        switch (field) {
+          case 'meta_total': return row.meta_total || 0;
+          case 'pct_meta_total': return row.pct_meta_total || 0;
+          case 'venda_jul26': return row.venda_jul26 || 0;
+          case 'meta_parcial': return row.meta_parcial || 0;
+          case 'desvio': return (row.venda_jul26 || 0) - (row.meta_parcial || 0);
+          case 'venda_jul25': return row.venda_jul25 || 0;
+          case 'evol_yoy': return row.evol_yoy || 0;
+          case 'evol_mom': return row.evol_mom || 0;
+          case 'part_digital': return row.pct_ecomm_jul26 || 0;
+          case 'part_digital_ant': return row.pct_ecomm_jul25 || 0;
+          default: return 0;
+        }
+      } else {
+        const m = getMetrics(row);
+        switch (field) {
+          case 'val26': return m.val26 || 0;
+          case 'val25': return m.val25 || 0;
+          case 'yoy': return m.yoy || 0;
+          case 'valJun': return m.valJun || 0;
+          case 'mom': return m.mom || 0;
+          default: return 0;
+        }
+      }
+    };
+
+    const localSortComparator = (a, b) => {
+      const va = getRowVal(a, sortField);
+      const vb = getRowVal(b, sortField);
+      if (va === vb) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      let cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+      return sortOrder === 'asc' ? cmp : -cmp;
+    };
+
+    let headers = [];
+    let rows = [];
+
+    if (activeTab === 'hierarquia') {
+      if (viewMode === 'venda') {
+        headers = [
+          'Nível',
+          'Distrital',
+          'Coordenador',
+          'Filial',
+          'Meta Total (R$)',
+          '% Meta Total',
+          `Venda E-comm ${labelAtual} (R$)`,
+          `Meta Parcial ${labelAtual} (R$)`,
+          'Desvio da Meta (R$)',
+          `Venda ${labelAtualAno} (R$)`,
+          `Evolução YoY vs ${labelAtualAno} (%)`,
+          `Crescimento MoM vs ${labelAnt} (%)`,
+          'Part. Digital (%)',
+          'Part. Digital Anterior (%)'
+        ];
+      } else {
+        const label = viewMode === 'cup' ? 'Cupons' : 'Ticket Médio';
+        headers = [
+          'Nível',
+          'Distrital',
+          'Coordenador',
+          'Filial',
+          `${label} ${labelAtual}`,
+          `${label} ${labelAtualAno}`,
+          'Evolução YoY (%)',
+          `${label} ${labelAnt}`,
+          'Crescimento MoM (%)'
+        ];
+      }
+
+      // Filtrar e ordenar Distritais
+      const sortedDists = [...distritais]
+        .filter(d => {
+          if (matchesFilter(d.nome)) return true;
+          const cs = coordenadores.filter(c => c.distrital === d.nome);
+          return cs.some(c => matchesFilter(c.nome) || filiais.filter(f => f.coordenador === c.nome).some(f => matchesFilter(f.nome)));
+        })
+        .sort(localSortComparator);
+
+      sortedDists.forEach(dist => {
+        // Distrital Row
+        if (viewMode === 'venda') {
+          rows.push([
+            'Distrital',
+            dist.nome,
+            '',
+            '',
+            getRowVal(dist, 'meta_total'),
+            getRowVal(dist, 'pct_meta_total'),
+            getRowVal(dist, 'venda_jul26'),
+            getRowVal(dist, 'meta_parcial'),
+            getRowVal(dist, 'desvio'),
+            getRowVal(dist, 'venda_jul25'),
+            getRowVal(dist, 'evol_yoy'),
+            getRowVal(dist, 'evol_mom'),
+            getRowVal(dist, 'part_digital'),
+            getRowVal(dist, 'part_digital_ant')
+          ]);
+        } else {
+          rows.push([
+            'Distrital',
+            dist.nome,
+            '',
+            '',
+            getRowVal(dist, 'val26'),
+            getRowVal(dist, 'val25'),
+            getRowVal(dist, 'yoy'),
+            getRowVal(dist, 'valJun'),
+            getRowVal(dist, 'mom')
+          ]);
+        }
+
+        // Coordenadores
+        const sortedCoords = coordenadores
+          .filter(c => c.distrital === dist.nome)
+          .filter(c => {
+            if (matchesFilter(c.nome) || matchesFilter(dist.nome)) return true;
+            return filiais.filter(f => f.coordenador === c.nome).some(f => matchesFilter(f.nome));
+          })
+          .sort(localSortComparator);
+
+        sortedCoords.forEach(coord => {
+          if (viewMode === 'venda') {
+            rows.push([
+              'Coordenador',
+              dist.nome,
+              coord.nome,
+              '',
+              getRowVal(coord, 'meta_total'),
+              getRowVal(coord, 'pct_meta_total'),
+              getRowVal(coord, 'venda_jul26'),
+              getRowVal(coord, 'meta_parcial'),
+              getRowVal(coord, 'desvio'),
+              getRowVal(coord, 'venda_jul25'),
+              getRowVal(coord, 'evol_yoy'),
+              getRowVal(coord, 'evol_mom'),
+              getRowVal(coord, 'part_digital'),
+              getRowVal(coord, 'part_digital_ant')
+            ]);
+          } else {
+            rows.push([
+              'Coordenador',
+              dist.nome,
+              coord.nome,
+              '',
+              getRowVal(coord, 'val26'),
+              getRowVal(coord, 'val25'),
+              getRowVal(coord, 'yoy'),
+              getRowVal(coord, 'valJun'),
+              getRowVal(coord, 'mom')
+            ]);
+          }
+
+          // Filiais
+          const sortedFils = filiais
+            .filter(f => f.coordenador === coord.nome)
+            .filter(f => matchesFilter(f.nome) || matchesFilter(coord.nome) || matchesFilter(dist.nome))
+            .sort(localSortComparator);
+
+          sortedFils.forEach(fil => {
+            if (viewMode === 'venda') {
+              rows.push([
+                'Filial',
+                dist.nome,
+                coord.nome,
+                fil.nome,
+                getRowVal(fil, 'meta_total'),
+                getRowVal(fil, 'pct_meta_total'),
+                getRowVal(fil, 'venda_jul26'),
+                getRowVal(fil, 'meta_parcial'),
+                getRowVal(fil, 'desvio'),
+                getRowVal(fil, 'venda_jul25'),
+                getRowVal(fil, 'evol_yoy'),
+                getRowVal(fil, 'evol_mom'),
+                getRowVal(fil, 'part_digital'),
+                getRowVal(fil, 'part_digital_ant')
+              ]);
+            } else {
+              rows.push([
+                'Filial',
+                dist.nome,
+                coord.nome,
+                fil.nome,
+                getRowVal(fil, 'val26'),
+                getRowVal(fil, 'val25'),
+                getRowVal(fil, 'yoy'),
+                getRowVal(fil, 'valJun'),
+                getRowVal(fil, 'mom')
+              ]);
+            }
+          });
+        });
+      });
+
+      // Total geral
+      if (viewMode === 'venda') {
+        rows.push([
+          'TOTAL GERAL',
+          '',
+          '',
+          '',
+          getRowVal(t, 'meta_total'),
+          getRowVal(t, 'pct_meta_total'),
+          getRowVal(t, 'venda_jul26'),
+          getRowVal(t, 'meta_parcial'),
+          getRowVal(t, 'desvio'),
+          getRowVal(t, 'venda_jul25'),
+          getRowVal(t, 'evol_yoy'),
+          getRowVal(t, 'evol_mom'),
+          getRowVal(t, 'part_digital'),
+          getRowVal(t, 'part_digital_ant')
+        ]);
+      } else {
+        rows.push([
+          'TOTAL GERAL',
+          '',
+          '',
+          '',
+          getRowVal(t, 'val26'),
+          getRowVal(t, 'val25'),
+          getRowVal(t, 'yoy'),
+          getRowVal(t, 'valJun'),
+          getRowVal(t, 'mom')
+        ]);
+      }
+
+    } else {
+      // Tab Categorias / Grupos
+      const isFlat = viewMode === 'cup' || viewMode === 'tm';
+
+      if (viewMode === 'venda') {
+        headers = [
+          'Grupo',
+          'Linha',
+          'Meta Total (R$)',
+          '% Meta Total',
+          `Venda E-comm ${labelAtual} (R$)`,
+          `Meta Parcial ${labelAtual} (R$)`,
+          'Desvio da Meta (R$)',
+          `Venda ${labelAtualAno} (R$)`,
+          `Evolução YoY vs ${labelAtualAno} (%)`,
+          `Crescimento MoM vs ${labelAnt} (%)`,
+          'Part. Digital (%)',
+          'Part. Digital Anterior (%)'
+        ];
+      } else {
+        const label = viewMode === 'cup' ? 'Cupons' : 'Ticket Médio';
+        headers = [
+          'Grupo',
+          'Linha',
+          `${label} ${labelAtual}`,
+          `${label} ${labelAtualAno}`,
+          'Evolução YoY (%)',
+          `${label} ${labelAnt}`,
+          'Crescimento MoM (%)'
+        ];
+      }
+
+      if (isFlat) {
+        const filteredLinhas = linhas
+          .filter(l => !searchTerm || matchesFilter(l.nome) || matchesFilter(l.grupo))
+          .sort(localSortComparator);
+
+        filteredLinhas.forEach(l => {
+          rows.push([
+            l.grupo,
+            l.nome,
+            getRowVal(l, 'val26'),
+            getRowVal(l, 'val25'),
+            getRowVal(l, 'yoy'),
+            getRowVal(l, 'valJun'),
+            getRowVal(l, 'mom')
+          ]);
+        });
+      } else {
+        // Agrupado venda
+        const sortedGrupos = [...grupos]
+          .filter(g => {
+            if (matchesFilter(g.nome)) return true;
+            return linhas.some(l => (l.grupo === g.nomeOriginal || l.grupo === g.nome) && matchesFilter(l.nome));
+          })
+          .sort(localSortComparator);
+
+        sortedGrupos.forEach(grupo => {
+          rows.push([
+            grupo.nome,
+            '',
+            getRowVal(grupo, 'meta_total'),
+            getRowVal(grupo, 'pct_meta_total'),
+            getRowVal(grupo, 'venda_jul26'),
+            getRowVal(grupo, 'meta_parcial'),
+            getRowVal(grupo, 'desvio'),
+            getRowVal(grupo, 'venda_jul25'),
+            getRowVal(grupo, 'evol_yoy'),
+            getRowVal(grupo, 'evol_mom'),
+            getRowVal(grupo, 'part_digital'),
+            getRowVal(grupo, 'part_digital_ant')
+          ]);
+
+          const grupoLinhas = linhas
+            .filter(l => l.grupo === grupo.nomeOriginal || l.grupo === grupo.nome)
+            .filter(l => matchesFilter(l.nome) || matchesFilter(grupo.nome))
+            .sort(localSortComparator);
+
+          grupoLinhas.forEach(l => {
+            rows.push([
+              grupo.nome,
+              l.nome,
+              getRowVal(l, 'meta_total'),
+              getRowVal(l, 'pct_meta_total'),
+              getRowVal(l, 'venda_jul26'),
+              getRowVal(l, 'meta_parcial'),
+              getRowVal(l, 'desvio'),
+              getRowVal(l, 'venda_jul25'),
+              getRowVal(l, 'evol_yoy'),
+              getRowVal(l, 'evol_mom'),
+              getRowVal(l, 'part_digital'),
+              getRowVal(l, 'part_digital_ant')
+            ]);
+          });
+        });
+      }
+
+      // Total geral
+      if (viewMode === 'venda') {
+        rows.push([
+          'TOTAL GERAL',
+          '',
+          getRowVal(t, 'meta_total'),
+          getRowVal(t, 'pct_meta_total'),
+          getRowVal(t, 'venda_jul26'),
+          getRowVal(t, 'meta_parcial'),
+          getRowVal(t, 'desvio'),
+          getRowVal(t, 'venda_jul25'),
+          getRowVal(t, 'evol_yoy'),
+          getRowVal(t, 'evol_mom'),
+          getRowVal(t, 'part_digital'),
+          getRowVal(t, 'part_digital_ant')
+        ]);
+      } else {
+        rows.push([
+          'TOTAL GERAL',
+          '',
+          getRowVal(t, 'val26'),
+          getRowVal(t, 'val25'),
+          getRowVal(t, 'yoy'),
+          getRowVal(t, 'valJun'),
+          getRowVal(t, 'mom')
+        ]);
+      }
+    }
+
+    const ws = window.XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = headers.map(() => ({ wch: 18 }));
+
+    const wb = window.XLSX.utils.book_new();
+    const sheetName = activeTab === 'hierarquia' ? 'Hierarquia' : 'Categorias';
+    window.XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    const fileLabel = viewMode === 'venda' ? 'Faturamento' : viewMode === 'cup' ? 'Cupons' : 'TicketMedio';
+    const filename = `Dashboard_C_${sheetName}_${fileLabel}_${labelAtual.replace('/', '_')}.xlsx`;
+    window.XLSX.writeFile(wb, filename);
+  }, [activeTab, viewMode, distritais, coordenadores, filiais, grupos, linhas, searchTerm, sortField, sortOrder, labelAtual, labelAtualAno, labelAnt, t, getMetrics]);
+
   const chartItems = useMemo(() => {
     let rawList = [];
     if (activeTab === 'hierarquia') {
@@ -2377,6 +2754,33 @@ export default function DrillPanel({ onUpload }) {
                 {activeTab === 'hierarquia' ? 'Desempenho E-Commerce — Hierarquia Organizacional' : 'Desempenho E-Commerce — Grupos e Linhas de Produtos'}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  onClick={handleDownloadExcel}
+                  title="Exportar Tabela para Excel"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#0f5132',
+                    background: '#d1e7dd',
+                    border: '1px solid #badbcc',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease-in-out',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#bcd0c7';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = '#d1e7dd';
+                  }}
+                >
+                  <Download size={13} />
+                  <span>Exportar Excel</span>
+                </button>
                 <input
                   type="text"
                   placeholder="Pesquisar..."
