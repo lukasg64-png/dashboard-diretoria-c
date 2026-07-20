@@ -1131,6 +1131,7 @@ app.get('/api/vtex-debug', async (req, res) => {
     let couponCount = 0;
     let matchCount = 0;
     const sellersSet = new Set();
+    const couponSellersSet = new Set();
     const matchedSellersSet = new Set();
 
     Object.values(vtexOrders).forEach(order => {
@@ -1140,6 +1141,7 @@ app.get('/api/vtex-debug', async (req, res) => {
       if (order.coupon && order.status !== 'canceled') {
         couponCount++;
         const seller = order.sellers?.[0]?.name || '';
+        couponSellersSet.add(seller);
         const cleanSeller = seller.includes(' - ') ? seller.split(' - ')[0].trim() : seller;
         const storeInfo = lookupStore(cleanSeller);
         if (storeInfo) {
@@ -1162,6 +1164,7 @@ app.get('/api/vtex-debug', async (req, res) => {
       unique_sellers_count:  sellersSet.size,
       matched_sellers_count: matchedSellersSet.size,
       sellers_sample:        Array.from(sellersSet).slice(0, 10),
+      coupon_sellers_sample: Array.from(couponSellersSet).slice(0, 10),
       matched_sellers_sample:Array.from(matchedSellersSet).slice(0, 10),
       sync_state:            vtexSync.getSyncState()
     });
