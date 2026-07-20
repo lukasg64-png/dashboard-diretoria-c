@@ -1126,6 +1126,29 @@ app.get('/api/vtex-debug', async (req, res) => {
     });
 
     const vtexOrders = vtexSync.getOrdersCache();
+    
+    // Diagnósticos extras do cache
+    let couponCount = 0;
+    let matchCount = 0;
+    const sellersSet = new Set();
+    const matchedSellersSet = new Set();
+
+    Object.values(vtexOrders).forEach(order => {
+      if (order.sellers?.[0]?.name) {
+        sellersSet.add(order.sellers[0].name);
+      }
+      if (order.coupon && order.status !== 'canceled') {
+        couponCount++;
+        const seller = order.sellers?.[0]?.name || '';
+        const cleanSeller = seller.includes(' - ') ? seller.split(' - ')[0].trim() : seller;
+        const storeInfo = lookupStore(cleanSeller);
+        if (storeInfo) {
+          matchCount++;
+          matchedSellersSet.add(cleanSeller);
+        }
+      }
+    });
+
     res.json({
       status:                result.statusCode === 200 ? 'ok' : 'vtex_error',
       vtex_http_status:      result.statusCode,
@@ -1134,6 +1157,12 @@ app.get('/api/vtex-debug', async (req, res) => {
       vtex_app_key:          preview(key),
       vtex_app_token:        preview(token),
       cached_orders_count:   Object.keys(vtexOrders).length,
+      orders_with_coupon:    couponCount,
+      orders_matched_cintia: matchCount,
+      unique_sellers_count:  sellersSet.size,
+      matched_sellers_count: matchedSellersSet.size,
+      sellers_sample:        Array.from(sellersSet).slice(0, 10),
+      matched_sellers_sample:Array.from(matchedSellersSet).slice(0, 10),
       sync_state:            vtexSync.getSyncState()
     });
   } catch (err) {
