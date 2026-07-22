@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Cancelamentos VTEX - Farmácias São João</title>
+  
+  <!-- Fonte Google Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Estilos customizados -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Topbar / Header -->
+    <header class="topbar">
+      <div class="brand-section">
+        <div class="logo-icon">
+          <i data-lucide="shield-alert"></i>
+        </div>
+        <div class="brand-text">
+          <h1>Dashboard de Cancelamentos VTEX</h1>
+          <p>Análise estratégica dos últimos 90 dias concluídos • Atualização diária às 08:00 AM</p>
+        </div>
+      </div>
+      
+      <div class="actions-section">
+        <div class="sync-status-badge" id="syncStatusBadge">
+          <span class="status-dot green"></span>
+          <span id="syncStatusText">Atualizado às 08:00</span>
+        </div>
+        <button class="btn-sync" id="btnSyncTrigger" title="Sincronizar dados agora com a VTEX">
+          <i data-lucide="refresh-cw"></i>
+          <span>Atualizar VTEX</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Modal / Banner de Progresso da Sincronização -->
+    <div id="syncProgressBanner" class="sync-banner hidden">
+      <div class="banner-content">
+        <div class="spinner"></div>
+        <div class="banner-text">
+          <strong id="bannerTitle">Sincronizando os 90 dias completos da VTEX...</strong>
+          <span id="bannerDetail">Varredura diária sem corte de resultados.</span>
+        </div>
+        <div class="progress-bar-container">
+          <div id="progressBarFill" class="progress-fill" style="width: 0%;"></div>
+        </div>
+        <span id="progressPercentage">0%</span>
+      </div>
+    </div>
+
+    <!-- KPIs Grid -->
+    <section class="kpi-grid">
+      <div class="kpi-card danger">
+        <div class="kpi-icon">
+          <i data-lucide="x-circle"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Pedidos Cancelados</span>
+          <h2 class="kpi-value" id="kpiTotalCount">--</h2>
+          <span class="kpi-subtext" id="kpiTotalCountSub">Janela dos últimos 90 dias</span>
+        </div>
+      </div>
+
+      <div class="kpi-card warning">
+        <div class="kpi-icon">
+          <i data-lucide="dollar-sign"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Perda Financeira Total</span>
+          <h2 class="kpi-value" id="kpiTotalValue">R$ --</h2>
+          <span class="kpi-subtext">Soma do valor bruto cancelado</span>
+        </div>
+      </div>
+
+      <div class="kpi-card info">
+        <div class="kpi-icon">
+          <i data-lucide="shopping-bag"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Ticket Médio Cancelado</span>
+          <h2 class="kpi-value" id="kpiAvgTicket">R$ --</h2>
+          <span class="kpi-subtext">Média por pedido cancelado</span>
+        </div>
+      </div>
+
+      <div class="kpi-card primary">
+        <div class="kpi-icon">
+          <i data-lucide="alert-triangle"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Maior Motivo de Perda</span>
+          <h2 class="kpi-value text-sm" id="kpiTopReason">--</h2>
+          <span class="kpi-subtext" id="kpiTopReasonSub">-- pedidos</span>
+        </div>
+      </div>
+
+      <div class="kpi-card accent">
+        <div class="kpi-icon">
+          <i data-lucide="store"></i>
+        </div>
+        <div class="kpi-info">
+          <span class="kpi-label">Filial com Mais Ruptura</span>
+          <h2 class="kpi-value text-sm" id="kpiTopSeller">--</h2>
+          <span class="kpi-subtext" id="kpiTopSellerSub">-- cancelamentos</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter Toolbar -->
+    <section class="filter-panel">
+      <div class="filter-header">
+        <div class="filter-title">
+          <i data-lucide="sliders"></i>
+          <span>Filtros Dinâmicos</span>
+        </div>
+        <div class="filter-actions">
+          <button class="btn-secondary" id="btnResetFilters">
+            <i data-lucide="rotate-ccw"></i>
+            <span>Limpar Filtros</span>
+          </button>
+          <button class="btn-primary" id="btnExportCSV">
+            <i data-lucide="download"></i>
+            <span>Exportar CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label><i data-lucide="calendar"></i> Período (Data Inicial - Final)</label>
+          <div class="date-inputs">
+            <input type="date" id="filterStartDate">
+            <span>até</span>
+            <input type="date" id="filterEndDate">
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label><i data-lucide="store"></i> Loja / Filial</label>
+          <select id="filterSeller">
+            <option value="ALL">Todas as Lojas</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label><i data-lucide="tag"></i> Categoria do Produto</label>
+          <select id="filterProductCategory">
+            <option value="ALL">Todas as Categorias</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label><i data-lucide="help-circle"></i> Categoria do Motivo</label>
+          <select id="filterReason">
+            <option value="ALL">Todos os Motivos</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label><i data-lucide="credit-card"></i> Meio de Pagamento</label>
+          <select id="filterPayment">
+            <option value="ALL">Todos os Pagamentos</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label><i data-lucide="truck"></i> Canal de Entrega</label>
+          <select id="filterChannel">
+            <option value="ALL">Todos os Canais</option>
+          </select>
+        </div>
+
+        <div class="filter-group search-group">
+          <label><i data-lucide="search"></i> Buscar Pedido, Motivo ou Produto</label>
+          <div class="search-input-wrapper">
+            <input type="text" id="filterSearch" placeholder="Ex: 1648..., estoque, bepantol, antialérgicos...">
+            <i data-lucide="search" class="search-icon"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-grid">
+      <!-- Chart 1: Evolução Diária -->
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="trending-up"></i> Evolução Diária de Cancelamentos (Últimos 90 Dias)</h3>
+            <p>Comportamento temporal com ponto marcado em cada dia (Volume e Valor R$)</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartTimeline"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Top Motivos de Cancelamento -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="pie-chart"></i> Principais Causa/Motivos</h3>
+            <p>Classificação dos motivos declarados e automáticos</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartReasons"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 3: Top Lojas/Filiais -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="building-2"></i> Top 10 Lojas com Mais Cancelamentos</h3>
+            <p>Filiais físicas com maior incidência de perda</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartSellers"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 4: Top Categorias de Produtos -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="tag"></i> Top 10 Categorias de Produtos Canceladas</h3>
+            <p>Categorias e departamentos com maior volume de descarte</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartCategories"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 5: Canais de Entrega -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="package-check"></i> Canal de Entrega</h3>
+            <p>Retirada em Loja (Pickup) vs Entrega (Delivery)</p>
+          </div>
+        </div>
+        <div class="chart-container donut-container">
+          <canvas id="chartChannels"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 6: Meios de Pagamento -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="credit-card"></i> Meio de Pagamento</h3>
+            <p>Volume por forma de pagamento utilizada</p>
+          </div>
+        </div>
+        <div class="chart-container donut-container">
+          <canvas id="chartPayments"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 7: Concentração por Horário -->
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <div>
+            <h3><i data-lucide="clock"></i> Distribuição por Horário do Dia (00h - 23h)</h3>
+            <p>Identificação de picos de cancelamento ao longo do dia</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartHourly"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data Table Section -->
+    <section class="table-section">
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <h3><i data-lucide="list"></i> Detalhamento dos Pedidos Cancelados</h3>
+            <p id="tableSubCount">Exibindo pedidos filtrados</p>
+          </div>
+          <div class="table-controls">
+            <label for="tableSort">Ordenar por:</label>
+            <select id="tableSort">
+              <option value="date_desc">Data (Mais recente)</option>
+              <option value="date_asc">Data (Mais antigo)</option>
+              <option value="value_desc">Maior Valor (R$)</option>
+              <option value="value_asc">Menor Valor (R$)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID Pedido</th>
+                <th>Data / Hora</th>
+                <th>Loja / Filial</th>
+                <th>Motivo de Cancelamento</th>
+                <th>Categoria Motivo</th>
+                <th>Categorias Produto</th>
+                <th>Canal</th>
+                <th>Pagamento</th>
+                <th>Valor (R$)</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="10" class="loading-cell">Carregando pedidos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <span class="pagination-info" id="paginationInfo">Página 1 de 1</span>
+          <div class="pagination-buttons">
+            <button id="btnPrevPage" disabled><i data-lucide="chevron-left"></i> Anterior</button>
+            <button id="btnNextPage" disabled>Próxima <i data-lucide="chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal Detalhes do Pedido -->
+    <div id="orderDetailModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 id="modalOrderId">Pedido #--</h3>
+            <span id="modalOrderDate" class="modal-date">--</span>
+          </div>
+          <button class="modal-close" id="btnCloseModal">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBodyContent">
+          <!-- Conteúdo dinâmico preenchido via Javascript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Farmácias São João • Painel Corporativo de Monitoramento VTEX OMS • Atualizado automaticamente às 08:00 AM</p>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

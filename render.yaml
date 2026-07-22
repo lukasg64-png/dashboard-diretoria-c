@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: dashboard-cancelamentos-vtex
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: VTEX_ACCOUNT
+        value: sjdigital
+      - key: VTEX_APP_KEY
+        value: vtexappkey-sjdigital-NBIBYX
+      - key: VTEX_APP_TOKEN
+        value: ZWWMCOPAPYMWRDDFJXJASHHUYAHMNWFDLQKYEFYTGNOHDWBDBJGDWDRAQKGALTKTJZUTNMSEOSARVFCIQDNTEVGACYJBFYYKDFRYJTFSQJTOANANWPYYWISDULGXVMON
