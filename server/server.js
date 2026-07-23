@@ -1091,10 +1091,8 @@ app.get('/api/coupons', (req, res) => {
         if (!storeInfo) return;
         
         let dateStr = '';
-        let utcDateStr = '';
         if (order.creationDate) {
           const d = new Date(order.creationDate);
-          utcDateStr = d.toISOString().slice(0, 10);
           const brt = new Date(d.getTime() - 3 * 3600000);
           dateStr = brt.toISOString().slice(0, 10);
         }
@@ -1102,7 +1100,6 @@ app.get('/api/coupons', (req, res) => {
         list.push({
           orderId: order.orderId,
           date: dateStr,
-          utcDate: utcDateStr,
           creationDate: order.creationDate || '',
           coupon: String(order.coupon).toUpperCase().trim(),
           value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
