@@ -15,6 +15,49 @@ const headers = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 };
 
+const { Storage } = require('@google-cloud/storage');
+const GCS_BUCKET = process.env.GCS_BUCKET;
+let storageClient = null;
+
+if (GCS_BUCKET) {
+  const saKeyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || 'C:\\Users\\lucas.alves6\\Downloads\\ga-fsj-c165e892c46a.json';
+  if (fs.existsSync(saKeyPath)) {
+    storageClient = new Storage({ keyFilename: saKeyPath });
+  } else {
+    storageClient = new Storage();
+  }
+}
+
+async function restoreCacheFromGCS() {
+  if (!GCS_BUCKET || !storageClient || fs.existsSync(CACHE_FILE)) return;
+  try {
+    const bucket = storageClient.bucket(GCS_BUCKET);
+    const file = bucket.file('vtex_orders_cache.json');
+    const [exists] = await file.exists();
+    if (exists) {
+      console.log('☁️ [VTEX Sync] Baixando vtex_orders_cache.json do GCS...');
+      await file.download({ destination: CACHE_FILE });
+      console.log('☁️ [VTEX Sync] Cache do VTEX restaurado do GCS.');
+    }
+  } catch (err) {
+    console.error('❌ [VTEX Sync] Erro ao restaurar cache do GCS:', err.message);
+  }
+}
+
+async function backupCacheToGCS() {
+  if (!GCS_BUCKET || !storageClient || !fs.existsSync(CACHE_FILE)) return;
+  try {
+    const bucket = storageClient.bucket(GCS_BUCKET);
+    await bucket.upload(CACHE_FILE, {
+      destination: 'vtex_orders_cache.json',
+      metadata: { cacheControl: 'no-cache' }
+    });
+    console.log('☁️ [VTEX Sync] Cache vtex_orders_cache.json salvo no GCS com sucesso.');
+  } catch (err) {
+    console.error('❌ [VTEX Sync] Erro ao salvar backup do cache no GCS:', err.message);
+  }
+}
+
 // Global sync state flag
 let isSyncing = false;
 let progressPercent = 0;
@@ -251,6 +294,7 @@ async function syncVtexData(forceFull = false) {
   console.log(`[VTEX Sync] Iniciando sincronização de cupons (forceFull=${forceFull})...`);
   
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  await restoreCacheFromGCS();
   const cache = loadOrdersCache();
   
   try {
@@ -267,6 +311,7 @@ async function syncVtexData(forceFull = false) {
     }
     pruneCache(cache);
     await saveCacheAsync(cache, CACHE_FILE);
+    await backupCacheToGCS();
     lastSyncTime = new Date().toISOString();
     console.log(`[VTEX Sync] Sincronização concluída com sucesso às ${lastSyncTime}.`);
   } catch (err) {

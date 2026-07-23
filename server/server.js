@@ -37,17 +37,42 @@ const EXCEL_PATH    = process.env.EXCEL_PATH || DEFAULT_EXCEL;
 // Cadastro de Filiais (Coordenadores, Distritais e Localização Geográfica)
 const CADASTRO_PATH = path.join(__dirname, 'filiais_cadastro.json');
 let filiaisCadastro = {};
+const lookupCache = new Map();
+const canonKeysMap = new Map();
+const cityNumKeysMap = new Map();
+
+function buildLookupIndexes() {
+  lookupCache.clear();
+  canonKeysMap.clear();
+  cityNumKeysMap.clear();
+
+  for (const key of Object.keys(filiaisCadastro)) {
+    const normKey = normalizeStoreName(key);
+    const canonKey = canonicalize(normKey);
+    canonKeysMap.set(canonKey, key);
+
+    const item = filiaisCadastro[key];
+    if (item && item.municipio) {
+      const normCity = normalizeStoreName(item.municipio);
+      const numMatch = key.match(/\b(\d+)\b/);
+      const num = numMatch ? numMatch[1] : '';
+      const cityKey = (normCity + ' ' + num).trim();
+      cityNumKeysMap.set(cityKey, key);
+    }
+  }
+}
+
 function loadFiliaisCadastro() {
   if (fs.existsSync(CADASTRO_PATH)) {
     try {
       filiaisCadastro = JSON.parse(fs.readFileSync(CADASTRO_PATH, 'utf8'));
+      buildLookupIndexes();
       console.log(`ℹ️ [cadastro] carregado com ${Object.keys(filiaisCadastro).length} filiais.`);
     } catch (err) {
       console.error(`❌ Erro ao ler filiais_cadastro.json:`, err.message);
     }
   }
 }
-loadFiliaisCadastro();
 
 // ── Mapeamento Fuzzy para Associação com a VTEX ────────────────────────────────
 function normalizeStoreName(str) {
@@ -171,7 +196,8 @@ function canonicalize(normName) {
   return res.replace(/\s+/g, ' ').trim();
 }
 
-const lookupCache = new Map();
+loadFiliaisCadastro();
+
 
 function lookupStore(vtexCleanName) {
   if (!vtexCleanName) return null;
@@ -187,24 +213,38 @@ function lookupStore(vtexCleanName) {
   }
   
   const canon = canonicalize(normName);
-  const keys = Object.keys(filiaisCadastro);
-  for (const key of keys) {
-    if (canonicalize(key) === canon) {
-      const res = { ...filiaisCadastro[key], matchedKey: key };
-      lookupCache.set(vtexCleanName, res);
-      return res;
-    }
+  if (canonKeysMap.has(canon)) {
+    const key = canonKeysMap.get(canon);
+    const res = { ...filiaisCadastro[key], matchedKey: key };
+    lookupCache.set(vtexCleanName, res);
+    return res;
   }
   
   const numMatch = canon.match(/^(.+?)\s+(\d+)$/);
   if (numMatch) {
     const baseName = numMatch[1].trim();
-    for (const key of keys) {
-      if (canonicalize(key) === baseName) {
-        const res = { ...filiaisCadastro[key], matchedKey: key };
-        lookupCache.set(vtexCleanName, res);
-        return res;
-      }
+    const num = numMatch[2];
+    
+    if (canonKeysMap.has(baseName)) {
+      const key = canonKeysMap.get(baseName);
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
+    }
+    
+    const cityKey = (baseName + ' ' + num).trim();
+    if (cityNumKeysMap.has(cityKey)) {
+      const key = cityNumKeysMap.get(cityKey);
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
+    }
+  } else {
+    if (cityNumKeysMap.has(canon)) {
+      const key = cityNumKeysMap.get(canon);
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
     }
   }
   
