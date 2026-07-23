@@ -93,7 +93,10 @@ export default function CuponsPage({
         endDate = today;
     }
 
-    return couponRaw.filter(item => item.date >= startDate && item.date <= endDate);
+    return couponRaw.filter(item => 
+      (item.date >= startDate && item.date <= endDate) ||
+      (item.utcDate && item.utcDate >= startDate && item.utcDate <= endDate)
+    );
   }, [couponRaw, fDateMode, fCustomDate]);
 
   // Opções dinâmicas dos dropdowns
