@@ -1090,9 +1090,16 @@ app.get('/api/coupons', (req, res) => {
         // FILTRO: Apenas lojas da Diretoria C (que estão no cadastro)
         if (!storeInfo) return;
         
+        let dateStr = '';
+        if (order.creationDate) {
+          const d = new Date(order.creationDate);
+          const brt = new Date(d.getTime() - 3 * 3600000);
+          dateStr = brt.toISOString().slice(0, 10);
+        }
+
         list.push({
           orderId: order.orderId,
-          date: order.creationDate ? new Date(order.creationDate).toISOString().slice(0, 10) : '',
+          date: dateStr,
           creationDate: order.creationDate || '',
           coupon: String(order.coupon).toUpperCase().trim(),
           value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
