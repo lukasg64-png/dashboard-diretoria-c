@@ -325,5 +325,7 @@ async function syncVtexData(forceFull = false) {
 module.exports = {
   syncVtexData,
   getSyncState: () => ({ isSyncing, progressPercent, lastSyncTime }),
-  getOrdersCache: () => loadOrdersCache()
+  getOrdersCache: () => loadOrdersCache(),
+  restoreCacheFromGCS,
+  backupCacheToGCS
 };
