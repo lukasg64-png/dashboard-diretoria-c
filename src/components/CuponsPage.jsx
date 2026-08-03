@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tag, DollarSign, ShoppingBag, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Tag, DollarSign, ShoppingBag, RefreshCw, ChevronDown, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import * as XLSX from 'xlsx';
 import API from '../api';
 
 const fmtCurrency = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
@@ -287,6 +288,84 @@ export default function CuponsPage({
     }
   }, [fDateMode, fCustomDate]);
 
+  // Exportar relatórios para Excel em arquivo multi-abas (.xlsx)
+  const handleExportExcel = () => {
+    if (!filteredData || filteredData.length === 0) return;
+
+    const xlsxLib = window.XLSX || XLSX;
+    if (!xlsxLib) {
+      alert('Biblioteca Excel indisponível no momento.');
+      return;
+    }
+
+    // 1. Aba Ranking
+    const rankingSheetData = couponRanking.map((item, idx) => ({
+      'Posição': idx + 1,
+      'Código do Cupom': item.coupon,
+      'Usos': item.uses,
+      'Faturamento (R$)': Number((item.revenue || 0).toFixed(2)),
+      'Ticket Médio (R$)': Number((item.uses > 0 ? item.revenue / item.uses : 0).toFixed(2))
+    }));
+
+    // 2. Aba Hierarquia (Distrital -> Coordenador -> Filial)
+    const hierarchyRows = [];
+    hierarchy.forEach(dist => {
+      dist.coords.forEach(coord => {
+        coord.filiais.forEach(fil => {
+          hierarchyRows.push({
+            'Distrital': dist.nome,
+            'Coordenador': coord.nome,
+            'Filial / Loja': fil.nome,
+            'Cupons Usados': fil.uses,
+            'Faturamento (R$)': Number((fil.revenue || 0).toFixed(2)),
+            'Ticket Médio (R$)': Number((fil.uses > 0 ? fil.revenue / fil.uses : 0).toFixed(2))
+          });
+        });
+      });
+    });
+
+    // 3. Aba Detalhes (Pedido a Pedido)
+    const detailsSheetData = filteredData.map(item => ({
+      'Data': item.date ? item.date.split('-').reverse().join('/') : '',
+      'Cupom': item.coupon || '',
+      'Filial / Loja': item.store || '',
+      'Coordenador': item.coordenador || '',
+      'Distrital': item.distrital || '',
+      'Valor (R$)': Number((item.value || 0).toFixed(2))
+    }));
+
+    const wb = xlsxLib.utils.book_new();
+
+    const wsRanking = xlsxLib.utils.json_to_sheet(rankingSheetData);
+    const wsHierarchy = xlsxLib.utils.json_to_sheet(hierarchyRows);
+    const wsDetails = xlsxLib.utils.json_to_sheet(detailsSheetData);
+
+    const autoWidth = (ws, data) => {
+      if (!data || data.length === 0) return;
+      const colWidths = Object.keys(data[0]).map(key => {
+        const maxLen = Math.max(
+          key.length,
+          ...data.map(row => String(row[key] ?? '').length)
+        );
+        return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
+      });
+      ws['!cols'] = colWidths;
+    };
+
+    autoWidth(wsRanking, rankingSheetData);
+    autoWidth(wsHierarchy, hierarchyRows);
+    autoWidth(wsDetails, detailsSheetData);
+
+    xlsxLib.utils.book_append_sheet(wb, wsRanking, 'Ranking Cupons');
+    xlsxLib.utils.book_append_sheet(wb, wsHierarchy, 'Por Hierarquia');
+    xlsxLib.utils.book_append_sheet(wb, wsDetails, 'Detalhes Pedidos');
+
+    const dateStr = getBrtDateStr(0);
+    const fileName = `cupons_vtex_${fDateMode}_${dateStr}.xlsx`;
+
+    xlsxLib.writeFile(wb, fileName);
+  };
+
   if (couponLoading && couponRaw.length === 0) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '60px 24px', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
@@ -393,6 +472,25 @@ export default function CuponsPage({
           display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600
         }}>
           <RefreshCw size={13} /> Atualizar
+        </button>
+
+        {/* Baixar Excel */}
+        <button
+          onClick={handleExportExcel}
+          disabled={filteredData.length === 0}
+          style={{
+            background: filteredData.length === 0 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: 6, padding: '6px 14px',
+            cursor: filteredData.length === 0 ? 'not-allowed' : 'pointer',
+            color: filteredData.length === 0 ? 'rgba(255,255,255,0.4)' : '#fff',
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700,
+            boxShadow: filteredData.length === 0 ? 'none' : '0 2px 8px rgba(16,185,129,0.35)',
+            transition: 'all 0.15s ease'
+          }}
+          title="Baixar dados filtrados em formato Excel (.xlsx)"
+        >
+          <FileSpreadsheet size={14} /> Baixar Excel
         </button>
       </div>
 
@@ -611,13 +709,23 @@ export default function CuponsPage({
             )}
 
             {/* Tabela de Ranking */}
-            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
-                Ranking de Cupons de Desconto — {periodLabel}
-              </span>
-              <span style={{ fontSize: 11, color: '#64748b', marginLeft: 12, background: '#f1f5f9', borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>
-                {couponRanking.length} cupons distintos
-              </span>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
+                  Ranking de Cupons de Desconto — {periodLabel}
+                </span>
+                <span style={{ fontSize: 11, color: '#64748b', marginLeft: 12, background: '#f1f5f9', borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>
+                  {couponRanking.length} cupons distintos
+                </span>
+              </div>
+              <button
+                onClick={handleExportExcel}
+                disabled={filteredData.length === 0}
+                style={tabDownloadBtnStyle(filteredData.length === 0)}
+                title="Baixar dados do ranking em Excel"
+              >
+                <Download size={13} /> Baixar Excel
+              </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={tableBase}>
@@ -653,10 +761,18 @@ export default function CuponsPage({
         {/* ── TAB 2: Hierarquia ── */}
         {viewTab === 'hierarquia' && (
           <div>
-            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>
                 Cupons por Distrital → Coordenador → Filial — {periodLabel}
               </span>
+              <button
+                onClick={handleExportExcel}
+                disabled={filteredData.length === 0}
+                style={tabDownloadBtnStyle(filteredData.length === 0)}
+                title="Baixar dados de hierarquia em Excel"
+              >
+                <Download size={13} /> Baixar Excel
+              </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={tableBase}>
@@ -751,8 +867,18 @@ export default function CuponsPage({
         {viewTab === 'detalhes' && (
           <div>
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>Detalhes de Utilização — {periodLabel}</span>
-              <span style={{ fontSize: 11, color: '#64748b', background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>{filteredData.length} registros</span>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#0f2050' }}>Detalhes de Utilização — {periodLabel}</span>
+                <span style={{ fontSize: 11, color: '#64748b', marginLeft: 12, background: '#f1f5f9', borderRadius: 4, padding: '3px 8px', fontWeight: 600 }}>{filteredData.length} registros</span>
+              </div>
+              <button
+                onClick={handleExportExcel}
+                disabled={filteredData.length === 0}
+                style={tabDownloadBtnStyle(filteredData.length === 0)}
+                title="Baixar detalhes dos pedidos em Excel"
+              >
+                <Download size={13} /> Baixar Excel
+              </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={tableBase}>
@@ -851,4 +977,20 @@ const expandBtn = (isOpen) => ({
   color: isOpen ? '#fff' : '#1e3a8a',
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontSize: 13, fontWeight: 700, lineHeight: 1, flexShrink: 0,
+});
+
+const tabDownloadBtnStyle = (disabled) => ({
+  background: disabled ? '#e2e8f0' : '#10b981',
+  border: 'none',
+  borderRadius: 5,
+  padding: '5px 12px',
+  color: disabled ? '#94a3b8' : '#fff',
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  boxShadow: disabled ? 'none' : '0 1px 3px rgba(16,185,129,0.3)',
+  transition: 'all 0.15s ease'
 });
