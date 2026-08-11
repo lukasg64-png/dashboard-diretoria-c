@@ -17,24 +17,79 @@ function getBrtDateStr(daysAgo = 0) {
 }
 
 export default function CuponsPage({
-  couponRaw = [],
-  couponLoading = false,
-  couponSync = null,
-  couponTotalOrders = 0,
-  loadCoupons,
-  fDist,
-  setFDist,
-  fCoord,
-  setFCoord,
-  fFilial,
-  setFFilial,
-  fDateMode,
-  setFDateMode,
-  fCustomDate,
-  setFCustomDate,
-  fCoupon,
-  setFCoupon,
+  couponRaw: externalCouponRaw,
+  couponLoading: externalCouponLoading,
+  couponSync: externalCouponSync,
+  couponTotalOrders: externalCouponTotalOrders,
+  loadCoupons: externalLoadCoupons,
+  fDist: externalFDist,
+  setFDist: externalSetFDist,
+  fCoord: externalFCoord,
+  setFCoord: externalSetFCoord,
+  fFilial: externalFFilial,
+  setFFilial: externalSetFFilial,
+  fDateMode: externalFDateMode,
+  setFDateMode: externalSetFDateMode,
+  fCustomDate: externalFCustomDate,
+  setFCustomDate: externalSetFCustomDate,
+  fCoupon: externalFCoupon,
+  setFCoupon: externalSetFCoupon,
 }) {
+  const [internalRaw, setInternalRaw] = useState([]);
+  const [internalLoading, setInternalLoading] = useState(false);
+  const [internalSync, setInternalSync] = useState(null);
+  const [internalTotalOrders, setInternalTotalOrders] = useState(0);
+
+  const [internalFDist, setInternalFDist] = useState('all');
+  const [internalFCoord, setInternalFCoord] = useState('all');
+  const [internalFFilial, setInternalFFilial] = useState('all');
+  const [internalFDateMode, setInternalFDateMode] = useState('7d');
+  const [internalFCustomDate, setInternalFCustomDate] = useState(getBrtDateStr(0));
+  const [internalFCoupon, setInternalFCoupon] = useState('');
+
+  const isStandalone = externalCouponRaw === undefined;
+
+  const couponRaw = isStandalone ? internalRaw : externalCouponRaw;
+  const couponLoading = isStandalone ? internalLoading : externalCouponLoading;
+  const couponSync = isStandalone ? internalSync : externalCouponSync;
+  const couponTotalOrders = isStandalone ? internalTotalOrders : externalCouponTotalOrders;
+
+  const fDist = externalFDist !== undefined ? externalFDist : internalFDist;
+  const setFDist = externalSetFDist || setInternalFDist;
+  const fCoord = externalFCoord !== undefined ? externalFCoord : internalFCoord;
+  const setFCoord = externalSetFCoord || setInternalFCoord;
+  const fFilial = externalFFilial !== undefined ? externalFFilial : internalFFilial;
+  const setFFilial = externalSetFFilial || setInternalFFilial;
+  const fDateMode = externalFDateMode !== undefined ? externalFDateMode : internalFDateMode;
+  const setFDateMode = externalSetFDateMode || setInternalFDateMode;
+  const fCustomDate = externalFCustomDate !== undefined ? externalFCustomDate : internalFCustomDate;
+  const setFCustomDate = externalSetFCustomDate || setInternalFCustomDate;
+  const fCoupon = externalFCoupon !== undefined ? externalFCoupon : internalFCoupon;
+  const setFCoupon = externalSetFCoupon || setInternalFCoupon;
+
+  const loadCoupons = externalLoadCoupons || (async () => {
+    setInternalLoading(true);
+    try {
+      const res = await API.getCoupons();
+      if (res.status === 'success') {
+        setInternalRaw(res.data || []);
+        setInternalSync(res.sync || null);
+        setInternalTotalOrders(res.totalOrders || 0);
+      }
+    } catch (err) {
+      console.error('[CuponsPage] Erro ao buscar cupons:', err);
+      throw err;
+    } finally {
+      setInternalLoading(false);
+    }
+  });
+
+  useEffect(() => {
+    if (isStandalone) {
+      loadCoupons().catch(() => {});
+    }
+  }, []);
+
   const [error, setError] = useState(null);
 
   // View mode: resumo ou detalhes
