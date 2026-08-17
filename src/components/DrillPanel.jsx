@@ -1237,9 +1237,9 @@ export default function DrillPanel({ onUpload }) {
   }, [rawFull, fGrupo]);
 
   const t = data?.filtered_total || data?.total || {};
-  const labelAtual    = data?.label_mes_atual || 'Jul/26';
-  const labelAtualAno = labelAtual.replace(/(\d{2})$/, m => String(Number(m) - 1).padStart(2, '0'));
-  const labelAnt      = data?.label_mes_ant || 'Jun/26';
+  const labelAtual    = data?.label_mes_atual || 'Agosto/26';
+  const labelAtualAno = data?.label_mes_atual_ano_ant || labelAtual.replace(/(\d{2})$/, m => String(Number(m) - 1).padStart(2, '0'));
+  const labelAnt      = data?.label_mes_ant || 'Julho/26';
 
   const distritais    = data?.distritoriais || [];
   const coordenadores = data?.coordenadores || [];

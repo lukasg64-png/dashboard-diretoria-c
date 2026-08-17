@@ -43,9 +43,9 @@ export default function FiliaisPage({ filters }) {
     });
   }, [filters]);
 
-  const labelMesAtual = data?.label_mes_atual || 'Jul/26';
-  const labelMesAtualAnoAnt = data?.label_mes_atual ? data.label_mes_atual.replace(/26$/, '25').replace(/2026$/, '2025') : 'Jul/25';
-  const labelMesAnt = data?.label_mes_ant || 'Jun/26';
+  const labelMesAtual = data?.label_mes_atual || 'Agosto/26';
+  const labelMesAtualAnoAnt = data?.label_mes_atual_ano_ant || (data?.label_mes_atual ? data.label_mes_atual.replace(/26$/, '25').replace(/2026$/, '2025') : 'Agosto/25');
+  const labelMesAnt = data?.label_mes_ant || 'Julho/26';
 
   const cols = [
     {

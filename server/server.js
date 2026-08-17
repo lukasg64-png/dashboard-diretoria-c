@@ -518,15 +518,23 @@ async function readCSVAsync(filePath) {
           cupJun26Index = baseOffset + 8; // Posição 12
         }
 
-        const rawLabelAtual = header[vJul26Index] || '';
-        const cleanLabelAtual = /venda/i.test(rawLabelAtual) 
-          ? rawLabelAtual.replace(/^venda\s+parcial\s+/i, '').replace(/^venda\s+/i, '').trim()
-          : (currentMonth ? `${currentMonth}/26` : 'Agosto/26');
+        function cleanPeriodLabel(raw, fallback) {
+          if (!raw) return fallback;
+          const cleaned = raw
+            .replace(/^venda\s+parcial\s+/i, '')
+            .replace(/^venda\s+/i, '')
+            .replace(/^base\s+empresa\s+/i, '')
+            .replace(/^meta\s+parcial\s+/i, '')
+            .replace(/^meta\s+/i, '')
+            .replace(/^cupons\s+parcial\s+/i, '')
+            .replace(/^cupons\s+/i, '')
+            .trim();
+          return cleaned || fallback;
+        }
 
-        const rawLabelAnt = header[vJun26Index] || '';
-        const cleanLabelAnt = /venda/i.test(rawLabelAnt)
-          ? rawLabelAnt.replace(/^venda\s+parcial\s+/i, '').replace(/^venda\s+/i, '').trim()
-          : 'Julho/26';
+        const cleanLabelAtual = cleanPeriodLabel(header[vJul26Index], currentMonth ? `${currentMonth}/26` : 'Agosto/26');
+        const cleanLabelAnoAnt = cleanPeriodLabel(header[vJul25Index], currentMonth ? `${currentMonth}/25` : 'Agosto/25');
+        const cleanLabelAnt = cleanPeriodLabel(header[vJun26Index], 'Julho/26');
 
         C = {
           dist:       distIndex,
@@ -545,6 +553,7 @@ async function readCSVAsync(filePath) {
           cupJul25:   cupJul25Index,
           cupJun26:   cupJun26Index,
           labelJul26: cleanLabelAtual,
+          labelJul25: cleanLabelAnoAnt,
           labelJun26: cleanLabelAnt
         };
         return;
@@ -632,10 +641,11 @@ async function readCSVAsync(filePath) {
       }
 
       resolve({
-        label_mes_atual: C.labelJul26 || 'Julho/26',
-        label_mes_ant:   C.labelJun26 || 'Junho/26',
-        arquivo:         path.basename(filePath),
-        lido_em:         new Date().toISOString()
+        label_mes_atual:         C.labelJul26 || 'Agosto/26',
+        label_mes_atual_ano_ant: C.labelJul25 || 'Agosto/25',
+        label_mes_ant:           C.labelJun26 || 'Julho/26',
+        arquivo:                 path.basename(filePath),
+        lido_em:                 new Date().toISOString()
       });
     });
 
@@ -1016,17 +1026,18 @@ function applyFilters(full, filters) {
 
   if (isAll && full.globalAgg) {
     return {
-      total:          full.globalAgg.total,
-      filtered_total: full.globalAgg.total,
-      distritoriais:  full.globalAgg.distritoriais,
-      coordenadores:  full.globalAgg.coordenadores,
-      filiais:        full.globalAgg.filiais,
-      grupos:         full.globalAgg.grupos,
-      linhas:         full.globalAgg.linhas,
-      label_mes_atual: full.label_mes_atual,
-      label_mes_ant:   full.label_mes_ant,
-      arquivo:         full.arquivo,
-      lido_em:         full.lido_em,
+      total:                   full.globalAgg.total,
+      filtered_total:          full.globalAgg.total,
+      distritoriais:           full.globalAgg.distritoriais,
+      coordenadores:           full.globalAgg.coordenadores,
+      filiais:                 full.globalAgg.filiais,
+      grupos:                  full.globalAgg.grupos,
+      linhas:                  full.globalAgg.linhas,
+      label_mes_atual:         full.label_mes_atual,
+      label_mes_atual_ano_ant: full.label_mes_atual_ano_ant,
+      label_mes_ant:           full.label_mes_ant,
+      arquivo:                 full.arquivo,
+      lido_em:                 full.lido_em,
     };
   }
 
@@ -1034,17 +1045,18 @@ function applyFilters(full, filters) {
   const filteredAgg = aggregate(indices);
 
   return {
-    total:          full.globalAgg.total,
-    filtered_total: filteredAgg.total,
-    distritoriais:  filteredAgg.distritoriais,
-    coordenadores:  filteredAgg.coordenadores,
-    filiais:        filteredAgg.filiais,
-    grupos:         filteredAgg.grupos,
-    linhas:         filteredAgg.linhas,
-    label_mes_atual: full.label_mes_atual,
-    label_mes_ant:   full.label_mes_ant,
-    arquivo:         full.arquivo,
-    lido_em:         full.lido_em,
+    total:                   full.globalAgg.total,
+    filtered_total:          filteredAgg.total,
+    distritoriais:           filteredAgg.distritoriais,
+    coordenadores:           filteredAgg.coordenadores,
+    filiais:                 filteredAgg.filiais,
+    grupos:                  filteredAgg.grupos,
+    linhas:                  filteredAgg.linhas,
+    label_mes_atual:         full.label_mes_atual,
+    label_mes_atual_ano_ant: full.label_mes_atual_ano_ant,
+    label_mes_ant:           full.label_mes_ant,
+    arquivo:                 full.arquivo,
+    lido_em:                 full.lido_em,
   };
 }
 
