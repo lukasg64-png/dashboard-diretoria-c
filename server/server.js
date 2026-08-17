@@ -444,42 +444,108 @@ async function readCSVAsync(filePath) {
 
         const distIndex = findColIndex(h => /distrital/i.test(h), -1);
         const coordIndex = findColIndex(h => /coordenador/i.test(h), -1);
-        const filialIndex = findColIndex(h => /desc_filial|filial/i.test(h), 3);
-        const grupoIndex = findColIndex(h => /desc_grupo|grupo/i.test(h), 4);
-        const linhaIndex = findColIndex(h => /desc_linha|linha/i.test(h), 5);
-        const metaParcIndex = findColIndex(h => /meta\s+parcial/i.test(h), 7);
-        const metaTotIndex = findColIndex(h => /^meta\s+(?!parcial)/i.test(h), 6);
+        const filialIndex = findColIndex(h => /desc_filial|filial/i.test(h), 0);
+        const grupoIndex = findColIndex(h => /desc_grupo|grupo/i.test(h), 1);
+        const linhaIndex = findColIndex(h => /desc_linha|linha/i.test(h), 2);
+        
+        const metaParcIndex = findColIndex(h => /meta\s+parcial/i.test(h), 4);
+        const metaTotIndex = findColIndex(h => /^meta\s+(?!parcial)/i.test(h), 3);
         const metaTotHeader = header[metaTotIndex] || '';
         const currentMonth = metaTotHeader.replace(/^meta\s+/i, '').trim();
-        const monthRegex = currentMonth ? new RegExp(currentMonth, 'i') : /julho/i;
+        const monthRegex = currentMonth ? new RegExp(currentMonth, 'i') : /(agosto|julho|junho|setembro|outubro|novembro|dezembro|janeiro|fevereiro|marco|abril|maio)/i;
 
-        const vJul26Index = findColIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), 8);
-        const vJul25Index = findColIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), 9);
-        const vJun26Index = findColIndex(h => /venda/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h), 10);
-        const beJul26Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), 11);
-        const beJul25Index = findColIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), 12);
-        const cupJul26Index = findColIndex(h => /cupons/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h), -1);
-        const cupJul25Index = findColIndex(h => /cupons/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h), -1);
-        const cupJun26Index = findColIndex(h => /cupons/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h), -1);
+        const baseOffset = metaParcIndex >= 0 ? metaParcIndex : 4;
+
+        // Venda Mês Atual:
+        // 1. Procura coluna com "venda" + mês atual + "26" (e NÃO contenha "base" nem "cupons")
+        // 2. Se não achar pelo nome (ex: nomeada 'z' ou com cabeçalho truncado), usa a coluna imediatamente após Meta Parcial (baseOffset + 1)
+        let vJul26Index = header.findIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h) && !/base/i.test(h) && !/cupons/i.test(h));
+        if (vJul26Index < 0) {
+          vJul26Index = baseOffset + 1; // Posição 5 padrão após Meta Parcial
+        }
+
+        // Venda Ano Anterior (ex: Agosto/25)
+        let vJul25Index = header.findIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h) && !/base/i.test(h) && !/cupons/i.test(h));
+        if (vJul25Index < 0) {
+          vJul25Index = baseOffset + 2; // Posição 6
+        }
+
+        // Venda Mês Anterior (ex: Julho/26)
+        let vJun26Index = header.findIndex(h => /venda/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h) && !/base/i.test(h) && !/cupons/i.test(h));
+        if (vJun26Index < 0) {
+          vJun26Index = baseOffset + 3; // Posição 7
+        }
+
+        // Base Empresa Mês Atual
+        let beJul26Index = header.findIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h));
+        if (beJul26Index < 0) {
+          beJul26Index = header.findIndex(h => /base\s+empresa/i.test(h) && /(26|2026)$/.test(h));
+        }
+        if (beJul26Index < 0) {
+          beJul26Index = baseOffset + 4; // Posição 8
+        }
+
+        // Base Empresa Ano Anterior
+        let beJul25Index = header.findIndex(h => /base\s+empresa/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h));
+        if (beJul25Index < 0) {
+          beJul25Index = header.findIndex(h => /base\s+empresa/i.test(h) && /(25|2025)$/.test(h));
+        }
+        if (beJul25Index < 0) {
+          beJul25Index = baseOffset + 5; // Posição 9
+        }
+
+        // Cupons Mês Atual
+        let cupJul26Index = header.findIndex(h => /cupons/i.test(h) && monthRegex.test(h) && /(26|2026)$/.test(h));
+        if (cupJul26Index < 0) {
+          cupJul26Index = header.findIndex(h => /cupons/i.test(h) && /(26|2026)$/.test(h));
+        }
+        if (cupJul26Index < 0) {
+          cupJul26Index = baseOffset + 6; // Posição 10
+        }
+
+        // Cupons Ano Anterior
+        let cupJul25Index = header.findIndex(h => /cupons/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h));
+        if (cupJul25Index < 0) {
+          cupJul25Index = header.findIndex(h => /cupons/i.test(h) && /(25|2025)$/.test(h));
+        }
+        if (cupJul25Index < 0) {
+          cupJul25Index = baseOffset + 7; // Posição 11
+        }
+
+        // Cupons Mês Anterior
+        let cupJun26Index = header.findIndex(h => /cupons/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h));
+        if (cupJun26Index < 0) {
+          cupJun26Index = baseOffset + 8; // Posição 12
+        }
+
+        const rawLabelAtual = header[vJul26Index] || '';
+        const cleanLabelAtual = /venda/i.test(rawLabelAtual) 
+          ? rawLabelAtual.replace(/^venda\s+parcial\s+/i, '').replace(/^venda\s+/i, '').trim()
+          : (currentMonth ? `${currentMonth}/26` : 'Agosto/26');
+
+        const rawLabelAnt = header[vJun26Index] || '';
+        const cleanLabelAnt = /venda/i.test(rawLabelAnt)
+          ? rawLabelAnt.replace(/^venda\s+parcial\s+/i, '').replace(/^venda\s+/i, '').trim()
+          : 'Julho/26';
 
         C = {
-          dist:      distIndex,
-          coord:     coordIndex,
-          filial:    filialIndex,
-          grupo:     grupoIndex,
-          linha:     linhaIndex,
-          metaTot:   metaTotIndex,
-          metaParc:  metaParcIndex,
-          vJul26:    vJul26Index,
-          vJul25:    vJul25Index,
-          vJun26:    vJun26Index,
-          beJul26:   beJul26Index,
-          beJul25:   beJul25Index,
-          cupJul26:  cupJul26Index,
-          cupJul25:  cupJul25Index,
-          cupJun26:  cupJun26Index,
-          labelJul26: String(header[vJul26Index] || 'Julho/26').replace('Venda Parcial ', ''),
-          labelJun26: String(header[vJun26Index] || 'Junho/26').replace('Venda Parcial ', '')
+          dist:       distIndex,
+          coord:      coordIndex,
+          filial:     filialIndex,
+          grupo:      grupoIndex,
+          linha:      linhaIndex,
+          metaTot:    metaTotIndex,
+          metaParc:   metaParcIndex,
+          vJul26:     vJul26Index,
+          vJul25:     vJul25Index,
+          vJun26:     vJun26Index,
+          beJul26:    beJul26Index,
+          beJul25:    beJul25Index,
+          cupJul26:   cupJul26Index,
+          cupJul25:   cupJul25Index,
+          cupJun26:   cupJun26Index,
+          labelJul26: cleanLabelAtual,
+          labelJun26: cleanLabelAnt
         };
         return;
       }
