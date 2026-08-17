@@ -7,3 +7,4 @@ server/node_modules/
 # Arquivos de dados — não commitar (são enviados via portal de upload)
 *.csv
 base_dashboard.csv
+scratch/

@@ -40,38 +40,20 @@ let filiaisCadastro = {};
 const lookupCache = new Map();
 const canonKeysMap = new Map();
 const cityNumKeysMap = new Map();
+const baseNoNumKeysMap = new Map();
 
-function buildLookupIndexes() {
-  lookupCache.clear();
-  canonKeysMap.clear();
-  cityNumKeysMap.clear();
-
-  for (const key of Object.keys(filiaisCadastro)) {
-    const normKey = normalizeStoreName(key);
-    const canonKey = canonicalize(normKey);
-    canonKeysMap.set(canonKey, key);
-
-    const item = filiaisCadastro[key];
-    if (item && item.municipio) {
-      const normCity = normalizeStoreName(item.municipio);
-      const numMatch = key.match(/\b(\d+)\b/);
-      const num = numMatch ? numMatch[1] : '';
-      const cityKey = (normCity + ' ' + num).trim();
-      cityNumKeysMap.set(cityKey, key);
+function cleanVtexSeller(sellerName) {
+  if (!sellerName) return '';
+  let cleaned = sellerName.replace(/\s*-\s*[\d\.\/-]{11,25}\s*-\s*\d+\s*$/i, '').trim();
+  if (cleaned === sellerName && sellerName.includes(' - ')) {
+    const parts = sellerName.split(' - ');
+    if (parts.length >= 3 && /^\d+$/.test(parts[parts.length - 1].trim())) {
+      cleaned = parts.slice(0, -2).join(' - ').trim();
+    } else {
+      cleaned = parts[0].trim();
     }
   }
-}
-
-function loadFiliaisCadastro() {
-  if (fs.existsSync(CADASTRO_PATH)) {
-    try {
-      filiaisCadastro = JSON.parse(fs.readFileSync(CADASTRO_PATH, 'utf8'));
-      buildLookupIndexes();
-      console.log(`ℹ️ [cadastro] carregado com ${Object.keys(filiaisCadastro).length} filiais.`);
-    } catch (err) {
-      console.error(`❌ Erro ao ler filiais_cadastro.json:`, err.message);
-    }
-  }
+  return cleaned;
 }
 
 // ── Mapeamento Fuzzy para Associação com a VTEX ────────────────────────────────
@@ -96,6 +78,7 @@ const ABBREVIATION_MAP = {
   'mal': 'marechal',
   'dioni': 'dionisio',
   'cnel': 'coronel',
+  'cel': 'coronel',
   'fco': 'francisco',
   'franc': 'francisco',
   'gal': 'galeria',
@@ -104,6 +87,17 @@ const ABBREVIATION_MAP = {
   'terez': 'terezinha',
   'ant': 'antonio',
   's': 'sao',
+  'dr': 'doutor',
+  'av': 'avenida',
+  'gen': 'general',
+  'v': 'vila',
+  'vl': 'vila',
+  'sn': 'santo',
+  'st': 'santo',
+  'pt': 'ponto',
+  'pto': 'porto',
+  'distr': 'distrito',
+  'pres': 'presidente',
 };
 
 const CITY_SUFFIX_MAP = {
@@ -113,6 +107,7 @@ const CITY_SUFFIX_MAP = {
   'cachoeira': 'cachoeira do sul',
   'sao lourenco do sul': 'sao lourenco',
   'sao lourenco oeste': 'sao lourenco do oeste',
+  'sao lourenco do oeste': 'sao lourenco oeste',
   'sao sebastiao cai': 'sao sebastiao',
   'julio castilhos': 'julio de castilhos',
   'quedas iguacu': 'quedas do iguacu',
@@ -125,10 +120,21 @@ const CITY_SUFFIX_MAP = {
   'bela vista paraiso': 'bela vista do paraiso',
   'balneario arroio silva': 'balneario arroio do silva',
   'sao pedro sul': 'sao pedro do sul',
+  'sao francisco de assis': 'sao francisco assis',
+  'sao francisco assis': 'sao francisco assis',
+  'santana livramento': 'santana do livramento',
+  'santa vitoria palmar': 'santa vitoria do palmar',
+  'sao jose norte': 'sao jose do norte',
+  'sao joao do oeste': 'sao joao oeste',
+  'sao luiz gonzaga': 'sao luiz',
+  'sao marcos': 'sao marcos',
+  'herval d oeste': 'herval doeste',
+  'herval doeste': 'herval doeste',
 };
 
 const SPECIAL_VTEX_TO_CSV = {
   'farmacias sao joao delivery': 'porto alegre dark store',
+  'sjdigital1601': 'santo antonio das missoes',
   'pf': 'pf matriz',
   'pf matriz': 'pf matriz',
   'pf modelo': 'pf loja modelo',
@@ -141,9 +147,9 @@ const SPECIAL_VTEX_TO_CSV = {
   'sao francisco de paula': 'sao fran paula',
   'santa terezinha de itaipu': 'santa terezinha do itaipu',
   'santa terezinha itaipu': 'santa terezinha do itaipu',
+  'sta terez de itaipu': 'santa terezinha do itaipu',
   'santo antonio missoes': 'santo antonio das missoes',
   'caxias 21': 'caxias 20',
-  'sjdigital1601': 'santo antonio das missoes',
 };
 
 function canonicalize(normName) {
@@ -167,7 +173,7 @@ function canonicalize(normName) {
   const words = res.split(' ');
   const expanded = words.map(w => ABBREVIATION_MAP[w] || w);
   res = expanded.join(' ');
-  res = res.replace(/d\s+/g, 'd').replace(/d'/g, 'd');
+  res = res.replace(/\bd\s+/g, 'd').replace(/\bd'/g, 'd');
 
   const numberMatch = res.match(/^(.+?)\s+(\d+)$/);
   if (numberMatch) {
@@ -184,10 +190,10 @@ function canonicalize(normName) {
 
   const finalNumMatch = res.match(/^(.+?)\s+(\d+)$/);
   if (finalNumMatch) {
-      const bName = finalNumMatch[1].trim();
-      if (SPECIAL_VTEX_TO_CSV[bName] && SPECIAL_VTEX_TO_CSV[bName] !== bName) {
-          res = SPECIAL_VTEX_TO_CSV[bName] + ' ' + finalNumMatch[2];
-      }
+    const bName = finalNumMatch[1].trim();
+    if (SPECIAL_VTEX_TO_CSV[bName] && SPECIAL_VTEX_TO_CSV[bName] !== bName) {
+      res = SPECIAL_VTEX_TO_CSV[bName] + ' ' + finalNumMatch[2];
+    }
   }
 
   if (SPECIAL_VTEX_TO_CSV[res] && SPECIAL_VTEX_TO_CSV[res] !== res) {
@@ -196,8 +202,53 @@ function canonicalize(normName) {
   return res.replace(/\s+/g, ' ').trim();
 }
 
-loadFiliaisCadastro();
+function buildLookupIndexes() {
+  lookupCache.clear();
+  canonKeysMap.clear();
+  cityNumKeysMap.clear();
+  baseNoNumKeysMap.clear();
 
+  for (const key of Object.keys(filiaisCadastro)) {
+    const normKey = normalizeStoreName(key);
+    const canonKey = canonicalize(normKey);
+    canonKeysMap.set(normKey, key);
+    canonKeysMap.set(canonKey, key);
+
+    if (!/\b\d+\b/.test(canonKey)) {
+      baseNoNumKeysMap.set(canonKey, key);
+      canonKeysMap.set(canonKey + ' 1', key);
+    } else {
+      const m1 = canonKey.match(/^(.+?)\s+1$/);
+      if (m1) {
+        baseNoNumKeysMap.set(m1[1].trim(), key);
+      }
+    }
+
+    const item = filiaisCadastro[key];
+    if (item && item.municipio) {
+      const normCity = normalizeStoreName(item.municipio);
+      const numMatch = key.match(/\b(\d+)\b/);
+      const num = numMatch ? numMatch[1] : '';
+      const cityKey = (normCity + ' ' + num).trim();
+      cityNumKeysMap.set(cityKey, key);
+      if (!num) {
+        cityNumKeysMap.set(normCity + ' 1', key);
+      }
+    }
+  }
+}
+
+function loadFiliaisCadastro() {
+  if (fs.existsSync(CADASTRO_PATH)) {
+    try {
+      filiaisCadastro = JSON.parse(fs.readFileSync(CADASTRO_PATH, 'utf8'));
+      buildLookupIndexes();
+      console.log(`ℹ️ [cadastro] carregado com ${Object.keys(filiaisCadastro).length} filiais.`);
+    } catch (err) {
+      console.error(`❌ Erro ao ler filiais_cadastro.json:`, err.message);
+    }
+  }
+}
 
 function lookupStore(vtexCleanName) {
   if (!vtexCleanName) return null;
@@ -205,13 +256,28 @@ function lookupStore(vtexCleanName) {
     return lookupCache.get(vtexCleanName);
   }
 
-  const normName = normalizeStoreName(vtexCleanName);
+  const cleanName = cleanVtexSeller(vtexCleanName);
+  const normName = normalizeStoreName(cleanName);
+
+  if (filiaisCadastro[cleanName]) {
+    const res = { ...filiaisCadastro[cleanName], matchedKey: cleanName };
+    lookupCache.set(vtexCleanName, res);
+    return res;
+  }
+
   if (filiaisCadastro[normName]) {
     const res = { ...filiaisCadastro[normName], matchedKey: normName };
     lookupCache.set(vtexCleanName, res);
     return res;
   }
-  
+
+  if (canonKeysMap.has(normName)) {
+    const key = canonKeysMap.get(normName);
+    const res = { ...filiaisCadastro[key], matchedKey: key };
+    lookupCache.set(vtexCleanName, res);
+    return res;
+  }
+
   const canon = canonicalize(normName);
   if (canonKeysMap.has(canon)) {
     const key = canonKeysMap.get(canon);
@@ -219,19 +285,38 @@ function lookupStore(vtexCleanName) {
     lookupCache.set(vtexCleanName, res);
     return res;
   }
-  
-  const numMatch = canon.match(/^(.+?)\s+(\d+)$/);
-  if (numMatch) {
-    const baseName = numMatch[1].trim();
-    const num = numMatch[2];
-    
-    if (canonKeysMap.has(baseName)) {
-      const key = canonKeysMap.get(baseName);
+
+  if (canon.endsWith(' 1')) {
+    const base = canon.slice(0, -2).trim();
+    if (baseNoNumKeysMap.has(base)) {
+      const key = baseNoNumKeysMap.get(base);
       const res = { ...filiaisCadastro[key], matchedKey: key };
       lookupCache.set(vtexCleanName, res);
       return res;
     }
-    
+    if (canonKeysMap.has(base)) {
+      const key = canonKeysMap.get(base);
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
+    }
+  }
+
+  if (!/\b\d+\b/.test(canon)) {
+    const with1 = canon + ' 1';
+    if (canonKeysMap.has(with1)) {
+      const key = canonKeysMap.get(with1);
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
+    }
+  }
+
+  const numMatch = canon.match(/^(.+?)\s+(\d+)$/);
+  if (numMatch) {
+    const baseName = numMatch[1].trim();
+    const num = numMatch[2];
+
     const cityKey = (baseName + ' ' + num).trim();
     if (cityNumKeysMap.has(cityKey)) {
       const key = cityNumKeysMap.get(cityKey);
@@ -247,10 +332,12 @@ function lookupStore(vtexCleanName) {
       return res;
     }
   }
-  
+
   lookupCache.set(vtexCleanName, null);
   return null;
 }
+
+loadFiliaisCadastro();
 
 // [subgrupos desativado temporariamente]
 
@@ -406,7 +493,10 @@ async function readCSVAsync(filePath) {
       const filialName = String(getVal(C.filial) || '').trim();
       if (!filialName) return;
  
-      const cadastro = filiaisCadastro[filialName] || {};
+      let cadastro = filiaisCadastro[filialName];
+      if (!cadastro) {
+        cadastro = lookupStore(filialName) || {};
+      }
       const distVal = (C.dist >= 0 ? String(getVal(C.dist) || '').trim() : '') || cadastro.distrital || '';
       const coordVal = (C.coord >= 0 ? String(getVal(C.coord) || '').trim() : '') || cadastro.coordenador || '';
 
@@ -1083,9 +1173,7 @@ app.get('/api/coupons', (req, res) => {
       // Filtra pedidos que têm cupom e que não estão cancelados
       if (order.coupon && order.status !== 'canceled') {
         const seller = order.sellers?.[0]?.name || '';
-        // Limpa o nome do seller da VTEX (ex: "LOJA 123 - 88.212.113/0001-00 - 123" -> "LOJA 123")
-        const cleanSeller = seller.includes(' - ') ? seller.split(' - ')[0].trim() : seller;
-        const storeInfo = lookupStore(cleanSeller);
+        const storeInfo = lookupStore(seller);
         
         // FILTRO: Apenas lojas da Diretoria C (que estão no cadastro)
         if (!storeInfo) return;
@@ -1106,7 +1194,7 @@ app.get('/api/coupons', (req, res) => {
           creationDate: order.creationDate || '',
           coupon: String(order.coupon).toUpperCase().trim(),
           value: order.value ? order.value / 100 : 0, // VTEX envia valor em centavos
-          store: storeInfo.matchedKey || cleanSeller,
+          store: storeInfo.matchedKey || cleanVtexSeller(seller),
           coordenador: storeInfo.coordenador || '',
           distrital: storeInfo.distrital || '',
           municipio: storeInfo.municipio || '',
@@ -1192,11 +1280,10 @@ app.get('/api/vtex-debug', async (req, res) => {
         couponCount++;
         const seller = order.sellers?.[0]?.name || '';
         couponSellersSet.add(seller);
-        const cleanSeller = seller.includes(' - ') ? seller.split(' - ')[0].trim() : seller;
-        const storeInfo = lookupStore(cleanSeller);
+        const storeInfo = lookupStore(seller);
         if (storeInfo) {
           matchCount++;
-          matchedSellersSet.add(cleanSeller);
+          matchedSellersSet.add(storeInfo.matchedKey || cleanVtexSeller(seller));
         }
       }
     });
