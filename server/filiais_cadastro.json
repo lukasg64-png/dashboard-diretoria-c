@@ -5609,6 +5609,36 @@
       -29.09243
     ]
   },
+  "Encantado 1": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr",
+    "uf": "RS",
+    "municipio": "Encantado",
+    "coords": [
+      -51.8642976,
+      -29.238858
+    ]
+  },
+  "Encantado 2": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr",
+    "uf": "RS",
+    "municipio": "Encantado",
+    "coords": [
+      -51.8657713,
+      -29.2384343
+    ]
+  },
+  "Encantado 3": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr",
+    "uf": "RS",
+    "municipio": "Encantado",
+    "coords": [
+      -51.86197243054944,
+      -29.2374184752798
+    ]
+  },
   "Espumoso 1": {
     "distrital": "Tiago Machado",
     "coordenador": "Tatiane Schorr",
@@ -5699,6 +5729,16 @@
       -28.630535
     ]
   },
+  "Roca Sales": {
+    "distrital": "Tiago Machado",
+    "coordenador": "Tatiane Schorr",
+    "uf": "RS",
+    "municipio": "Roca Sales",
+    "coords": [
+      -51.87305598873688,
+      -29.124801227310417
+    ]
+  },
   "Serafina Correa 1": {
     "distrital": "Tiago Machado",
     "coordenador": "Tatiane Schorr",
@@ -5787,36 +5827,6 @@
     "coords": [
       -51.948787496601234,
       -29.605326787891386
-    ]
-  },
-  "Encantado 1": {
-    "distrital": "Tiago Machado",
-    "coordenador": "Wagner Schuck",
-    "uf": "RS",
-    "municipio": "Encantado",
-    "coords": [
-      -51.8642976,
-      -29.238858
-    ]
-  },
-  "Encantado 2": {
-    "distrital": "Tiago Machado",
-    "coordenador": "Wagner Schuck",
-    "uf": "RS",
-    "municipio": "Encantado",
-    "coords": [
-      -51.8657713,
-      -29.2384343
-    ]
-  },
-  "Encantado 3": {
-    "distrital": "Tiago Machado",
-    "coordenador": "Wagner Schuck",
-    "uf": "RS",
-    "municipio": "Encantado",
-    "coords": [
-      -51.86197243054944,
-      -29.2374184752798
     ]
   },
   "Estrela 1": {
@@ -5947,16 +5957,6 @@
     "coords": [
       -51.963842144470306,
       -29.468075180488448
-    ]
-  },
-  "Roca Sales": {
-    "distrital": "Tiago Machado",
-    "coordenador": "Wagner Schuck",
-    "uf": "RS",
-    "municipio": "Roca Sales",
-    "coords": [
-      -51.87305598873688,
-      -29.124801227310417
     ]
   },
   "Santa Clara do Sul": {
