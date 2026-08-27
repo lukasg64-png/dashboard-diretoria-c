@@ -764,9 +764,13 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
 
 // Retorna data em formato BRT (YYYY-MM-DD) para "hoje", "ontem", etc.
 function getBrtDateStr(daysAgo = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const now = new Date();
+  const brtNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  brtNow.setDate(brtNow.getDate() - daysAgo);
+  const y = brtNow.getFullYear();
+  const m = String(brtNow.getMonth() + 1).padStart(2, '0');
+  const d = String(brtNow.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 // ── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
