@@ -111,6 +111,7 @@ export default function CuponsPage({
     // 1. Inclui todas as lojas do cadastro completo
     if (allStores && allStores.length > 0) {
       allStores.forEach(s => {
+        if (!s) return;
         if (s.distrital) dists.add(s.distrital);
         if (fDist === 'all' || s.distrital === fDist) {
           if (s.coordenador) coords.add(s.coordenador);
@@ -122,7 +123,8 @@ export default function CuponsPage({
     }
 
     // 2. Complementa com dados dos pedidos
-    dataByDate.forEach(item => {
+    (dataByDate || []).forEach(item => {
+      if (!item) return;
       if (item.distrital) dists.add(item.distrital);
       if (fDist === 'all' || item.distrital === fDist) {
         if (item.coordenador) coords.add(item.coordenador);
@@ -141,14 +143,14 @@ export default function CuponsPage({
 
   // Aplicar filtros
   const filteredData = useMemo(() => {
-    let result = dataByDate;
+    let result = Array.isArray(dataByDate) ? dataByDate : [];
 
-    if (fDist !== 'all') result = result.filter(item => item.distrital === fDist);
-    if (fCoord !== 'all') result = result.filter(item => item.coordenador === fCoord);
-    if (fFilial !== 'all') result = result.filter(item => item.store === fFilial);
-    if (fCoupon.trim()) {
-      const query = fCoupon.toLowerCase().trim();
-      result = result.filter(item => item.coupon.toLowerCase().includes(query));
+    if (fDist && fDist !== 'all') result = result.filter(item => item && item.distrital === fDist);
+    if (fCoord && fCoord !== 'all') result = result.filter(item => item && item.coordenador === fCoord);
+    if (fFilial && fFilial !== 'all') result = result.filter(item => item && item.store === fFilial);
+    if (fCoupon && String(fCoupon).trim()) {
+      const query = String(fCoupon).toLowerCase().trim();
+      result = result.filter(item => item && item.coupon && String(item.coupon).toLowerCase().includes(query));
     }
 
     return result;
@@ -158,10 +160,11 @@ export default function CuponsPage({
 
   // KPIs
   const kpi = useMemo(() => {
-    const totalUses = filteredData.length;
-    const totalRevenue = filteredData.reduce((sum, item) => sum + (item.value || 0), 0);
+    const list = Array.isArray(filteredData) ? filteredData : [];
+    const totalUses = list.length;
+    const totalRevenue = list.reduce((sum, item) => sum + (item?.value || 0), 0);
     const avgTicket = totalUses > 0 ? totalRevenue / totalUses : 0;
-    const uniqueCoupons = new Set(filteredData.map(i => i.coupon)).size;
+    const uniqueCoupons = new Set(list.map(i => i?.coupon).filter(Boolean)).size;
 
     return { totalUses, totalRevenue, avgTicket, uniqueCoupons };
   }, [filteredData]);
@@ -169,12 +172,14 @@ export default function CuponsPage({
   // Ranking de cupons (resumo)
   const couponRanking = useMemo(() => {
     const map = {};
-    filteredData.forEach(item => {
-      if (!map[item.coupon]) {
-        map[item.coupon] = { coupon: item.coupon, uses: 0, revenue: 0 };
+    (filteredData || []).forEach(item => {
+      if (!item || !item.coupon) return;
+      const c = String(item.coupon);
+      if (!map[c]) {
+        map[c] = { coupon: c, uses: 0, revenue: 0 };
       }
-      map[item.coupon].uses++;
-      map[item.coupon].revenue += item.value || 0;
+      map[c].uses++;
+      map[c].revenue += item.value || 0;
     });
     return Object.values(map).sort((a, b) => b.uses - a.uses);
   }, [filteredData]);
@@ -186,6 +191,7 @@ export default function CuponsPage({
     // Pré-popula todas as lojas cadastradas da Diretoria C
     if (allStores && allStores.length > 0) {
       allStores.forEach(s => {
+        if (!s) return;
         const d = s.distrital || 'Outros';
         const c = s.coordenador || 'Outros';
         const f = s.nome || 'Sem Loja';
@@ -202,7 +208,8 @@ export default function CuponsPage({
       });
     }
 
-    filteredData.forEach(item => {
+    (filteredData || []).forEach(item => {
+      if (!item) return;
       const d = item.distrital || 'Outros';
       const c = item.coordenador || 'Outros';
       const f = item.store || 'Sem Loja';
@@ -231,7 +238,7 @@ export default function CuponsPage({
             ...c,
             filiais: Object.values(c.filiais).sort((a, b) => {
               if (b.uses !== a.uses) return b.uses - a.uses;
-              return a.nome.localeCompare(b.nome);
+              return String(a.nome || '').localeCompare(String(b.nome || ''));
             })
           }))
           .sort((a, b) => b.uses - a.uses)
@@ -242,13 +249,14 @@ export default function CuponsPage({
   // Gráfico temporal
   const timeChartData = useMemo(() => {
     const groups = {};
-    filteredData.forEach(item => {
-      const date = item.date;
+    (filteredData || []).forEach(item => {
+      if (!item) return;
+      const date = item.date || 'Sem Data';
       if (!groups[date]) groups[date] = { date, cupons: 0, valor: 0 };
       groups[date].cupons++;
       groups[date].valor += item.value || 0;
     });
-    return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
+    return Object.values(groups).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
   }, [filteredData]);
 
   // Top 10 cupons para gráfico
