@@ -11,9 +11,7 @@ const fmtInteger = v => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 
 function getBrtDateStr(daysAgo = 0) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  // Ajuste manual UTC-3 para BRT
-  const brt = new Date(d.getTime() - 3 * 3600000);
-  return brt.toISOString().slice(0, 10);
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
 export default function CuponsPage({
@@ -21,6 +19,7 @@ export default function CuponsPage({
   couponLoading = false,
   couponSync = null,
   couponTotalOrders = 0,
+  allStores = [],
   loadCoupons,
   fDist,
   setFDist,
@@ -57,7 +56,7 @@ export default function CuponsPage({
     }
   };
 
-  // Filtrar por data
+  // Filtrar por data (sempre na data brasileira BRT da venda)
   const dataByDate = useMemo(() => {
     if (couponRaw.length === 0) return [];
 
@@ -95,21 +94,38 @@ export default function CuponsPage({
     }
 
     return couponRaw.filter(item => 
-      (item.date >= startDate && item.date <= endDate) ||
-      (item.utcDate && item.utcDate >= startDate && item.utcDate <= endDate)
+      Boolean(item.date && item.date >= startDate && item.date <= endDate)
     );
   }, [couponRaw, fDateMode, fCustomDate]);
 
-  // Opções dinâmicas dos dropdowns
+  // Opções dinâmicas dos dropdowns (garante que todas as lojas do cadastro apareçam)
   const filterOptions = useMemo(() => {
     const dists = new Set();
     const coords = new Set();
     const filiais = new Set();
 
+    // 1. Inclui todas as lojas do cadastro completo
+    if (allStores && allStores.length > 0) {
+      allStores.forEach(s => {
+        if (s.distrital) dists.add(s.distrital);
+        if (fDist === 'all' || s.distrital === fDist) {
+          if (s.coordenador) coords.add(s.coordenador);
+        }
+        if ((fDist === 'all' || s.distrital === fDist) && (fCoord === 'all' || s.coordenador === fCoord)) {
+          if (s.nome) filiais.add(s.nome);
+        }
+      });
+    }
+
+    // 2. Complementa com dados dos pedidos
     dataByDate.forEach(item => {
       if (item.distrital) dists.add(item.distrital);
-      if (item.coordenador) coords.add(item.coordenador);
-      if (item.store) filiais.add(item.store);
+      if (fDist === 'all' || item.distrital === fDist) {
+        if (item.coordenador) coords.add(item.coordenador);
+      }
+      if ((fDist === 'all' || item.distrital === fDist) && (fCoord === 'all' || item.coordenador === fCoord)) {
+        if (item.store) filiais.add(item.store);
+      }
     });
 
     return {
@@ -117,7 +133,7 @@ export default function CuponsPage({
       coordenadores: Array.from(coords).sort(),
       filiais: Array.from(filiais).sort()
     };
-  }, [dataByDate]);
+  }, [allStores, dataByDate, fDist, fCoord]);
 
   // Aplicar filtros
   const filteredData = useMemo(() => {
@@ -159,9 +175,29 @@ export default function CuponsPage({
     return Object.values(map).sort((a, b) => b.uses - a.uses);
   }, [filteredData]);
 
-  // Hierarquia: Distrital → Coordenador → Filial
+  // Hierarquia: Distrital → Coordenador → Filial (garante que lojas sem cupons não desapareçam)
   const hierarchy = useMemo(() => {
     const distMap = {};
+
+    // Se houver filtro de coordenador ou distrital ativo, pré-popula todas as lojas cadastradas
+    if (allStores && allStores.length > 0 && (fDist !== 'all' || fCoord !== 'all')) {
+      allStores.forEach(s => {
+        const d = s.distrital || 'Outros';
+        const c = s.coordenador || 'Outros';
+        const f = s.nome || 'Sem Loja';
+
+        if (fDist !== 'all' && d !== fDist) return;
+        if (fCoord !== 'all' && c !== fCoord) return;
+        if (fFilial !== 'all' && f !== fFilial) return;
+
+        if (!distMap[d]) distMap[d] = { nome: d, uses: 0, revenue: 0, coords: {} };
+        if (!distMap[d].coords[c]) distMap[d].coords[c] = { nome: c, uses: 0, revenue: 0, filiais: {} };
+        if (!distMap[d].coords[c].filiais[f]) {
+          distMap[d].coords[c].filiais[f] = { nome: f, uses: 0, revenue: 0, semCupons: true };
+        }
+      });
+    }
+
     filteredData.forEach(item => {
       const d = item.distrital || 'Outros';
       const c = item.coordenador || 'Outros';
@@ -175,9 +211,12 @@ export default function CuponsPage({
       distMap[d].coords[c].uses++;
       distMap[d].coords[c].revenue += item.value || 0;
 
-      if (!distMap[d].coords[c].filiais[f]) distMap[d].coords[c].filiais[f] = { nome: f, uses: 0, revenue: 0 };
+      if (!distMap[d].coords[c].filiais[f]) {
+        distMap[d].coords[c].filiais[f] = { nome: f, uses: 0, revenue: 0, semCupons: false };
+      }
       distMap[d].coords[c].filiais[f].uses++;
       distMap[d].coords[c].filiais[f].revenue += item.value || 0;
+      distMap[d].coords[c].filiais[f].semCupons = false;
     });
 
     return Object.values(distMap)
@@ -186,12 +225,15 @@ export default function CuponsPage({
         coords: Object.values(d.coords)
           .map(c => ({
             ...c,
-            filiais: Object.values(c.filiais).sort((a, b) => b.uses - a.uses)
+            filiais: Object.values(c.filiais).sort((a, b) => {
+              if (b.uses !== a.uses) return b.uses - a.uses;
+              return a.nome.localeCompare(b.nome);
+            })
           }))
           .sort((a, b) => b.uses - a.uses)
       }))
       .sort((a, b) => b.uses - a.uses);
-  }, [filteredData]);
+  }, [allStores, filteredData, fDist, fCoord, fFilial]);
 
   // Gráfico temporal
   const timeChartData = useMemo(() => {
@@ -518,11 +560,63 @@ export default function CuponsPage({
         </div>
       )}
 
+      {/* Aviso evidente de carregamento / atualização */}
+      {couponLoading && (
+        <div style={{
+          background: 'linear-gradient(90deg, #ede9fe 0%, #f5f3ff 100%)',
+          border: '1px solid #c4b5fd',
+          borderRadius: 8,
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          color: '#6d28d9',
+          fontSize: 13,
+          fontWeight: 600,
+          boxShadow: '0 2px 6px rgba(124, 58, 237, 0.08)'
+        }}>
+          <RefreshCw size={16} className="spinning" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span>Carregando dados de cupons da VTEX...</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: '#7c3aed' }}>
+              Processando pedidos. Os valores abaixo serão atualizados automaticamente sem zerar a tela.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ══════ KPIs ══════ */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <KpiCard icon={<Tag size={18} />} color="#7c3aed" bg="#f5f3ff" label="Cupons Usados" value={fmtInteger(kpi.totalUses)} sub={`${kpi.uniqueCoupons} cupons distintos`} />
-        <KpiCard icon={<DollarSign size={18} />} color="#10b981" bg="#ecfdf5" label="Faturamento c/ Cupom" value={fmtCurrency(kpi.totalRevenue)} sub={`Período: ${periodLabel}`} />
-        <KpiCard icon={<ShoppingBag size={18} />} color="#3b82f6" bg="#eff6ff" label="Ticket Médio" value={fmtCurrency(kpi.avgTicket)} sub="Valor médio dos pedidos" />
+        <KpiCard
+          icon={<Tag size={18} />}
+          color="#7c3aed"
+          bg="#f5f3ff"
+          label="Cupons Usados"
+          value={fmtInteger(kpi.totalUses)}
+          sub={`${kpi.uniqueCoupons} cupons distintos`}
+          loading={couponLoading && filteredData.length === 0}
+          isRefreshing={couponLoading && filteredData.length > 0}
+        />
+        <KpiCard
+          icon={<DollarSign size={18} />}
+          color="#10b981"
+          bg="#ecfdf5"
+          label="Faturamento c/ Cupom"
+          value={fmtCurrency(kpi.totalRevenue)}
+          sub={`Período: ${periodLabel}`}
+          loading={couponLoading && filteredData.length === 0}
+          isRefreshing={couponLoading && filteredData.length > 0}
+        />
+        <KpiCard
+          icon={<ShoppingBag size={18} />}
+          color="#3b82f6"
+          bg="#eff6ff"
+          label="Ticket Médio"
+          value={fmtCurrency(kpi.avgTicket)}
+          sub="Valor médio dos pedidos"
+          loading={couponLoading && filteredData.length === 0}
+          isRefreshing={couponLoading && filteredData.length > 0}
+        />
       </div>
 
       {/* ══════ TABS: Resumo / Hierarquia / Detalhes ══════ */}
@@ -827,13 +921,36 @@ export default function CuponsPage({
 
                               {/* Filiais */}
                               {isCoordOpen && coord.filiais.map(fil => (
-                                <tr key={`f-${dist.nome}-${coord.nome}-${fil.nome}`} style={tbodyRow}>
+                                <tr key={`f-${dist.nome}-${coord.nome}-${fil.nome}`} style={{ ...tbodyRow, opacity: fil.uses === 0 ? 0.75 : 1 }}>
                                   <td style={{ ...tdCell, paddingLeft: 60 }}>
-                                    <span style={{ fontSize: 12, color: '#64748b' }}>{fil.nome}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <span style={{ fontSize: 12, color: fil.uses > 0 ? '#1e293b' : '#64748b', fontWeight: fil.uses > 0 ? 500 : 400 }}>
+                                        {fil.nome}
+                                      </span>
+                                      {fil.uses === 0 && (
+                                        <span style={{
+                                          fontSize: 10,
+                                          color: '#94a3b8',
+                                          background: '#f1f5f9',
+                                          border: '1px solid #e2e8f0',
+                                          padding: '1px 6px',
+                                          borderRadius: 4,
+                                          fontStyle: 'italic'
+                                        }}>
+                                          Sem cupons no período
+                                        </span>
+                                      )}
+                                    </div>
                                   </td>
-                                  <td style={{ ...tdCell, textAlign: 'right', fontWeight: 600, color: '#475569' }}>{fmtInteger(fil.uses)}</td>
-                                  <td style={{ ...tdCell, textAlign: 'right', color: '#475569' }}>{fmtCurrency(fil.revenue)}</td>
-                                  <td style={{ ...tdCell, textAlign: 'right', color: '#94a3b8' }}>{fmtCurrency(fil.uses > 0 ? fil.revenue / fil.uses : 0)}</td>
+                                  <td style={{ ...tdCell, textAlign: 'right', fontWeight: 600, color: fil.uses > 0 ? '#475569' : '#94a3b8' }}>
+                                    {fmtInteger(fil.uses)}
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'right', color: fil.uses > 0 ? '#047857' : '#94a3b8', fontWeight: fil.uses > 0 ? 600 : 400 }}>
+                                    {fmtCurrency(fil.revenue)}
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'right', color: '#94a3b8' }}>
+                                    {fil.uses > 0 ? fmtCurrency(fil.revenue / fil.uses) : '—'}
+                                  </td>
                                 </tr>
                               ))}
                             </React.Fragment>
@@ -927,17 +1044,35 @@ export default function CuponsPage({
 }
 
 // ── Sub-componentes ──────────────────────────────────────────────────────────
-function KpiCard({ icon, color, bg, label, value, sub }) {
+function KpiCard({ icon, color, bg, label, value, sub, loading = false, isRefreshing = false }) {
   return (
     <div style={{
       flex: 1, minWidth: 200, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
       padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
-      boxShadow: '0 1px 4px rgba(0,0,0,0.05)'
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+      opacity: isRefreshing ? 0.75 : 1,
+      transition: 'opacity 0.2s ease',
+      position: 'relative'
     }}>
-      <div style={{ background: bg, color, padding: 9, borderRadius: 6, display: 'flex' }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>{label}</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f2050', marginTop: 2 }}>{value}</div>
+      <div style={{ background: bg, color, padding: 9, borderRadius: 6, display: 'flex', flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>{label}</div>
+          {isRefreshing && (
+            <span style={{ fontSize: 9, color: '#7c3aed', fontWeight: 600, background: '#f5f3ff', padding: '1px 5px', borderRadius: 3 }}>
+              Atualizando…
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f2050', marginTop: 2 }}>
+          {loading ? (
+            <span style={{ color: '#94a3b8', fontSize: 14, fontWeight: 600 }}>Carregando…</span>
+          ) : (
+            value
+          )}
+        </div>
         {sub && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>{sub}</div>}
       </div>
     </div>

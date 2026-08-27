@@ -766,9 +766,7 @@ function CatTable({ grupos, linhas, labelAtualAno, searchTerm, viewMode, getMetr
 function getBrtDateStr(daysAgo = 0) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  // Ajuste manual UTC-3 para BRT
-  const brt = new Date(d.getTime() - 3 * 3600000);
-  return brt.toISOString().slice(0, 10);
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
 // ── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
@@ -800,6 +798,7 @@ export default function DrillPanel({ onUpload }) {
   const [couponSync, setCouponSync] = useState(null);
   const [couponTotalOrders, setCouponTotalOrders] = useState(0);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [couponAllStores, setCouponAllStores] = useState([]);
 
   // Filtros específicos de cupons
   const [couponDateMode, setCouponDateMode] = useState('7d'); // hoje, ontem, 3d, 7d, 15d, custom
@@ -817,6 +816,7 @@ export default function DrillPanel({ onUpload }) {
         setCouponRaw(res.data || []);
         setCouponSync(res.sync || null);
         setCouponTotalOrders(res.totalOrders || 0);
+        if (res.allStores) setCouponAllStores(res.allStores);
       }
     } catch (err) {
       console.error('[DrillPanel] Erro ao buscar cupons:', err);
@@ -1122,16 +1122,26 @@ export default function DrillPanel({ onUpload }) {
     }
   }, [apiOptions]);
 
+  const loadingFilterDescription = useMemo(() => {
+    const parts = [];
+    if (fFilial !== 'all') parts.push(`Filial: ${fFilial}`);
+    else if (fCoord !== 'all') parts.push(`Coordenação: ${fCoord}`);
+    else if (fDist !== 'all') parts.push(`Distrital: ${fDist}`);
+    if (fUF !== 'all') parts.push(`UF: ${fUF}`);
+    if (fCidade !== 'all') parts.push(`Cidade: ${fCidade}`);
+    if (fGrupo !== 'all') parts.push(`Grupo: ${fGrupo}`);
+    if (fLinha !== 'all') parts.push(`Linha: ${fLinha}`);
+    return parts.join(' · ');
+  }, [fDist, fCoord, fFilial, fUF, fCidade, fGrupo, fLinha]);
+
   const load = useCallback(async () => {
     setLoading(true); setError(null); setNoData(false);
     try {
-      // Sempre busca sem filtro para ter as opções de dropdown
       const resAll = await API.getMetas({ 
         distrital: 'all', coordenador: 'all', filial: 'all', grupo: 'all', linha: 'all',
         uf: 'all', cidade: 'all'
       });
       
-      // Checar se o servidor ainda não tem planilha
       if (resAll.status === 'no_data') {
         setNoData(true);
         setLoading(false);
@@ -1141,7 +1151,6 @@ export default function DrillPanel({ onUpload }) {
       setRawFull(resAll.data);
       setApiOptions(resAll.options);
 
-      // Se tem filtro, busca com filtro
       if (hasFilter) {
         const res = await API.getMetas(filters);
         setData(res.data);
@@ -1150,9 +1159,47 @@ export default function DrillPanel({ onUpload }) {
       }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
+  }, [filters, hasFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  // Carga inicial
+  useEffect(() => {
+    load();
+  }, []);
+
+  // Quando os filtros mudam, busca diretamente SEM re-buscar os 5MB de resAll
+  const isInitialFilterMount = useRef(true);
+  useEffect(() => {
+    if (isInitialFilterMount.current) {
+      isInitialFilterMount.current = false;
+      return;
+    }
+
+    if (!rawFull) return;
+
+    if (!hasFilter) {
+      setData(rawFull);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+
+    API.getMetas(filters)
+      .then(res => {
+        if (isMounted && res.status === 'ok') {
+          setData(res.data);
+        }
+      })
+      .catch(err => {
+        if (isMounted) setError(err.message);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [fDist, fCoord, fFilial, fGrupo, fLinha, fUF, fCidade]);
 
   // Opções dos dropdowns (sempre do dado completo)
   const distOptions = useMemo(() => {
@@ -1791,7 +1838,7 @@ export default function DrillPanel({ onUpload }) {
   const tPartEvol = (t.pct_ecomm_jul26 != null && t.pct_ecomm_jul25 != null) ? t.pct_ecomm_jul26 - t.pct_ecomm_jul25 : null;
 
   const kpiBlocks = useMemo(() => {
-    if (loading || !t) {
+    if (!t) {
       return [
         { label: 'Carregando...', value: '...' },
         { label: 'Carregando...', value: '...' },
@@ -1917,7 +1964,7 @@ export default function DrillPanel({ onUpload }) {
         }
       ];
     }
-  }, [loading, t, viewMode, labelAtualAno, labelAnt, tPartEvol]);
+  }, [t, viewMode, labelAtualAno, labelAnt, tPartEvol]);
 
   const COLS_HIER = [
     'Meta Total',
@@ -2132,14 +2179,68 @@ export default function DrillPanel({ onUpload }) {
 
       <div style={{ padding: '16px 24px', maxWidth: 1700, margin: '0 auto' }}>
 
+        {/* ── Banner em destaque quando atualizando dados (Filtros / Carga) ── */}
+        {activeTab !== 'cupons' && loading && (
+          <div style={{
+            background: 'linear-gradient(90deg, #1e3a8a 0%, #0f2050 100%)',
+            color: '#fff',
+            borderRadius: 8,
+            padding: '12px 18px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 12px rgba(15,32,80,0.25)',
+            border: '1px solid rgba(255,255,255,0.15)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <RefreshCw size={18} className="spinning" />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>
+                  {loadingFilterDescription ? `Atualizando dados: ${loadingFilterDescription}` : 'Atualizando dados do Dashboard...'}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+                  Processando métricas e indicadores. Mantendo valores anteriores na tela enquanto carrega.
+                </div>
+              </div>
+            </div>
+            <span style={{
+              background: 'rgba(255,255,255,0.15)',
+              padding: '3px 10px',
+              borderRadius: 12,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              Carregando
+            </span>
+          </div>
+        )}
+
         {/* ── KPIs — apenas para venda (cup/tm têm dupla contagem no total) ── */}
         {activeTab !== 'cupons' && (viewMode === 'venda' ? (
-          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-            <div style={{ padding: '6px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', textAlign: 'right' }}>
-              Período: <strong style={{ color: '#0f2050' }}>{labelAtual}</strong>
-              &nbsp;·&nbsp; vs Ano Ant.: <strong>{labelAtualAno}</strong>
-              &nbsp;·&nbsp; vs Mês Ant.: <strong>{labelAnt}</strong>
-              {hasFilter && <span style={{ marginLeft: 12, color: '#7c3aed', fontWeight: 700 }}>• Dados filtrados</span>}
+          <div style={{
+            background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0',
+            overflow: 'hidden', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            opacity: loading ? 0.75 : 1,
+            transition: 'opacity 0.2s ease',
+            position: 'relative'
+          }}>
+            <div style={{ padding: '6px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', textAlign: 'right', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                {loading && (
+                  <span style={{ color: '#1e3a8a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <RefreshCw size={11} className="spinning" /> Atualizando indicadores…
+                  </span>
+                )}
+              </div>
+              <div>
+                Período: <strong style={{ color: '#0f2050' }}>{labelAtual}</strong>
+                &nbsp;·&nbsp; vs Ano Ant.: <strong>{labelAtualAno}</strong>
+                &nbsp;·&nbsp; vs Mês Ant.: <strong>{labelAnt}</strong>
+                {hasFilter && <span style={{ marginLeft: 12, color: '#7c3aed', fontWeight: 700 }}>• Dados filtrados</span>}
+              </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
               {kpiBlocks.map((b, idx) => (
@@ -2709,6 +2810,7 @@ export default function DrillPanel({ onUpload }) {
             couponLoading={couponLoading}
             couponSync={couponSync}
             couponTotalOrders={couponTotalOrders}
+            allStores={couponAllStores.length > 0 ? couponAllStores : (apiOptions?.filiais || [])}
             loadCoupons={loadCoupons}
             fDist={fDist}
             setFDist={setFDist}
@@ -2802,8 +2904,36 @@ export default function DrillPanel({ onUpload }) {
               </div>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <div style={{ overflowX: 'auto', position: 'relative' }}>
+              {loading && data && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  background: 'rgba(255, 255, 255, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10,
+                  pointerEvents: 'none'
+                }}>
+                  <div style={{
+                    background: '#0f2050',
+                    color: '#fff',
+                    padding: '8px 16px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}>
+                    <RefreshCw size={14} className="spinning" />
+                    <span>Atualizando dados da tabela…</span>
+                  </div>
+                </div>
+              )}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, opacity: (loading && data) ? 0.65 : 1, transition: 'opacity 0.15s ease' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontWeight: 700 }}>
                     <th 
@@ -2840,7 +2970,7 @@ export default function DrillPanel({ onUpload }) {
                 </thead>
 
                 <tbody>
-                  {loading ? (
+                  {loading && !data ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         {Array.from({ length: 1 + activeCols.length }).map((_, j) => (

@@ -39,6 +39,7 @@ const CADASTRO_PATH = path.join(__dirname, 'filiais_cadastro.json');
 let filiaisCadastro = {};
 const lookupCache = new Map();
 const canonKeysMap = new Map();
+const stateSpecificKeysMap = new Map();
 const cityNumKeysMap = new Map();
 const baseNoNumKeysMap = new Map();
 
@@ -152,17 +153,21 @@ const SPECIAL_VTEX_TO_CSV = {
   'caxias 21': 'caxias 20',
 };
 
-function canonicalize(normName) {
+function canonicalize(normName, preserveState = false) {
   let res = String(normName).toLowerCase();
   if (SPECIAL_VTEX_TO_CSV[res] && SPECIAL_VTEX_TO_CSV[res] !== res) {
-    return canonicalize(SPECIAL_VTEX_TO_CSV[res]);
+    return canonicalize(SPECIAL_VTEX_TO_CSV[res], preserveState);
   }
   res = res.replace(/([a-z])(\d)/g, '$1 $2');
   res = res.replace(/\b0+(\d+)\b/g, '$1');
-  res = res.replace(/\s+(rs|pr|sc)\s*$/g, '');
-  res = res.replace(/\s+(rs|pr|sc)\s+(\d)/g, ' $2');
+
+  if (!preserveState) {
+    res = res.replace(/\s+(rs|pr|sc)\s*$/g, '');
+    res = res.replace(/\s+(rs|pr|sc)\s+(\d)/g, ' $2');
+  }
+
   res = res
-    .replace(/\s*-\s*(nova|shop|gal|hosp|merc|pr|sc|rs)\b/gi, '')
+    .replace(/\s*-\s*(nova|shop|gal|hosp|merc)\b/gi, '')
     .replace(/\b(nova|shop|gal|hosp|merc)\b/gi, '')
     .replace(/\bnv\b/g, '')
     .replace(/\bnov\b/g, '')
@@ -175,12 +180,13 @@ function canonicalize(normName) {
   res = expanded.join(' ');
   res = res.replace(/\bd\s+/g, 'd').replace(/\bd'/g, 'd');
 
-  const numberMatch = res.match(/^(.+?)\s+(\d+)$/);
+  const numberMatch = res.match(/^(.+?)\s+(\d+)(\s+(rs|pr|sc))?$/);
   if (numberMatch) {
     const baseName = numberMatch[1].trim();
     const num = numberMatch[2];
+    const st = numberMatch[3] || '';
     if (CITY_SUFFIX_MAP[baseName]) {
-      res = CITY_SUFFIX_MAP[baseName] + ' ' + num;
+      res = CITY_SUFFIX_MAP[baseName] + ' ' + num + st;
     }
   } else {
     if (CITY_SUFFIX_MAP[res]) {
@@ -197,7 +203,7 @@ function canonicalize(normName) {
   }
 
   if (SPECIAL_VTEX_TO_CSV[res] && SPECIAL_VTEX_TO_CSV[res] !== res) {
-    return canonicalize(SPECIAL_VTEX_TO_CSV[res]);
+    return canonicalize(SPECIAL_VTEX_TO_CSV[res], preserveState);
   }
   return res.replace(/\s+/g, ' ').trim();
 }
@@ -205,18 +211,50 @@ function canonicalize(normName) {
 function buildLookupIndexes() {
   lookupCache.clear();
   canonKeysMap.clear();
+  stateSpecificKeysMap.clear();
   cityNumKeysMap.clear();
   baseNoNumKeysMap.clear();
 
   for (const key of Object.keys(filiaisCadastro)) {
     const normKey = normalizeStoreName(key);
-    const canonKey = canonicalize(normKey);
+    const canonKey = canonicalize(normKey, false);
+    const canonWithState = canonicalize(normKey, true);
+
+    const item = filiaisCadastro[key];
+    const uf = item?.uf?.toLowerCase();
+
+    // 1. Direct norm key
     canonKeysMap.set(normKey, key);
-    canonKeysMap.set(canonKey, key);
+
+    // 2. State-specific index: e.g. "sarandi 1 rs" -> Sarandi 1, "sarandi 1 pr" -> Sarandi 1 - PR
+    if (uf) {
+      stateSpecificKeysMap.set(canonKey + ' ' + uf, key);
+      stateSpecificKeysMap.set(normKey + ' ' + uf, key);
+      if (canonKey.endsWith(' 1')) {
+        stateSpecificKeysMap.set(canonKey.slice(0, -2).trim() + ' ' + uf, key);
+      } else if (!/\b\d+\b/.test(canonKey)) {
+        stateSpecificKeysMap.set(canonKey + ' 1 ' + uf, key);
+      }
+    }
+    if (canonWithState.endsWith(' rs') || canonWithState.endsWith(' pr') || canonWithState.endsWith(' sc')) {
+      stateSpecificKeysMap.set(canonWithState, key);
+      const stMatch = canonWithState.match(/^(.+?)\s+(rs|pr|sc)$/);
+      if (stMatch) {
+        const b = stMatch[1].trim();
+        const s = stMatch[2];
+        if (b.endsWith(' 1')) stateSpecificKeysMap.set(b.slice(0, -2).trim() + ' ' + s, key);
+        else if (!/\b\d+\b/.test(b)) stateSpecificKeysMap.set(b + ' 1 ' + s, key);
+      }
+    }
+
+    // 3. Canon key
+    if (!canonKeysMap.has(canonKey) || !key.includes('- PR')) {
+      canonKeysMap.set(canonKey, key);
+    }
 
     if (!/\b\d+\b/.test(canonKey)) {
       baseNoNumKeysMap.set(canonKey, key);
-      canonKeysMap.set(canonKey + ' 1', key);
+      if (!canonKeysMap.has(canonKey + ' 1')) canonKeysMap.set(canonKey + ' 1', key);
     } else {
       const m1 = canonKey.match(/^(.+?)\s+1$/);
       if (m1) {
@@ -224,15 +262,24 @@ function buildLookupIndexes() {
       }
     }
 
-    const item = filiaisCadastro[key];
     if (item && item.municipio) {
       const normCity = normalizeStoreName(item.municipio);
       const numMatch = key.match(/\b(\d+)\b/);
       const num = numMatch ? numMatch[1] : '';
       const cityKey = (normCity + ' ' + num).trim();
-      cityNumKeysMap.set(cityKey, key);
+      if (uf) {
+        stateSpecificKeysMap.set(cityKey + ' ' + uf, key);
+        if (!num) {
+          stateSpecificKeysMap.set(normCity + ' 1 ' + uf, key);
+        } else if (num === '1') {
+          stateSpecificKeysMap.set(normCity + ' ' + uf, key);
+        }
+      }
+      if (!cityNumKeysMap.has(cityKey) || !key.includes('- PR')) {
+        cityNumKeysMap.set(cityKey, key);
+      }
       if (!num) {
-        cityNumKeysMap.set(normCity + ' 1', key);
+        if (!cityNumKeysMap.has(normCity + ' 1')) cityNumKeysMap.set(normCity + ' 1', key);
       }
     }
   }
@@ -259,18 +306,14 @@ function lookupStore(vtexCleanName) {
   const cleanName = cleanVtexSeller(vtexCleanName);
   const normName = normalizeStoreName(cleanName);
 
+  // 1. Direct match with cadastro key
   if (filiaisCadastro[cleanName]) {
     const res = { ...filiaisCadastro[cleanName], matchedKey: cleanName };
     lookupCache.set(vtexCleanName, res);
     return res;
   }
 
-  if (filiaisCadastro[normName]) {
-    const res = { ...filiaisCadastro[normName], matchedKey: normName };
-    lookupCache.set(vtexCleanName, res);
-    return res;
-  }
-
+  // 2. Direct match with normalized key (handles exact matches like "pelotas 7 nova")
   if (canonKeysMap.has(normName)) {
     const key = canonKeysMap.get(normName);
     const res = { ...filiaisCadastro[key], matchedKey: key };
@@ -278,7 +321,39 @@ function lookupStore(vtexCleanName) {
     return res;
   }
 
-  const canon = canonicalize(normName);
+  // 3. State-specific check if seller has RS/PR/SC
+  const stateMatch = normName.match(/\b(rs|pr|sc)\b/i);
+  if (stateMatch) {
+    const uf = stateMatch[1].toLowerCase();
+    const canonBase = canonicalize(normName, false);
+    const lookupStateKey = canonBase + ' ' + uf;
+    if (stateSpecificKeysMap.has(lookupStateKey)) {
+      const key = stateSpecificKeysMap.get(lookupStateKey);
+      const res = { ...filiaisCadastro[key], matchedKey: key };
+      lookupCache.set(vtexCleanName, res);
+      return res;
+    }
+    if (canonBase.endsWith(' 1')) {
+      const altKey = canonBase.slice(0, -2).trim() + ' ' + uf;
+      if (stateSpecificKeysMap.has(altKey)) {
+        const key = stateSpecificKeysMap.get(altKey);
+        const res = { ...filiaisCadastro[key], matchedKey: key };
+        lookupCache.set(vtexCleanName, res);
+        return res;
+      }
+    } else if (!/\b\d+\b/.test(canonBase)) {
+      const altKey = canonBase + ' 1 ' + uf;
+      if (stateSpecificKeysMap.has(altKey)) {
+        const key = stateSpecificKeysMap.get(altKey);
+        const res = { ...filiaisCadastro[key], matchedKey: key };
+        lookupCache.set(vtexCleanName, res);
+        return res;
+      }
+    }
+  }
+
+  // 4. Canonical match
+  const canon = canonicalize(normName, false);
   if (canonKeysMap.has(canon)) {
     const key = canonKeysMap.get(canon);
     const res = { ...filiaisCadastro[key], matchedKey: key };
@@ -286,6 +361,7 @@ function lookupStore(vtexCleanName) {
     return res;
   }
 
+  // 5. Ends with 1
   if (canon.endsWith(' 1')) {
     const base = canon.slice(0, -2).trim();
     if (baseNoNumKeysMap.has(base)) {
@@ -312,12 +388,21 @@ function lookupStore(vtexCleanName) {
     }
   }
 
+  // 6. City + Number
   const numMatch = canon.match(/^(.+?)\s+(\d+)$/);
   if (numMatch) {
     const baseName = numMatch[1].trim();
     const num = numMatch[2];
-
     const cityKey = (baseName + ' ' + num).trim();
+    if (stateMatch) {
+      const uf = stateMatch[1].toLowerCase();
+      if (stateSpecificKeysMap.has(cityKey + ' ' + uf)) {
+        const key = stateSpecificKeysMap.get(cityKey + ' ' + uf);
+        const res = { ...filiaisCadastro[key], matchedKey: key };
+        lookupCache.set(vtexCleanName, res);
+        return res;
+      }
+    }
     if (cityNumKeysMap.has(cityKey)) {
       const key = cityNumKeysMap.get(cityKey);
       const res = { ...filiaisCadastro[key], matchedKey: key };
@@ -1242,11 +1327,33 @@ app.post('/api/refresh', async (req, res) => {
   }
 });
 
+let couponsCache = {
+  data: null,
+  totalOrders: 0,
+  lastSyncTime: null,
+  ts: 0
+};
+
 app.get('/api/coupons', (req, res) => {
   try {
     const cache = vtexSync.getOrdersCache();
+    const syncState = vtexSync.getSyncState();
+    const totalOrders = Object.keys(cache).length;
+    const now = Date.now();
+
+    // Cache em memória para resposta instantânea (< 15ms)
+    if (couponsCache.data && 
+        couponsCache.totalOrders === totalOrders && 
+        couponsCache.lastSyncTime === syncState?.lastSyncTime && 
+        (now - couponsCache.ts) < 60000) {
+      return res.json({
+        ...couponsCache.data,
+        sync: syncState,
+        cached: true
+      });
+    }
+
     const list = [];
-    
     Object.values(cache).forEach(order => {
       // Filtra pedidos que têm cupom e que não estão cancelados
       if (order.coupon && order.status !== 'canceled') {
@@ -1261,8 +1368,7 @@ app.get('/api/coupons', (req, res) => {
         if (order.creationDate) {
           const d = new Date(order.creationDate);
           utcDateStr = d.toISOString().slice(0, 10);
-          const brt = new Date(d.getTime() - 3 * 3600000);
-          dateStr = brt.toISOString().slice(0, 10);
+          dateStr = d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
         }
 
         list.push({
@@ -1281,12 +1387,30 @@ app.get('/api/coupons', (req, res) => {
       }
     });
 
-    res.json({
+    const catalogStores = Object.keys(filiaisCadastro).map(key => ({
+      nome: key,
+      coordenador: filiaisCadastro[key].coordenador || '',
+      distrital: filiaisCadastro[key].distrital || '',
+      uf: filiaisCadastro[key].uf || '',
+      municipio: filiaisCadastro[key].municipio || ''
+    }));
+
+    const responsePayload = {
       status: 'success',
-      sync: vtexSync.getSyncState(),
-      totalOrders: Object.keys(cache).length,
-      data: list
-    });
+      sync: syncState,
+      totalOrders,
+      data: list,
+      allStores: catalogStores
+    };
+
+    couponsCache = {
+      data: responsePayload,
+      totalOrders,
+      lastSyncTime: syncState?.lastSyncTime,
+      ts: now
+    };
+
+    res.json(responsePayload);
   } catch (err) {
     console.error('[/api/coupons] Erro:', err.message);
     res.status(500).json({ status: 'error', error: err.message });
