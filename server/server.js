@@ -549,13 +549,13 @@ async function readCSVAsync(filePath) {
           vJul26Index = baseOffset + 1; // Posição 5 padrão após Meta Parcial
         }
 
-        // Venda Ano Anterior (ex: Agosto/25)
+        // Venda Ano Anterior (ex: Setembro/25)
         let vJul25Index = header.findIndex(h => /venda/i.test(h) && monthRegex.test(h) && /(25|2025)$/.test(h) && !/base/i.test(h) && !/cupons/i.test(h));
         if (vJul25Index < 0) {
           vJul25Index = baseOffset + 2; // Posição 6
         }
 
-        // Venda Mês Anterior (ex: Julho/26)
+        // Venda Mês Anterior (ex: Agosto/26)
         let vJun26Index = header.findIndex(h => /venda/i.test(h) && !monthRegex.test(h) && /(26|2026)$/.test(h) && !/base/i.test(h) && !/cupons/i.test(h));
         if (vJun26Index < 0) {
           vJun26Index = baseOffset + 3; // Posição 7
@@ -617,9 +617,9 @@ async function readCSVAsync(filePath) {
           return cleaned || fallback;
         }
 
-        const cleanLabelAtual = cleanPeriodLabel(header[vJul26Index], currentMonth ? `${currentMonth}/26` : 'Agosto/26');
-        const cleanLabelAnoAnt = cleanPeriodLabel(header[vJul25Index], currentMonth ? `${currentMonth}/25` : 'Agosto/25');
-        const cleanLabelAnt = cleanPeriodLabel(header[vJun26Index], 'Julho/26');
+        const cleanLabelAtual = cleanPeriodLabel(header[vJul26Index], currentMonth ? `${currentMonth}/26` : 'Setembro/26');
+        const cleanLabelAnoAnt = cleanPeriodLabel(header[vJul25Index], currentMonth ? `${currentMonth}/25` : 'Setembro/25');
+        const cleanLabelAnt = cleanPeriodLabel(header[vJun26Index], 'Agosto/26');
 
         C = {
           dist:       distIndex,
@@ -726,9 +726,9 @@ async function readCSVAsync(filePath) {
       }
 
       resolve({
-        label_mes_atual:         C.labelJul26 || 'Agosto/26',
-        label_mes_atual_ano_ant: C.labelJul25 || 'Agosto/25',
-        label_mes_ant:           C.labelJun26 || 'Julho/26',
+        label_mes_atual:         C.labelJul26 || 'Setembro/26',
+        label_mes_atual_ano_ant: C.labelJul25 || 'Setembro/25',
+        label_mes_ant:           C.labelJun26 || 'Agosto/26',
         arquivo:                 path.basename(filePath),
         lido_em:                 new Date().toISOString()
       });

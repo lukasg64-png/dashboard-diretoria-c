@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TrendingUp, TrendingDown, Upload, RefreshCw, ChevronDown, X, Filter, Download } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import API from '../api';
 import GeoMapPage from './GeoMapPage';
 import CuponsPage from './CuponsPage';
@@ -32,6 +32,60 @@ const cMeta = v => {
 };
 const desvioAbs = (venda, meta) => (venda != null && meta != null) ? venda - meta : null;
 const desvioPct = (venda, meta) => (venda != null && meta && meta !== 0) ? ((venda - meta) / meta) * 100 : null;
+
+// Badge numérico em cima dos pontos do traço (% Desvio = venda/meta - 1)
+const renderDesvioPctBadge = (props) => {
+  const { x, y, value } = props;
+  if (value == null || isNaN(value)) return null;
+  const numVal = Number(value);
+  const isPositive = numVal >= 0;
+  const color = isPositive ? '#059669' : '#dc2626';
+  const bgColor = isPositive ? '#ecfdf5' : '#fef2f2';
+  const borderCol = isPositive ? '#10b981' : '#ef4444';
+  const text = `${isPositive ? '+' : ''}${numVal.toFixed(1).replace('.', ',')}%`;
+
+  return (
+    <g transform={`translate(${x},${y - 12})`}>
+      <rect
+        x="-24"
+        y="-9"
+        width="48"
+        height="18"
+        rx="4"
+        fill={bgColor}
+        stroke={borderCol}
+        strokeWidth="1.2"
+      />
+      <text
+        x="0"
+        y="3.5"
+        textAnchor="middle"
+        fill={color}
+        style={{ fontSize: 9.5, fontWeight: 700, fontFamily: 'inherit' }}
+      >
+        {text}
+      </text>
+    </g>
+  );
+};
+
+// Ponto customizado no traço de % desvio (Verde se >= 0, Vermelho se < 0)
+const renderDesvioDot = (props) => {
+  const { cx, cy, payload } = props;
+  if (!cx || !cy || payload?.desvio_pct == null) return null;
+  const isPositive = payload.desvio_pct >= 0;
+  const color = isPositive ? '#10b981' : '#ef4444';
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4.5}
+      fill={color}
+      stroke="#ffffff"
+      strokeWidth={2}
+    />
+  );
+};
 
 const renderCustomLabel = (props) => {
   const { x, y, width, height, value } = props;
@@ -783,7 +837,7 @@ export default function DrillPanel({ onUpload }) {
   const [noData, setNoData] = useState(false); // true quando servidor não tem planilha carregada
   const [activeTab, setActiveTab] = useState('hierarquia');
   const [showChart, setShowChart] = useState(true);
-  const [chartMetric, setChartMetric] = useState('desvio');
+  const [chartMetric, setChartMetric] = useState('venda_meta');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('venda'); // venda, cup, tm
@@ -1028,8 +1082,8 @@ export default function DrillPanel({ onUpload }) {
   const chartMetricOptions = useMemo(() => {
     if (viewMode === 'venda') {
       return [
+        { key: 'venda_meta', label: '📊 Venda vs Meta & % Desvio' },
         { key: 'desvio', label: 'Desvio (R$)' },
-        { key: 'venda_meta', label: 'Venda vs Meta' },
         { key: 'participacao', label: 'Part. Digital (%)' },
         { key: 'evolucao', label: 'Evolução YoY (%)' },
         { key: 'crescimento', label: 'Crescimento MoM (%)' },
@@ -1051,7 +1105,7 @@ export default function DrillPanel({ onUpload }) {
       }
     } else {
       if (chartMetric === 'valor') {
-        setChartMetric('desvio');
+        setChartMetric('venda_meta');
       }
     }
   }, [viewMode, chartMetric]);
@@ -1288,9 +1342,9 @@ export default function DrillPanel({ onUpload }) {
   }, [rawFull, fGrupo]);
 
   const t = data?.filtered_total || data?.total || {};
-  const labelAtual    = data?.label_mes_atual || 'Agosto/26';
+  const labelAtual    = data?.label_mes_atual || 'Setembro/26';
   const labelAtualAno = data?.label_mes_atual_ano_ant || labelAtual.replace(/(\d{2})$/, m => String(Number(m) - 1).padStart(2, '0'));
-  const labelAnt      = data?.label_mes_ant || 'Julho/26';
+  const labelAnt      = data?.label_mes_ant || 'Agosto/26';
 
   const distritais    = data?.distritoriais || [];
   const coordenadores = data?.coordenadores || [];
@@ -1777,6 +1831,11 @@ export default function DrillPanel({ onUpload }) {
       const part26 = item.pct_ecomm_jul26 != null ? item.pct_ecomm_jul26 : 0;
       const part25 = item.pct_ecomm_jul25 != null ? item.pct_ecomm_jul25 : 0;
       const diffPP = (item.pct_ecomm_jul26 != null && item.pct_ecomm_jul25 != null) ? (item.pct_ecomm_jul26 - item.pct_ecomm_jul25) : 0;
+      const metaParc = item.meta_parcial || 0;
+      const vendaVal = m.val26 || 0;
+      const desvAbs = viewMode === 'venda' ? desvioAbs(vendaVal, metaParc) || 0 : 0;
+      const desvPct = (vendaVal != null && metaParc > 0) ? Number((((vendaVal / metaParc) - 1.0) * 100.0).toFixed(1)) : null;
+
       // Em modo flat cup/tm: mostrar grupo como prefixo para identificar a linha no gráfico
       const displayName = isFlatCupTm && item.grupo
         ? `${item.grupo.substring(0, 8)}… ${item.nome}`
@@ -1784,10 +1843,11 @@ export default function DrillPanel({ onUpload }) {
       return {
         name: displayName.length > 20 ? displayName.substring(0, 18) + '…' : displayName,
         nomeOriginal: item.nome,
-        venda: m.val26,
+        venda: vendaVal,
         venda_ant: m.val25,
-        meta: item.meta_parcial || 0,
-        desvio: viewMode === 'venda' ? desvioAbs(m.val26, item.meta_parcial) || 0 : 0,
+        meta: metaParc,
+        desvio: desvAbs,
+        desvio_pct: desvPct,
         participacao: part26,
         participacao_ant: part25,
         diff_pp: diffPP,
@@ -2373,12 +2433,18 @@ export default function DrillPanel({ onUpload }) {
               </div>
             </div>
             {chartMetric === 'venda_meta' && (
-              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', fontSize: 11, fontWeight: 600, marginBottom: 4 }}>
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', fontSize: 11, fontWeight: 600, marginBottom: 4, flexWrap: 'wrap' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#7c3aed', display: 'inline-block' }} /> Venda E-comm ({labelAtual})
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981', display: 'inline-block' }} /> Venda Bateu Meta
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} /> Venda Abaixo da Meta
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
                   <span style={{ width: 10, height: 10, borderRadius: 2, background: '#94a3b8', display: 'inline-block' }} /> Meta Parcial
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#475569' }}>
+                  <span style={{ width: 14, height: 2, background: '#475569', display: 'inline-block', borderTop: '2px dashed #475569' }} /> Traço % Desvio (Venda / Meta - 1)
                 </span>
               </div>
             )}
@@ -2451,7 +2517,7 @@ export default function DrillPanel({ onUpload }) {
                 );
 
                 const yAxis = (
-                  <YAxis tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => {
+                  <YAxis yAxisId="left" tick={{ fontSize: 9 }} stroke="#64748b" tickFormatter={v => {
                     if (chartMetric === 'participacao' || chartMetric === 'evolucao' || chartMetric === 'crescimento') return `${v.toFixed(0)}%`;
                     if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                     return fmtR(v);
@@ -2461,6 +2527,12 @@ export default function DrillPanel({ onUpload }) {
                 const tooltip = (
                   <Tooltip
                     formatter={(value, name, props) => {
+                      if (name === 'desvio_pct' || name === '% Desvio') {
+                        if (value == null) return ['—', '% Desvio'];
+                        const isPos = Number(value) >= 0;
+                        const icon = isPos ? '🟢 Bateu a meta' : '🔴 Abaixo da meta';
+                        return [`${isPos ? '+' : ''}${Number(value).toFixed(1).replace('.', ',')}% (${icon})`, '% Desvio (Venda / Meta - 1)'];
+                      }
                       if (name === 'participacao' || name === 'Part. Digital Atual') {
                         const diff = props?.payload?.diff_pp;
                         const diffTxt = diff != null ? ` (${diff >= 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} pp vs ano ant.)` : '';
@@ -2497,18 +2569,28 @@ export default function DrillPanel({ onUpload }) {
                 return (
                   <div style={containerStyle}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
+                      <ComposedChart
                         data={chartItems}
-                        margin={{ top: 32, right: isFlatScroll ? 20 : 10, left: 10, bottom: bottomMargin }}
+                        margin={{ top: 32, right: (chartMetric === 'venda_meta' ? 36 : (isFlatScroll ? 20 : 10)), left: 10, bottom: bottomMargin }}
                         onClick={handleChartClick}
                         style={{ cursor: 'pointer' }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                         {xAxis}
                         {yAxis}
+                        {chartMetric === 'venda_meta' && (
+                          <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            tick={{ fontSize: 9 }}
+                            stroke="#64748b"
+                            tickFormatter={v => `${v > 0 ? '+' : ''}${v.toFixed(0)}%`}
+                            tickLine={false}
+                          />
+                        )}
                         {tooltip}
                         {chartMetric === 'desvio' && (
-                          <Bar dataKey="desvio" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 40 : undefined}>
+                          <Bar yAxisId="left" dataKey="desvio" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 40 : undefined}>
                             {chartItems.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.desvio >= 0 ? '#10b981' : '#ef4444'} />
                             ))}
@@ -2516,7 +2598,7 @@ export default function DrillPanel({ onUpload }) {
                           </Bar>
                         )}
                         {chartMetric === 'valor' && (
-                          <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
+                          <Bar yAxisId="left" dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
                             <LabelList dataKey="venda" position="top" formatter={v => {
                               if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                               if (viewMode === 'tm') return fmtCurrency1(v);
@@ -2525,7 +2607,7 @@ export default function DrillPanel({ onUpload }) {
                           </Bar>
                         )}
                         {chartMetric === 'valor' && (
-                          <Bar dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
+                          <Bar yAxisId="left" dataKey="venda_ant" name="venda_ant" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
                             <LabelList dataKey="venda_ant" position="top" formatter={v => {
                               if (viewMode === 'cup') return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(v);
                               if (viewMode === 'tm') return fmtCurrency1(v);
@@ -2534,27 +2616,46 @@ export default function DrillPanel({ onUpload }) {
                           </Bar>
                         )}
                         {chartMetric === 'venda_meta' && (
-                          <Bar dataKey="venda" name="venda" fill="#7c3aed" radius={[4, 4, 0, 0]}>
-                            <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                          <Bar yAxisId="left" dataKey="venda" name="venda" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
+                            {chartItems.map((entry, index) => {
+                              const isPos = entry.desvio_pct != null ? entry.desvio_pct >= 0 : entry.venda >= entry.meta;
+                              return <Cell key={`cell-venda-${index}`} fill={isPos ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)'} />;
+                            })}
+                            <LabelList dataKey="venda" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#334155', fontWeight: 700 }} />
                           </Bar>
                         )}
                         {chartMetric === 'venda_meta' && (
-                          <Bar dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]}>
-                            <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#475569', fontWeight: 600 }} />
+                          <Bar yAxisId="left" dataKey="meta" name="meta" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={isFlatScroll ? 36 : undefined}>
+                            <LabelList dataKey="meta" position="top" formatter={v => fmtR(v)} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                           </Bar>
                         )}
+                        {chartMetric === 'venda_meta' && (
+                          <Line
+                            yAxisId="right"
+                            type="monotone"
+                            dataKey="desvio_pct"
+                            name="desvio_pct"
+                            stroke="#475569"
+                            strokeWidth={2}
+                            strokeDasharray="4 4"
+                            dot={renderDesvioDot}
+                            activeDot={{ r: 6 }}
+                          >
+                            <LabelList content={renderDesvioPctBadge} />
+                          </Line>
+                        )}
                         {chartMetric === 'participacao' && (
-                          <Bar dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
+                          <Bar yAxisId="left" dataKey="participacao" name="participacao" fill="#0ea5e9" radius={[4, 4, 0, 0]}>
                             <LabelList content={renderCustomPartLabel} />
                           </Bar>
                         )}
                         {chartMetric === 'participacao' && (
-                          <Bar dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                          <Bar yAxisId="left" dataKey="participacao_ant" name="participacao_ant" fill="#94a3b8" radius={[4, 4, 0, 0]}>
                             <LabelList dataKey="participacao_ant" position="top" formatter={v => `${Number(v).toFixed(1).replace('.', ',')}%`} style={{ fontSize: 8, fill: '#64748b', fontWeight: 600 }} />
                           </Bar>
                         )}
                         {chartMetric === 'evolucao' && (
-                          <Bar dataKey="evol_yoy" radius={[4, 4, 0, 0]}>
+                          <Bar yAxisId="left" dataKey="evol_yoy" radius={[4, 4, 0, 0]}>
                             {chartItems.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.evol_yoy >= 0 ? '#10b981' : '#ef4444'} />
                             ))}
@@ -2562,14 +2663,14 @@ export default function DrillPanel({ onUpload }) {
                           </Bar>
                         )}
                         {chartMetric === 'crescimento' && (
-                          <Bar dataKey="evol_mom" radius={[4, 4, 0, 0]}>
+                          <Bar yAxisId="left" dataKey="evol_mom" radius={[4, 4, 0, 0]}>
                             {chartItems.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.evol_mom >= 0 ? '#10b981' : '#ef4444'} />
                             ))}
                             <LabelList content={renderCustomPctLabel} />
                           </Bar>
                         )}
-                      </BarChart>
+                      </ComposedChart>
                     </ResponsiveContainer>
                   </div>
                 );
