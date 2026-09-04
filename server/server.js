@@ -536,7 +536,7 @@ async function readCSVAsync(filePath) {
         const metaParcIndex = findColIndex(h => /meta\s+parcial/i.test(h), 4);
         const metaTotIndex = findColIndex(h => /^meta\s+(?!parcial)/i.test(h), 3);
         const metaTotHeader = header[metaTotIndex] || '';
-        const currentMonth = metaTotHeader.replace(/^meta\s+/i, '').trim();
+        const currentMonth = metaTotHeader.replace(/^meta\s+/i, '').replace(/(\/\d+|\s+\d+)$/, '').trim();
         const monthRegex = currentMonth ? new RegExp(currentMonth, 'i') : /(agosto|julho|junho|setembro|outubro|novembro|dezembro|janeiro|fevereiro|marco|abril|maio)/i;
 
         const baseOffset = metaParcIndex >= 0 ? metaParcIndex : 4;

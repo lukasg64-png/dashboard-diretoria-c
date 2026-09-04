@@ -2,7 +2,14 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
-const xlsxPath = path.join(__dirname, '..', 'base Dashboard.xlsx');
+const localOneUp = path.join(__dirname, '..', 'base Dashboard.xlsx');
+const localTwoUp = path.join(__dirname, '..', '..', 'base Dashboard.xlsx');
+let xlsxPath = localOneUp;
+if (fs.existsSync(localTwoUp)) {
+  if (!fs.existsSync(localOneUp) || fs.statSync(localTwoUp).mtimeMs >= fs.statSync(localOneUp).mtimeMs) {
+    xlsxPath = localTwoUp;
+  }
+}
 const csvPath = path.join(__dirname, '..', 'base_dashboard.csv');
 
 console.log('Reading Excel file:', xlsxPath);
