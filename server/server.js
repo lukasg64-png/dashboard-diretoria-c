@@ -26,7 +26,7 @@ const PORT = process.env.PORT || 3005;
 const CSV_NAME   = 'base_dashboard.csv';
 const localOneUpCSV = path.join(__dirname, '..', CSV_NAME);
 const localTwoUpCSV = path.join(__dirname, '..', '..', CSV_NAME);
-const DEFAULT_CSV = fs.existsSync(localOneUpCSV) ? localOneUpCSV : localTwoUpCSV;
+const DEFAULT_CSV = fs.existsSync(localOneUpCSV) ? localOneUpCSV : (fs.existsSync(localTwoUpCSV) ? localTwoUpCSV : localOneUpCSV);
 const CSV_PATH    = process.env.CSV_PATH || DEFAULT_CSV;
 
 const localOneUp = path.join(__dirname, '..', 'base Dashboard.xlsx');
@@ -1008,7 +1008,7 @@ async function getCached() {
     loaded = await downloadFromGCS(tmp, CSV_NAME);
   }
 
-  const csvFileToRead = loaded ? tmp : CSV_PATH;
+  const csvFileToRead = loaded ? tmp : (fs.existsSync(localOneUpCSV) ? localOneUpCSV : CSV_PATH);
   if (!fs.existsSync(csvFileToRead)) {
     console.warn(`⚠️ [getCached] CSV não encontrado em: ${csvFileToRead}. Aguardando upload do usuário.`);
     return null;
