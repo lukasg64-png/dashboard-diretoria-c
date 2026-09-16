@@ -168,11 +168,14 @@ def consolidate():
     with open(VENDAS_JSON, "r", encoding="utf-8") as f:
         vendas_data = json.load(f)
 
-    max_dia = vendas_data["metadata"].get("max_dia", 16)
-    max_date = vendas_data["metadata"].get("max_date", f"{max_dia:02d}/09/2026")
+    raw_max_dia = vendas_data["metadata"].get("max_dia", 16)
+    # REGRA OFICIAL FSJ: SEMPRE D-1 (Ontem Fechado)
+    # Não considera o dia de hoje (intraday) para não distorcer o atingimento de metas.
+    max_dia = max(1, raw_max_dia - 1)
+    max_date = f"{max_dia:02d}/09/2026 (D-1 Fechado)"
     total_dias_mes = metas_data["metadata"].get("dias_totais", 30)
 
-    print(f"Data de corte: {max_date} (Dia {max_dia} de {total_dias_mes})")
+    print(f"Data de corte Oficial (D-1 Fechado): {max_date} (Dia {max_dia} de {total_dias_mes})")
 
     # 1. TOTAL GERAL (DIRETORIA C)
     total_metas_dias = [round(m, 2) for m in metas_data["total"]["metas_dias"]]
@@ -288,8 +291,8 @@ def consolidate():
         m_dias = [round(x, 2) for x in f_meta.get("metas_dias", [0.0]*30)] if f_meta else [0.0]*30
         m_mtd = sum(m_dias[:max_dia])
 
-        dias_dig = qf.get("dias_digital", [0.0]*max_dia)
-        dias_tot = qf.get("dias_total", [0.0]*max_dia)
+        dias_dig = qf.get("dias_digital", [0.0]*max_dia)[:max_dia]
+        dias_tot = qf.get("dias_total", [0.0]*max_dia)[:max_dia]
 
         v_dig = sum(dias_dig)
         v_tot = sum(dias_tot)
@@ -513,8 +516,8 @@ def consolidate():
         m_dias = [round(x, 2) for x in g_meta.get("metas_dias", [0.0]*30)]
         m_mtd = round(sum(m_dias[:max_dia]), 2)
 
-        dias_dig = v_info.get("dias_digital", [0.0]*max_dia)
-        dias_tot = v_info.get("dias_total", [0.0]*max_dia)
+        dias_dig = v_info.get("dias_digital", [0.0]*max_dia)[:max_dia]
+        dias_tot = v_info.get("dias_total", [0.0]*max_dia)[:max_dia]
 
         v_dig = round(sum(dias_dig) if dias_dig else v_info.get("venda_digital", 0.0), 2)
         v_tot = round(sum(dias_tot) if dias_tot else v_info.get("venda", 0.0), 2)

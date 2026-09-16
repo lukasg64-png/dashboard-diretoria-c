@@ -30,10 +30,26 @@ def build_html():
 
     meta = dash_data.get("metadata", {})
     kpis = dash_data.get("kpis", {})
-    max_dia = meta.get("max_dia", 16)
+    max_dia = meta.get("max_dia", 15)
     max_dia_str = f"{max_dia:02d}"
-    data_corte = meta.get("data_corte", f"{max_dia_str}/09/2026")
+    data_corte = meta.get("data_corte", f"{max_dia_str}/09/2026 (D-1 Fechado)")
     gerado_em = meta.get("gerado_em", time.strftime("%d/%m/%Y %H:%M:%S"))
+
+    def py_format_brl(val):
+        if val is None or val == "": return "R$ 0"
+        n = int(round(float(val)))
+        if n < 0:
+            return "- R$ " + f"{abs(n):,}".replace(",", ".")
+        return "R$ " + f"{n:,}".replace(",", ".")
+
+    def py_format_gap(val):
+        if val is None or val == "": return "R$ 0"
+        n = int(round(float(val)))
+        if n > 0:
+            return "+ R$ " + f"{n:,}".replace(",", ".")
+        elif n < 0:
+            return "- R$ " + f"{abs(n):,}".replace(",", ".")
+        return "R$ 0"
 
     raw_json_str = json.dumps(dash_data, ensure_ascii=False)
 
@@ -906,7 +922,7 @@ def build_html():
           <div class="date-inputs-pair">
             <div class="date-input-wrap">
               <label for="filterDateIni">Início</label>
-              <input type="date" id="filterDateIni" class="apple-date-input" min="2026-09-01" max="2026-09-{max_dia_str}" value="2026-09-01" onchange="onDateInputChange()">
+              <input type="date" id="filterDateIni" class="apple-date-input" min="2026-09-01" max="2026-09-{max_dia_str}" value="2026-09-{max_dia_str}" onchange="onDateInputChange()">
             </div>
             <span class="date-range-separator">até</span>
             <div class="date-input-wrap">
@@ -917,14 +933,14 @@ def build_html():
         </div>
 
         <div class="date-presets-group">
-          <span class="preset-pill active" id="presetMtd" onclick="selectDatePreset('mtd')">⭐ Mês Acumulado (MTD)</span>
-          <span class="preset-pill" id="presetYesterday" onclick="selectDatePreset('yesterday')">⚡ Ontem (D-1)</span>
+          <span class="preset-pill active" id="presetYesterday" onclick="selectDatePreset('yesterday')">⚡ Ontem (D-1)</span>
+          <span class="preset-pill" id="presetMtd" onclick="selectDatePreset('mtd')">⭐ Mês Acumulado (MTD D-1)</span>
           <span class="preset-pill" id="preset7Days" onclick="selectDatePreset('7days')">📆 Últimos 7 Dias</span>
           <span class="preset-pill" id="presetThisWeek" onclick="selectDatePreset('this_week')">🗓️ Semana Atual</span>
         </div>
 
         <div class="date-period-badge" id="datePeriodInfo">
-          <span>01 a {max_dia_str}/09/2026 ({max_dia} dias MTD)</span>
+          <span>{max_dia_str}/09/2026 • Ontem (D-1) (1 dia)</span>
         </div>
       </div>
 
@@ -966,7 +982,7 @@ def build_html():
           <span class="kpi-label">Meta do Mês (Set/26)</span>
           <span class="badge" style="background: rgba(0, 113, 227, 0.12); color: var(--sj-blue);">Oficial</span>
         </div>
-        <div class="kpi-value" id="kpiMetaMes">R$ {kpis.get('meta_mes', 0):,.2f}</div>
+        <div class="kpi-value" id="kpiMetaMes">{py_format_brl(kpis.get('meta_mes', 0))}</div>
         <div class="kpi-subtext">Base Oficial Diarizada (30 Dias)</div>
       </div>
 
@@ -974,10 +990,10 @@ def build_html():
       <div class="kpi-card" style="--kpi-accent: #5856D6;">
         <div class="kpi-header">
           <span class="kpi-label" id="labelMetaPeriodo">Meta do Período</span>
-          <span class="badge" style="background: rgba(88, 86, 214, 0.12); color: #5856D6;" id="badgeMetaDias">{max_dia} Dias</span>
+          <span class="badge" style="background: rgba(88, 86, 214, 0.12); color: #5856D6;" id="badgeMetaDias">1 Dia</span>
         </div>
-        <div class="kpi-value" id="kpiMetaPeriodo">R$ {kpis.get('meta_mtd', 0):,.2f}</div>
-        <div class="kpi-subtext" id="subtextMetaPeriodo">Acumulado dias 01 a {max_dia_str}/09</div>
+        <div class="kpi-value" id="kpiMetaPeriodo">{py_format_brl(kpis.get('meta_mtd', 0))}</div>
+        <div class="kpi-subtext" id="subtextMetaPeriodo">Meta específica do dia {max_dia_str}/09</div>
       </div>
 
       <!-- 3. Realizado Digital -->
@@ -986,9 +1002,9 @@ def build_html():
           <span class="kpi-label">Venda Digital Realizada</span>
           <span class="badge badge-warning" id="kpiAtingBadge">0.0%</span>
         </div>
-        <div class="kpi-value" id="kpiVendaDigital">R$ {kpis.get('venda_digital', 0):,.2f}</div>
+        <div class="kpi-value" id="kpiVendaDigital">{py_format_brl(kpis.get('venda_digital', 0))}</div>
         <div class="kpi-subtext" id="kpiGapSub">
-          GAP R$: <span id="kpiGapVal">R$ 0,00</span>
+          GAP: <span id="kpiGapVal">R$ 0</span>
         </div>
       </div>
 
@@ -998,7 +1014,7 @@ def build_html():
           <span class="kpi-label">Projeção Fechamento Mês</span>
           <span class="badge" style="background: rgba(191, 90, 242, 0.12); color: #BF5AF2;" id="kpiAtingProjBadge">0.0% Meta</span>
         </div>
-        <div class="kpi-value" id="kpiProjecao">R$ {kpis.get('projecao_fechamento', 0):,.2f}</div>
+        <div class="kpi-value" id="kpiProjecao">{py_format_brl(kpis.get('projecao_fechamento', 0))}</div>
         <div class="kpi-subtext" id="kpiRitmoSub">Ritmo do período selecionado</div>
       </div>
 
@@ -1008,7 +1024,7 @@ def build_html():
           <span class="kpi-label">Venda Total Lojas</span>
           <span class="badge" style="background: rgba(48, 209, 88, 0.12); color: #30D158;" id="kpiShareBadge">Share 0.0%</span>
         </div>
-        <div class="kpi-value" id="kpiVendaTotal">R$ {kpis.get('venda_total_lojas', 0):,.2f}</div>
+        <div class="kpi-value" id="kpiVendaTotal">{py_format_brl(kpis.get('venda_total_lojas', 0))}</div>
         <div class="kpi-subtext" id="kpiLojasSub">Física + Digital • <strong id="kpiTotalLojasCount">{kpis.get('total_lojas', 0)}</strong> Lojas Ativas</div>
       </div>
     </section>
@@ -1231,19 +1247,42 @@ def build_html():
   <script>
     const DASH_DATA = {raw_json_str};
 
-    let maxDia = DASH_DATA.metadata.max_dia || 16;
-    let selectedDiaIni = 1;
-    let selectedDiaEnd = maxDia;
-    let activeDatePreset = 'mtd';
+    let maxDia = DASH_DATA.metadata.max_dia || 15;
+    let selectedDiaIni = maxDia; // Padrão FSJ: Sempre D-1
+    let selectedDiaEnd = maxDia; // Padrão FSJ: Sempre D-1
+    let activeDatePreset = 'yesterday';
     let currentTab = 'visao-geral';
     let showAllFiliais = false;
 
     let chartCurvaInstance = null;
     let chartShareInstance = null;
 
+    // =========================================================================
+    // FORMATAÇÃO OFICIAL FSJ (Inteiros com separador de milhar pt-BR, sem casas decimais)
+    // =========================================================================
     function formatBRL(val) {{
-      if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
-      return 'R$ ' + Number(val).toLocaleString('pt-BR', {{ minimumFractionDigits: 2, maximumFractionDigits: 2 }});
+      if (val === null || val === undefined || isNaN(val)) return 'R$ 0';
+      const num = Math.round(Number(val));
+      if (num < 0) {{
+        return '- R$ ' + Math.abs(num).toLocaleString('pt-BR', {{ minimumFractionDigits: 0, maximumFractionDigits: 0 }});
+      }}
+      return 'R$ ' + num.toLocaleString('pt-BR', {{ minimumFractionDigits: 0, maximumFractionDigits: 0 }});
+    }}
+
+    function formatBRLGap(val) {{
+      if (val === null || val === undefined || isNaN(val)) return 'R$ 0';
+      const num = Math.round(Number(val));
+      if (num > 0) {{
+        return '+ R$ ' + num.toLocaleString('pt-BR', {{ minimumFractionDigits: 0, maximumFractionDigits: 0 }});
+      }} else if (num < 0) {{
+        return '- R$ ' + Math.abs(num).toLocaleString('pt-BR', {{ minimumFractionDigits: 0, maximumFractionDigits: 0 }});
+      }}
+      return 'R$ 0';
+    }}
+
+    function formatNumber(val) {{
+      if (val === null || val === undefined || isNaN(val)) return '0';
+      return Math.round(Number(val)).toLocaleString('pt-BR', {{ minimumFractionDigits: 0, maximumFractionDigits: 0 }});
     }}
 
     function formatPct(val) {{
@@ -1293,18 +1332,18 @@ def build_html():
         if (d - 1 < v_dias_tot.length) venda_tot += (v_dias_tot[d - 1] || 0.0);
       }}
 
-      meta = Math.round(meta * 100) / 100;
-      venda_dig = Math.round(venda_dig * 100) / 100;
-      venda_tot = Math.round(venda_tot * 100) / 100;
-      const venda_fis = Math.round((venda_tot - venda_dig) * 100) / 100;
+      meta = Math.round(meta);
+      venda_dig = Math.round(venda_dig);
+      venda_tot = Math.round(venda_tot);
+      const venda_fis = venda_tot - venda_dig;
 
-      const gap = Math.round((venda_dig - meta) * 100) / 100;
+      const gap = venda_dig - meta;
       const ating = meta > 0 ? ((venda_dig / meta) * 100) : (venda_dig > 0 ? 100.0 : 0.0);
       const share_dig = venda_tot > 0 ? ((venda_dig / venda_tot) * 100) : 0.0;
 
       const dias_sel = (selectedDiaEnd - selectedDiaIni + 1);
       const meta_mes = item.meta_mes || 0.0;
-      const proj = dias_sel > 0 ? Math.round((venda_dig / dias_sel * 30) * 100) / 100 : 0.0;
+      const proj = dias_sel > 0 ? Math.round(venda_dig / dias_sel * 30) : 0.0;
       const ating_proj = meta_mes > 0 ? ((proj / meta_mes) * 100) : 0.0;
 
       return {{
@@ -1331,9 +1370,9 @@ def build_html():
       const diffDias = (selectedDiaEnd - selectedDiaIni + 1);
 
       if (selectedDiaIni === 1 && selectedDiaEnd === maxDia) {{
-        badge.innerHTML = `<span>01 a ${{pad(maxDia)}}/09/2026 (${{maxDia}} dias MTD)</span>`;
+        badge.innerHTML = `<span>01 a ${{pad(maxDia)}}/09/2026 (${{maxDia}} dias MTD D-1)</span>`;
       }} else if (selectedDiaIni === selectedDiaEnd) {{
-        const isOntem = (selectedDiaIni === Math.max(1, maxDia - 1));
+        const isOntem = (selectedDiaIni === maxDia);
         badge.innerHTML = `<span>${{pad(selectedDiaIni)}}/09/2026${{isOntem ? ' • Ontem (D-1)' : ''}} (1 dia)</span>`;
       }} else {{
         badge.innerHTML = `<span>${{pad(selectedDiaIni)}} a ${{pad(selectedDiaEnd)}}/09/2026 (${{diffDias}} dias)</span>`;
@@ -1353,10 +1392,10 @@ def build_html():
     }}
 
     function updatePresetButtonsState() {{
-      const presets = ['mtd', 'yesterday', '7days', 'this_week'];
+      const presets = ['yesterday', 'mtd', '7days', 'this_week'];
       presets.forEach(p => {{
-        let btnId = 'presetMtd';
-        if (p === 'yesterday') btnId = 'presetYesterday';
+        let btnId = 'presetYesterday';
+        if (p === 'mtd') btnId = 'presetMtd';
         if (p === '7days') btnId = 'preset7Days';
         if (p === 'this_week') btnId = 'presetThisWeek';
         const btn = document.getElementById(btnId);
@@ -1374,16 +1413,14 @@ def build_html():
         selectedDiaIni = 1;
         selectedDiaEnd = maxDia;
       }} else if (preset === 'yesterday') {{
-        // D-1 Fechado
-        const dOntem = Math.max(1, maxDia - 1);
-        selectedDiaIni = dOntem;
-        selectedDiaEnd = dOntem;
+        // D-1 Fechado (Ontem)
+        selectedDiaIni = maxDia;
+        selectedDiaEnd = maxDia;
       }} else if (preset === '7days') {{
         selectedDiaIni = Math.max(1, maxDia - 6);
         selectedDiaEnd = maxDia;
       }} else if (preset === 'this_week') {{
-        // Segunda-feira mais recente até maxDia
-        // Em setembro/2026: 01=Ter, 07=Seg, 14=Seg
+        // Segunda-feira mais recente até maxDia (D-1)
         let segDia = 1;
         for (let d = maxDia; d >= 1; d--) {{
           const dt = new Date(2026, 8, d);
@@ -1428,7 +1465,7 @@ def build_html():
 
       if (selectedDiaIni === 1 && selectedDiaEnd === maxDia) {{
         activeDatePreset = 'mtd';
-      }} else if (selectedDiaIni === Math.max(1, maxDia - 1) && selectedDiaEnd === Math.max(1, maxDia - 1)) {{
+      }} else if (selectedDiaIni === maxDia && selectedDiaEnd === maxDia) {{
         activeDatePreset = 'yesterday';
       }} else if (selectedDiaIni === Math.max(1, maxDia - 6) && selectedDiaEnd === maxDia) {{
         activeDatePreset = '7days';
@@ -1461,7 +1498,8 @@ def build_html():
       cardReal.style.setProperty('--kpi-accent', totMetrics.atingimento >= 100 ? '#34C759' : (totMetrics.atingimento >= 95 ? '#FF9F0A' : '#FF453A'));
 
       const gapValEl = document.getElementById('kpiGapVal');
-      gapValEl.textContent = formatBRL(totMetrics.gap);
+      gapValEl.textContent = formatBRLGap(totMetrics.gap);
+      gapValEl.className = totMetrics.gap >= 0 ? 'text-success' : 'text-danger';
       gapValEl.className = totMetrics.gap >= 0 ? 'text-success' : 'text-danger';
 
       const atingProjBadge = document.getElementById('kpiAtingProjBadge');
@@ -1579,7 +1617,7 @@ def build_html():
             <td class="num">${{formatBRL(d.meta_periodo)}}</td>
             <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(d.venda_digital)}}</td>
             <td>${{getProgressBar(d.atingimento)}}</td>
-            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRL(d.gap)}}</td>
+            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(d.gap)}}</td>
             <td class="num">${{formatBRL(d.projecao)}}</td>
             <td class="num">${{formatBRL(d.venda_total)}}</td>
             <td class="num"><strong>${{formatPct(d.share_digital)}}</strong></td>
@@ -1596,7 +1634,7 @@ def build_html():
             <td class="num">${{formatBRL(d.meta_periodo)}}</td>
             <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(d.venda_digital)}}</td>
             <td>${{getProgressBar(d.atingimento)}}</td>
-            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRL(d.gap)}}</td>
+            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(d.gap)}}</td>
             <td class="num">${{formatBRL(d.projecao)}} (${{formatPct(d.atingimento_proj)}})</td>
             <td class="num">${{formatBRL(d.venda_total)}}</td>
             <td class="num"><strong>${{formatPct(d.share_digital)}}</strong></td>
@@ -1641,7 +1679,7 @@ def build_html():
             <td class="num">${{formatBRL(c.meta_periodo)}}</td>
             <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(c.venda_digital)}}</td>
             <td>${{getProgressBar(c.atingimento)}}</td>
-            <td class="num ${{c.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRL(c.gap)}}</td>
+            <td class="num ${{c.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(c.gap)}}</td>
             <td class="num">${{formatBRL(c.projecao)}}</td>
             <td class="num">${{formatBRL(c.venda_total)}}</td>
             <td class="num">${{formatPct(c.share_digital)}}</td>
@@ -1701,7 +1739,7 @@ def build_html():
             <td class="num">${{formatBRL(f.meta_periodo)}}</td>
             <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(f.venda_digital)}}</td>
             <td>${{getProgressBar(f.atingimento)}}</td>
-            <td class="num ${{f.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRL(f.gap)}}</td>
+            <td class="num ${{f.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(f.gap)}}</td>
             <td class="num">${{formatBRL(f.venda_total)}}</td>
             <td class="num">${{formatPct(f.share_digital)}}</td>
             <td>${{getStatusBadge(f.atingimento)}}</td>
@@ -1731,7 +1769,7 @@ def build_html():
             <td class="num">${{formatBRL(g.meta_periodo)}}</td>
             <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(g.venda_digital)}}</td>
             <td>${{getProgressBar(g.atingimento)}}</td>
-            <td class="num ${{g.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRL(g.gap)}}</td>
+            <td class="num ${{g.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(g.gap)}}</td>
             <td class="num">${{formatBRL(g.projecao)}}</td>
             <td class="num">${{formatBRL(g.venda_total)}}</td>
             <td class="num"><strong>${{formatPct(g.share_digital)}}</strong></td>
