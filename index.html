@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     /* ==========================================================================
@@ -1030,6 +1031,26 @@
       background: var(--sj-blue-hover);
     }
 
+    .btn-excel {
+      background: rgba(52, 199, 89, 0.12);
+      border: 1px solid rgba(52, 199, 89, 0.35);
+      color: #34C759;
+      font-weight: 600;
+    }
+
+    .btn-excel:hover {
+      background: #34C759;
+      border-color: #34C759;
+      color: #FFF;
+      box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25);
+    }
+
+    .btn-group-export {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     /* Footer */
     .footer {
       margin-top: auto;
@@ -1279,11 +1300,15 @@
 
       <!-- Resumo Distritais na Visão Geral -->
       <div class="card" style="margin-top: 16px;">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div class="card-title">Resumo por Distrital (Período Selecionado)</div>
+          <div class="btn-group-export">
+            <button class="btn btn-sm btn-excel" onclick="exportDistritaisOverview('excel')" title="Baixar resumo das distritais em Excel (.xlsx)">📊 Baixar Excel</button>
+            <button class="btn btn-sm" onclick="exportDistritaisOverview('csv')" title="Baixar resumo das distritais em CSV">📄 CSV</button>
+          </div>
         </div>
         <div class="table-container">
-          <table>
+          <table id="tableDistritaisOverview">
             <thead>
               <tr>
                 <th class="sortable" onclick="handleSortTable('distritaisOverview', 'nome')" data-table="distritaisOverview" data-col="nome">Distrital <span class="sort-icon">⇅</span></th>
@@ -1311,9 +1336,12 @@
     <!-- Tab 2: Distritais -->
     <section id="tab-distritais" class="tab-content hidden">
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div class="card-title">Ranking Oficial das Distritais — Diretoria Cíntia Silva</div>
-          <button class="btn btn-sm" onclick="exportTableToCSV('tableDistritaisFull', 'distritais_diretoria_c.csv')">Exportar Tabela</button>
+          <div class="btn-group-export">
+            <button class="btn btn-sm btn-excel" onclick="exportDistritaisFull('excel')" title="Baixar ranking das distritais em Excel (.xlsx)">📊 Baixar Excel</button>
+            <button class="btn btn-sm" onclick="exportDistritaisFull('csv')" title="Baixar ranking das distritais em CSV">📄 CSV</button>
+          </div>
         </div>
         <div class="table-container">
           <table id="tableDistritaisFull">
@@ -1347,9 +1375,12 @@
     <!-- Tab 3: Coordenadores -->
     <section id="tab-coordenadores" class="tab-content hidden">
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div class="card-title">Ranking dos Coordenadores (29)</div>
-          <button class="btn btn-sm" onclick="exportTableToCSV('tableCoordenadoresFull', 'coordenadores_diretoria_c.csv')">Exportar Tabela</button>
+          <div class="btn-group-export">
+            <button class="btn btn-sm btn-excel" onclick="exportCoordenadoresFull('excel')" title="Baixar ranking dos coordenadores em Excel (.xlsx)">📊 Baixar Excel</button>
+            <button class="btn btn-sm" onclick="exportCoordenadoresFull('csv')" title="Baixar ranking dos coordenadores em CSV">📄 CSV</button>
+          </div>
         </div>
         <div class="table-container">
           <table id="tableCoordenadoresFull">
@@ -1389,9 +1420,12 @@
             <div class="card-title">Performance Individual das Filiais / Lojas</div>
             <div class="card-subtitle" id="filiaisHeaderSubtitle">Exibindo lojas ordenadas por faturamento digital</div>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-sm" onclick="toggleShowAllFiliais()" id="btnToggleFiliais">Ver Todas as Lojas</button>
-            <button class="btn btn-sm" onclick="exportTableToCSV('tableFiliaisFull', 'filiais_diretoria_c.csv')">Exportar CSV</button>
+            <div class="btn-group-export">
+              <button class="btn btn-sm btn-excel" onclick="exportFiliaisFull('excel')" title="Baixar todas as filiais filtradas em Excel (.xlsx)">📊 Baixar Excel</button>
+              <button class="btn btn-sm" onclick="exportFiliaisFull('csv')" title="Baixar todas as filiais filtradas em CSV">📄 CSV</button>
+            </div>
           </div>
         </div>
         <div class="table-container">
@@ -1432,9 +1466,12 @@
             <div class="card-title">Metas & Vendas por Categoria / Grupo de Produtos</div>
             <div class="card-subtitle" id="categoriasHeaderSubtitle">Clique em qualquer grupo para abrir e expandir suas linhas de produtos associadas</div>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-sm" onclick="toggleExpandAllGrupos()" id="btnExpandAllGrupos">📂 Expandir Todas as Linhas</button>
-            <button class="btn btn-sm" onclick="exportTableToCSV('tableCategoriasFull', 'categorias_diretoria_c.csv')">Exportar Tabela</button>
+            <div class="btn-group-export">
+              <button class="btn btn-sm btn-excel" onclick="exportCategoriasFull('excel')" title="Baixar categorias e linhas completas em Excel (.xlsx)">📊 Baixar Excel</button>
+              <button class="btn btn-sm" onclick="exportCategoriasFull('csv')" title="Baixar categorias em CSV">📄 CSV</button>
+            </div>
           </div>
         </div>
         <div class="table-container">
@@ -1483,7 +1520,10 @@
               <span class="search-icon-inside">🔍</span>
               <input type="text" id="filterLinhaSearch" class="apple-search-input" placeholder="Buscar linha de produto..." oninput="onLinhaSearchTabChange()">
             </div>
-            <button class="btn btn-sm" onclick="exportTableToCSV('tableLinhasFull', 'linhas_diretoria_c.csv')">Exportar CSV</button>
+            <div class="btn-group-export">
+              <button class="btn btn-sm btn-excel" onclick="exportLinhasFull('excel')" title="Baixar todas as linhas de produtos filtradas em Excel (.xlsx)">📊 Baixar Excel</button>
+              <button class="btn btn-sm" onclick="exportLinhasFull('csv')" title="Baixar todas as linhas de produtos filtradas em CSV">📄 CSV</button>
+            </div>
           </div>
         </div>
         <div class="table-container">
@@ -2595,6 +2635,7 @@
 
       // 1a. Distritais Overview
       let distOverviewList = sortItemList(distList, tableSort.distritaisOverview.col, tableSort.distritaisOverview.dir);
+      window.currentDistritaisOverviewList = distOverviewList;
       distOverviewList.forEach((d) => {
         const rowOver = `
           <tr>
@@ -2619,6 +2660,7 @@
 
       // 1b. Distritais Full
       let distFullList = sortItemList(distList, tableSort.distritaisFull.col, tableSort.distritaisFull.dir);
+      window.currentDistritaisFullList = distFullList;
       distFullList.forEach((d, idx) => {
         const rowFull = `
           <tr>
@@ -2683,6 +2725,7 @@
         });
 
       coordList = sortItemList(coordList, tableSort.coordenadores.col, tableSort.coordenadores.dir);
+      window.currentCoordenadoresList = coordList;
       document.getElementById('badgeCoordenadoresCount').textContent = coordList.length;
 
       coordList.forEach((c, idx) => {
@@ -2742,6 +2785,7 @@
         });
 
       filList = sortItemList(filList, tableSort.filiais.col, tableSort.filiais.dir);
+      window.currentFiliaisList = filList;
       document.getElementById('badgeFiliaisCount').textContent = filList.length;
 
       const subHeader = document.getElementById('filiaisHeaderSubtitle');
@@ -2839,6 +2883,7 @@
       }
 
       catList = sortItemList(catList, tableSort.categorias.col, tableSort.categorias.dir);
+      window.currentCategoriasList = catList;
       document.getElementById('badgeCategoriasCount').textContent = catList.length;
 
       catList.forEach((g) => {
@@ -3052,6 +3097,7 @@
         });
 
       list = sortItemList(list, tableSort.linhas.col, tableSort.linhas.dir);
+      window.currentLinhasList = list;
 
       const badgeCount = document.getElementById('badgeLinhasCount');
       if (badgeCount) badgeCount.textContent = list.length;
@@ -3390,14 +3436,349 @@
       }
     }
 
-    // Exportação CSV
+    // =========================================================================
+    // EXPORTAÇÃO AVANÇADA (EXCEL NATIVO XLSX COM MULTI-SHEET & CSV FORMATADO)
+    // =========================================================================
+
+    function getStatusText(atingimento) {
+      if (atingimento >= 100) return 'Bateu Meta';
+      if (atingimento >= 95) return 'Em Linha';
+      return 'Abaixo';
+    }
+
+    function triggerDownload(blob, filename) {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+    }
+
+    function exportSheets(sheetsDict, baseFilename, format = 'excel') {
+      const dateIni = document.getElementById('filterDateIni')?.value || '2026-09-01';
+      const dateEnd = document.getElementById('filterDateEnd')?.value || '2026-09-30';
+      const cleanFilename = `${baseFilename}_${dateIni}_a_${dateEnd}`.replace(/[^a-zA-Z0-9_\-]/g, '_');
+
+      if (format === 'excel') {
+        if (typeof XLSX !== 'undefined' && XLSX.utils) {
+          const wb = XLSX.utils.book_new();
+          for (const [sheetName, rows] of Object.entries(sheetsDict)) {
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const colWidths = [];
+            rows.forEach(r => {
+              r.forEach((c, idx) => {
+                const len = c != null ? String(c).length : 0;
+                colWidths[idx] = Math.max(colWidths[idx] || 10, Math.min(len + 3, 45));
+              });
+            });
+            ws['!cols'] = colWidths.map(w => ({ wch: w }));
+            XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+          }
+          XLSX.writeFile(wb, cleanFilename + '.xlsx');
+          return;
+        } else {
+          console.warn('SheetJS indisponível. Fazendo fallback para CSV UTF-8.');
+          format = 'csv';
+        }
+      }
+
+      if (format === 'csv') {
+        const firstKey = Object.keys(sheetsDict)[0];
+        const rows = sheetsDict[firstKey] || [];
+        let csvLines = [];
+        for (let i = 0; i < rows.length; i++) {
+          const rowVals = rows[i].map(v => {
+            if (v == null) return '""';
+            let str = String(v);
+            if (typeof v === 'number') {
+              if (Number.isInteger(v)) str = String(v);
+              else str = v.toFixed(2).replace('.', ',');
+            }
+            str = str.replace(/"/g, '""');
+            return `"${str}"`;
+          });
+          csvLines.push(rowVals.join(';'));
+        }
+        const blob = new Blob(["\uFEFF" + csvLines.join("\r\n")], { type: 'text/csv;charset=utf-8;' });
+        triggerDownload(blob, cleanFilename + '.csv');
+      }
+    }
+
+    function exportDistritaisOverview(format = 'excel') {
+      const list = window.currentDistritaisOverviewList || [];
+      const headers = [
+        'Distrital', 'Meta Período (R$)', 'Venda Digital (R$)', 'Progresso %',
+        'GAP R$', 'Desvio %', 'Projeção Mês (R$)', 'Venda Total (R$)', 'Venda Física (R$)',
+        'Share Atual %', 'Share LY %', 'Evol. P.P.', '% Share Diretoria', 'Lojas', 'R$ / Loja'
+      ];
+      const rows = [headers];
+      list.forEach(d => {
+        rows.push([
+          d.nome,
+          Math.round(d.meta_periodo || 0),
+          Math.round(d.venda_digital || 0),
+          Number((d.atingimento || 0).toFixed(1)),
+          Math.round(d.gap || 0),
+          Number((d.desvio || 0).toFixed(1)),
+          Math.round(d.projecao || 0),
+          Math.round(d.venda_total || 0),
+          Math.round(d.venda_fisica || 0),
+          Number((d.share_digital || 0).toFixed(1)),
+          Number((d.share_digital_ly || 0).toFixed(1)),
+          Number((d.diff_pp_ly || 0).toFixed(1)),
+          Number((d.share_diretoria || 0).toFixed(2)),
+          d.lojas || 0,
+          Math.round(d.media_loja || 0)
+        ]);
+      });
+      exportSheets({ 'Resumo Distritais': rows }, 'resumo_distritais_diretoria_c', format);
+    }
+
+    function exportDistritaisFull(format = 'excel') {
+      const list = window.currentDistritaisFullList || [];
+      const headers = [
+        'Ranking', 'Distrital', 'Meta Mês (R$)', 'Meta Período (R$)', 'Venda Digital (R$)', 'Progresso %',
+        'GAP R$', 'Desvio %', 'Projeção Mês (R$)', 'Venda Total (R$)', 'Venda Física (R$)',
+        'Share Atual %', 'Share LY %', 'Evol. P.P.', '% Share Diretoria', 'Lojas', 'R$ / Loja', 'Status'
+      ];
+      const rows = [headers];
+      list.forEach((d, idx) => {
+        rows.push([
+          idx + 1,
+          d.nome,
+          Math.round(d.meta_mes || 0),
+          Math.round(d.meta_periodo || 0),
+          Math.round(d.venda_digital || 0),
+          Number((d.atingimento || 0).toFixed(1)),
+          Math.round(d.gap || 0),
+          Number((d.desvio || 0).toFixed(1)),
+          Math.round(d.projecao || 0),
+          Math.round(d.venda_total || 0),
+          Math.round(d.venda_fisica || 0),
+          Number((d.share_digital || 0).toFixed(1)),
+          Number((d.share_digital_ly || 0).toFixed(1)),
+          Number((d.diff_pp_ly || 0).toFixed(1)),
+          Number((d.share_diretoria || 0).toFixed(2)),
+          d.lojas || 0,
+          Math.round(d.media_loja || 0),
+          getStatusText(d.atingimento)
+        ]);
+      });
+      exportSheets({ 'Ranking Distritais': rows }, 'ranking_distritais_diretoria_c', format);
+    }
+
+    function exportCoordenadoresFull(format = 'excel') {
+      const list = window.currentCoordenadoresList || [];
+      const headers = [
+        'Ranking', 'Coordenador', 'Distrital', 'Meta Mês (R$)', 'Meta Período (R$)', 'Venda Digital (R$)',
+        'Atingimento %', 'GAP R$', 'Desvio %', 'Projeção Mês (R$)', 'Venda Total (R$)', 'Venda Física (R$)',
+        'Share Atual %', 'Share LY %', 'Evol. P.P.', '% Share Diretoria', 'Lojas', 'R$ / Loja', 'Status'
+      ];
+      const rows = [headers];
+      list.forEach((c, idx) => {
+        rows.push([
+          idx + 1,
+          c.nome,
+          c.distrital,
+          Math.round(c.meta_mes || 0),
+          Math.round(c.meta_periodo || 0),
+          Math.round(c.venda_digital || 0),
+          Number((c.atingimento || 0).toFixed(1)),
+          Math.round(c.gap || 0),
+          Number((c.desvio || 0).toFixed(1)),
+          Math.round(c.projecao || 0),
+          Math.round(c.venda_total || 0),
+          Math.round(c.venda_fisica || 0),
+          Number((c.share_digital || 0).toFixed(1)),
+          Number((c.share_digital_ly || 0).toFixed(1)),
+          Number((c.diff_pp_ly || 0).toFixed(1)),
+          Number((c.share_diretoria || 0).toFixed(2)),
+          c.lojas || 0,
+          Math.round(c.media_loja || 0),
+          getStatusText(c.atingimento)
+        ]);
+      });
+      exportSheets({ 'Ranking Coordenadores': rows }, 'coordenadores_diretoria_c', format);
+    }
+
+    function exportFiliaisFull(format = 'excel') {
+      const list = window.currentFiliaisList || [];
+      const headers = [
+        'Ranking', 'ID Loja', 'Filial / Loja', 'Distrital', 'Coordenador',
+        'Meta Mês (R$)', 'Meta Período (R$)', 'Venda Digital (R$)', 'Atingimento %',
+        'GAP R$', 'Desvio %', 'Projeção Mês (R$)', 'Venda Total (R$)', 'Venda Física (R$)',
+        'Share Atual %', 'Share LY %', 'Evol. P.P.', '% Share Diretoria', 'Status'
+      ];
+      const rows = [headers];
+      list.forEach((f, idx) => {
+        rows.push([
+          idx + 1,
+          f.id_loja || '',
+          f.nome,
+          f.distrital,
+          f.coordenador,
+          Math.round(f.meta_mes || 0),
+          Math.round(f.meta_periodo || 0),
+          Math.round(f.venda_digital || 0),
+          Number((f.atingimento || 0).toFixed(1)),
+          Math.round(f.gap || 0),
+          Number((f.desvio || 0).toFixed(1)),
+          Math.round(f.projecao || 0),
+          Math.round(f.venda_total || 0),
+          Math.round(f.venda_fisica || 0),
+          Number((f.share_digital || 0).toFixed(1)),
+          Number((f.share_digital_ly || 0).toFixed(1)),
+          Number((f.diff_pp_ly || 0).toFixed(1)),
+          Number((f.share_diretoria || 0).toFixed(2)),
+          getStatusText(f.atingimento)
+        ]);
+      });
+      exportSheets({ 'Filiais': rows }, 'filiais_diretoria_c', format);
+    }
+
+    function exportCategoriasFull(format = 'excel') {
+      const list = window.currentCategoriasList || [];
+      const dirTot = getPeriodMetrics(DASH_DATA.total || {});
+      const dirTotDigital = dirTot.venda_digital || 1.0;
+
+      const catHeaders = [
+        'Categoria / Grupo', 'Meta Mês (R$)', 'Meta Período (R$)', 'Venda Digital (R$)',
+        'Atingimento %', 'GAP R$', 'Desvio %', 'Projeção Mês (R$)', 'Venda Total (R$)', 'Venda Física (R$)',
+        'Share Atual %', 'Share LY %', 'Evol. P.P.', '% Share Diretoria', 'Total Linhas', 'Status'
+      ];
+      const catRows = [catHeaders];
+
+      const linHeaders = [
+        'Categoria / Grupo', 'Linha de Produto', 'Meta Mês (R$)', 'Meta Período (R$)', 'Venda Digital (R$)',
+        'Atingimento %', 'GAP R$', 'Desvio %', 'Projeção Mês (R$)', 'Venda Total (R$)', 'Venda Física (R$)',
+        'Share Atual %', 'Share LY %', 'Evol. P.P.', '% Share Categoria', '% Share Diretoria', 'Status'
+      ];
+      const linRows = [linHeaders];
+
+      list.forEach(g => {
+        catRows.push([
+          g.grupo,
+          Math.round(g.meta_mes || 0),
+          Math.round(g.meta_periodo || 0),
+          Math.round(g.venda_digital || 0),
+          Number((g.atingimento || 0).toFixed(1)),
+          Math.round(g.gap || 0),
+          Number((g.desvio || 0).toFixed(1)),
+          Math.round(g.projecao || 0),
+          Math.round(g.venda_total || 0),
+          Math.round(g.venda_fisica || 0),
+          Number((g.share_digital || 0).toFixed(1)),
+          Number((g.share_digital_ly || 0).toFixed(1)),
+          Number((g.diff_pp_ly || 0).toFixed(1)),
+          Number((g.share_diretoria || 0).toFixed(2)),
+          g.total_linhas || (g.linhas || []).length,
+          getStatusText(g.atingimento)
+        ]);
+
+        (g.linhas || []).forEach(l => {
+          const lm = getPeriodMetrics(l);
+          const share_grp = g.venda_digital > 0 ? ((lm.venda_digital / g.venda_digital) * 100) : 0.0;
+          const share_dir = dirTotDigital > 0 ? ((lm.venda_digital / dirTotDigital) * 100) : 0.0;
+          linRows.push([
+            g.grupo,
+            l.linha,
+            Math.round(l.meta_mes || 0),
+            Math.round(lm.meta_periodo || 0),
+            Math.round(lm.venda_digital || 0),
+            Number((lm.atingimento || 0).toFixed(1)),
+            Math.round(lm.gap || 0),
+            Number((lm.desvio || 0).toFixed(1)),
+            Math.round(lm.projecao || 0),
+            Math.round(lm.venda_total || 0),
+            Math.round(lm.venda_fisica || 0),
+            Number((lm.share_digital || 0).toFixed(1)),
+            Number((lm.share_digital_ly || 0).toFixed(1)),
+            Number((lm.diff_pp_ly || 0).toFixed(1)),
+            Number(share_grp.toFixed(1)),
+            Number(share_dir.toFixed(2)),
+            getStatusText(lm.atingimento)
+          ]);
+        });
+      });
+
+      const sheets = { 'Categorias': catRows };
+      if (format === 'excel') {
+        sheets['Linhas por Categoria'] = linRows;
+      }
+      exportSheets(sheets, 'categorias_diretoria_c', format);
+    }
+
+    function exportLinhasFull(format = 'excel') {
+      const list = window.currentLinhasList || [];
+      const headers = [
+        'Ranking', 'Linha de Produto', 'Categoria / Grupo', 'Meta Mês (R$)', 'Meta Período (R$)',
+        'Venda Digital (R$)', 'Atingimento %', 'GAP R$', 'Desvio %', 'Projeção Mês (R$)',
+        'Venda Total (R$)', 'Venda Física (R$)', 'Share Atual %', 'Share LY %', 'Evol. P.P.',
+        '% Share Diretoria', 'Status'
+      ];
+      const rows = [headers];
+      list.forEach((l, idx) => {
+        rows.push([
+          idx + 1,
+          l.linha,
+          l.grupo,
+          Math.round(l.meta_mes || 0),
+          Math.round(l.meta_periodo || 0),
+          Math.round(l.venda_digital || 0),
+          Number((l.atingimento || 0).toFixed(1)),
+          Math.round(l.gap || 0),
+          Number((l.desvio || 0).toFixed(1)),
+          Math.round(l.projecao || 0),
+          Math.round(l.venda_total || 0),
+          Math.round(l.venda_fisica || 0),
+          Number((l.share_digital || 0).toFixed(1)),
+          Number((l.share_digital_ly || 0).toFixed(1)),
+          Number((l.diff_pp_ly || 0).toFixed(1)),
+          Number((l.share_diretoria || 0).toFixed(2)),
+          getStatusText(l.atingimento)
+        ]);
+      });
+      exportSheets({ 'Linhas de Produtos': rows }, 'linhas_produtos_diretoria_c', format);
+    }
+
+    // Exportação genérica de tabelas do DOM (para compatibilidade)
+    function exportTableToExcel(tableId, filename) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      if (tableId === 'tableDistritaisOverview') return exportDistritaisOverview('excel');
+      if (tableId === 'tableDistritaisFull') return exportDistritaisFull('excel');
+      if (tableId === 'tableCoordenadoresFull') return exportCoordenadoresFull('excel');
+      if (tableId === 'tableFiliaisFull') return exportFiliaisFull('excel');
+      if (tableId === 'tableCategoriasFull') return exportCategoriasFull('excel');
+      if (tableId === 'tableLinhasFull') return exportLinhasFull('excel');
+
+      if (typeof XLSX !== 'undefined' && XLSX.utils) {
+        const wb = XLSX.utils.table_to_book(table, { sheet: "Dados" });
+        XLSX.writeFile(wb, filename.replace(/\.csv$/i, '') + '.xlsx');
+      } else {
+        exportTableToCSV(tableId, filename.replace(/\.xlsx$/i, '') + '.csv');
+      }
+    }
+
     function exportTableToCSV(tableId, filename) {
+      if (tableId === 'tableDistritaisOverview') return exportDistritaisOverview('csv');
+      if (tableId === 'tableDistritaisFull') return exportDistritaisFull('csv');
+      if (tableId === 'tableCoordenadoresFull') return exportCoordenadoresFull('csv');
+      if (tableId === 'tableFiliaisFull') return exportFiliaisFull('csv');
+      if (tableId === 'tableCategoriasFull') return exportCategoriasFull('csv');
+      if (tableId === 'tableLinhasFull') return exportLinhasFull('csv');
+
       const table = document.getElementById(tableId);
       if (!table) return;
 
       let csv = [];
       const rows = table.querySelectorAll("tr");
       for (let i = 0; i < rows.length; i++) {
+        if (rows[i].classList.contains('accordion-child-row')) continue;
         const row = [];
         const cols = rows[i].querySelectorAll("td, th");
         for (let j = 0; j < cols.length; j++) {
@@ -3405,17 +3786,11 @@
           text = text.replace(/"/g, '""');
           row.push('"' + text + '"');
         }
-        csv.push(row.join(";"));
+        if (row.length > 0) csv.push(row.join(";"));
       }
 
       const csvFile = new Blob(["\uFEFF" + csv.join("\n")], { type: "text/csv;charset=utf-8;" });
-      const downloadLink = document.createElement("a");
-      downloadLink.download = filename;
-      downloadLink.href = window.URL.createObjectURL(csvFile);
-      downloadLink.style.display = "none";
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
+      triggerDownload(csvFile, filename.endsWith('.csv') ? filename : filename + '.csv');
     }
 
     // Inicialização ao carregar
