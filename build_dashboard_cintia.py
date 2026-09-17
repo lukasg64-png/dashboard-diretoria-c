@@ -2,6 +2,14 @@
 build_dashboard_cintia.py — Compila o Dashboard Executivo da Diretoria C (Cíntia Silva)
 Integrando o "Filtrinho de Data" oficial (MTD, Ontem D-1, 7 Dias, Semana, Custom)
 com metas diarizadas completas (dias 1..30) e vendas do Qlik Cloud SaaS.
+
+Funcionalidades:
+1. Filtro de Data Oficial FSJ (MTD D-1 como padrão, Ontem D-1, 7 Dias, Semana Atual, Custom)
+2. Toggle "Sem Figital" (Puro Online: Site, Site Tele Entrega, App, App Tele Entrega, iFood)
+   vs "Com Figital" (Online + Loja Figital)
+3. Filtros Dropdown de Grupo e Linha com cascata inteligente
+4. Visão de Categorias com acordeão / drill-down in-place (clique no grupo abre suas linhas)
+5. Formatação numérica brasileira oficial: 1.000 (sem casas decimais) para valores monetários
 """
 import os
 import sys
@@ -59,7 +67,7 @@ def build_html():
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diretoria C — Cíntia Silva | Acompanhamento Estratégico de Metas Digitais</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -148,26 +156,26 @@ def build_html():
       --sj-blue-border: rgba(0, 113, 227, 0.25);
 
       --apple-green: #248A3D;
-      --apple-green-soft: rgba(52, 199, 89, 0.12);
+      --apple-green-soft: rgba(36, 138, 61, 0.10);
       --apple-green-text: #248A3D;
-      --apple-green-border: rgba(52, 199, 89, 0.25);
+      --apple-green-border: rgba(36, 138, 61, 0.25);
 
       --apple-red: #D70015;
-      --apple-red-soft: rgba(255, 69, 58, 0.10);
+      --apple-red-soft: rgba(215, 0, 21, 0.10);
       --apple-red-text: #D70015;
-      --apple-red-border: rgba(255, 69, 58, 0.25);
+      --apple-red-border: rgba(215, 0, 21, 0.25);
 
-      --apple-orange: #C96700;
-      --apple-orange-soft: rgba(255, 159, 10, 0.12);
-      --apple-orange-text: #C96700;
-      --apple-orange-border: rgba(255, 159, 10, 0.25);
+      --apple-orange: #C96500;
+      --apple-orange-soft: rgba(201, 101, 0, 0.10);
+      --apple-orange-text: #C96500;
+      --apple-orange-border: rgba(201, 101, 0, 0.25);
 
-      --apple-purple: #8944AB;
-      --apple-purple-soft: rgba(191, 90, 242, 0.10);
+      --apple-purple: #9836DC;
+      --apple-purple-soft: rgba(152, 54, 220, 0.10);
 
       --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.07);
+      --shadow-lg: 0 14px 32px rgba(0, 0, 0, 0.10);
 
       --chart-grid: rgba(0, 0, 0, 0.06);
       --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
@@ -177,62 +185,58 @@ def build_html():
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
     }}
 
     body {{
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      background: var(--bg-canvas);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-canvas);
       color: var(--text-primary);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      line-height: 1.45;
-      transition: background-color 0.3s ease, color 0.3s ease;
     }}
 
     /* Header Apple Style */
     .header {{
-      position: sticky;
-      top: 0;
-      z-index: 100;
       background: var(--surface-translucent);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       padding: 14px 28px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 20px;
     }}
 
     .header-left {{
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }}
 
     .logo-badge {{
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       border-radius: var(--radius-md);
-      background: linear-gradient(135deg, #0071E3, #004B99);
+      background: linear-gradient(135deg, #0071E3, #00C6FF);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
-      color: #FFF;
-      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.35);
+      box-shadow: 0 4px 14px rgba(0, 113, 227, 0.4);
     }}
 
     .header-title-group h1 {{
       font-family: 'Outfit', sans-serif;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.4px;
-      color: var(--text-primary);
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -240,8 +244,8 @@ def build_html():
 
     .header-title-group p {{
       font-size: 12px;
-      color: var(--text-secondary);
-      margin-top: 1px;
+      color: var(--text-tertiary);
+      font-weight: 500;
     }}
 
     .header-right {{
@@ -251,15 +255,15 @@ def build_html():
     }}
 
     .status-pill {{
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
+      gap: 7px;
+      padding: 6px 12px;
       border-radius: var(--radius-pill);
-      font-size: 11.5px;
-      font-weight: 600;
-      background: var(--surface);
+      background: var(--surface-subtle);
       border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 500;
       color: var(--text-secondary);
     }}
 
@@ -269,27 +273,27 @@ def build_html():
       border-radius: 50%;
       background: var(--apple-green);
       box-shadow: 0 0 8px var(--apple-green);
-      animation: pulseDot 2s infinite ease-in-out;
+      animation: pulse-dot 2s infinite;
     }}
 
-    @keyframes pulseDot {{
+    @keyframes pulse-dot {{
       0%, 100% {{ opacity: 1; transform: scale(1); }}
-      50% {{ opacity: 0.4; transform: scale(0.85); }}
+      50% {{ opacity: 0.5; transform: scale(0.85); }}
     }}
 
     .btn-icon {{
       width: 36px;
       height: 36px;
       border-radius: var(--radius-sm);
-      background: var(--surface);
       border: 1px solid var(--border);
+      background: var(--surface-subtle);
       color: var(--text-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 15px;
       transition: all 0.2s ease;
+      font-size: 16px;
     }}
 
     .btn-icon:hover {{
@@ -298,30 +302,28 @@ def build_html():
       transform: translateY(-1px);
     }}
 
-    /* Main Container */
+    /* Container */
     .container {{
-      max-width: 1560px;
+      max-width: 1600px;
       width: 100%;
       margin: 0 auto;
-      padding: 20px 28px;
+      padding: 20px 24px 60px;
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
     }}
 
     /* ==========================================================================
-       FILTRO DE PERÍODO / DATA DIARIZADA ("O NOSSO FILTRINHO DE DATA")
+       FILTRINHO DE DATA OFICIAL FSJ + TOGGLE FIGITAL + FILTROS GEOGRÁFICOS
        ========================================================================== */
     .date-filter-section {{
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 14px 20px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: var(--shadow-sm);
+      gap: 14px;
     }}
 
     .date-filter-row {{
@@ -335,17 +337,19 @@ def build_html():
     .date-filter-inputs-group {{
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }}
 
     .date-filter-title {{
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
       color: var(--text-primary);
       display: flex;
       align-items: center;
       gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
     }}
 
     .date-inputs-pair {{
@@ -356,47 +360,41 @@ def build_html():
 
     .date-input-wrap {{
       display: flex;
-      flex-direction: column;
-      gap: 2px;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
     }}
 
     .date-input-wrap label {{
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 600;
       color: var(--text-tertiary);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }}
 
     .apple-date-input {{
-      background: var(--surface-subtle);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
+      background: transparent;
+      border: none;
       color: var(--text-primary);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
       outline: none;
       cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }}
 
-    .apple-date-input:hover {{
-      border-color: var(--sj-blue);
-    }}
-
-    .apple-date-input:focus {{
-      border-color: var(--sj-blue);
-      box-shadow: 0 0 0 3px var(--sj-blue-soft);
+    .apple-date-input::-webkit-calendar-picker-indicator {{
+      filter: invert(0.6);
+      cursor: pointer;
     }}
 
     .date-range-separator {{
-      font-size: 12px;
       color: var(--text-tertiary);
+      font-size: 12px;
       font-weight: 600;
-      margin-top: 14px;
     }}
 
     .date-presets-group {{
@@ -446,7 +444,73 @@ def build_html():
       border: 1px solid rgba(0, 113, 227, 0.25);
     }}
 
-    /* Sub-bar de Filtros Geográficos e Busca */
+    /* Toggle Figital (Segmented Control Executivo Apple HIG) */
+    .figital-control-group {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      padding: 3px 4px 3px 12px;
+    }}
+
+    .figital-control-label {{
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }}
+
+    .segmented-control {{
+      display: inline-flex;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-pill);
+      padding: 2px;
+      gap: 2px;
+    }}
+
+    [data-theme="light"] .segmented-control {{
+      background: rgba(0, 0, 0, 0.06);
+    }}
+
+    .segmented-btn {{
+      padding: 5px 13px;
+      border-radius: var(--radius-pill);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }}
+
+    .segmented-btn:hover {{
+      color: var(--text-primary);
+    }}
+
+    .segmented-btn.active {{
+      background: var(--sj-blue);
+      color: #FFFFFF;
+      box-shadow: 0 2px 10px rgba(0, 113, 227, 0.45);
+      font-weight: 700;
+    }}
+
+    .segmented-btn .hint {{
+      font-size: 10px;
+      opacity: 0.82;
+      font-weight: 500;
+    }}
+
+    /* Sub-bar de Filtros Geográficos e Categoria/Linha */
     .filter-secondary-row {{
       display: flex;
       align-items: center;
@@ -514,7 +578,7 @@ def build_html():
       font-family: inherit;
       font-size: 12.5px;
       color: var(--text-primary);
-      width: 240px;
+      width: 220px;
       outline: none;
       transition: all 0.2s ease;
     }}
@@ -522,7 +586,7 @@ def build_html():
     .apple-search-input:focus {{
       border-color: var(--sj-blue);
       box-shadow: 0 0 0 2px var(--sj-blue-soft);
-      width: 280px;
+      width: 260px;
     }}
 
     .search-icon-inside {{
@@ -536,46 +600,105 @@ def build_html():
     .btn-reset-filters {{
       padding: 6px 12px;
       border-radius: 8px;
-      font-size: 11.5px;
+      font-size: 12px;
       font-weight: 600;
-      background: var(--surface-subtle);
-      color: var(--text-secondary);
+      background: transparent;
       border: 1px solid var(--border);
+      color: var(--text-tertiary);
       cursor: pointer;
       transition: all 0.15s ease;
     }}
 
     .btn-reset-filters:hover {{
       background: var(--surface-hover);
+      color: var(--text-primary);
+      border-color: var(--border-hover);
+    }}
+
+    .active-filter-banner {{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: rgba(0, 113, 227, 0.10);
+      border: 1px solid rgba(0, 113, 227, 0.30);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-primary);
+    }}
+
+    .active-filter-banner-content {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }}
+
+    .active-filter-badge-tag {{
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(0, 113, 227, 0.22);
+      color: #64D2FF;
+      border: 1px solid rgba(0, 113, 227, 0.40);
+    }}
+
+    .btn-clear-active-badge {{
+      background: transparent;
+      border: 1px solid rgba(255, 69, 58, 0.45);
       color: var(--apple-red-text);
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }}
+
+    .btn-clear-active-badge:hover {{
+      background: var(--apple-red-soft);
       border-color: var(--apple-red-border);
     }}
 
-    /* ==========================================================================
-       KPI CARDS GRID
-       ========================================================================== */
+    /* Top KPI Cards */
     .kpi-grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(5, 1fr);
       gap: 16px;
+      margin-bottom: 24px;
+    }}
+
+    @media (max-width: 1280px) {{
+      .kpi-grid {{ grid-template-columns: repeat(3, 1fr); }}
+    }}
+    @media (max-width: 768px) {{
+      .kpi-grid {{ grid-template-columns: 1fr; }}
     }}
 
     .kpi-card {{
       background: var(--surface-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      padding: 18px 22px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       position: relative;
       overflow: hidden;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }}
 
     .kpi-card:hover {{
       transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
       border-color: var(--border-hover);
     }}
 
@@ -584,8 +707,8 @@ def build_html():
       position: absolute;
       top: 0;
       left: 0;
-      right: 0;
-      height: 3px;
+      width: 4px;
+      height: 100%;
       background: var(--kpi-accent, var(--sj-blue));
     }}
 
@@ -593,7 +716,6 @@ def build_html():
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
       margin-bottom: 8px;
     }}
 
@@ -608,15 +730,17 @@ def build_html():
     .kpi-value {{
       font-family: 'Outfit', sans-serif;
       font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -0.6px;
+      font-weight: 700;
       color: var(--text-primary);
+      letter-spacing: -0.5px;
+      line-height: 1.15;
       margin-bottom: 6px;
     }}
 
     .kpi-subtext {{
       font-size: 12px;
-      color: var(--text-secondary);
+      color: var(--text-tertiary);
+      font-weight: 500;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -632,6 +756,8 @@ def build_html():
       border-radius: var(--radius-pill);
       font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.2px;
+      line-height: 1;
     }}
 
     .badge-success {{
@@ -640,31 +766,32 @@ def build_html():
       border: 1px solid var(--apple-green-border);
     }}
 
-    .badge-warning {{
-      background: var(--apple-orange-soft);
-      color: var(--apple-orange-text);
-      border: 1px solid var(--apple-orange-border);
-    }}
-
     .badge-danger {{
       background: var(--apple-red-soft);
       color: var(--apple-red-text);
       border: 1px solid var(--apple-red-border);
     }}
 
-    .text-success {{ color: var(--apple-green-text) !important; font-weight: 700; }}
-    .text-danger  {{ color: var(--apple-red-text) !important; font-weight: 700; }}
-    .text-warning {{ color: var(--apple-orange-text) !important; font-weight: 700; }}
+    .badge-warning {{
+      background: var(--apple-orange-soft);
+      color: var(--apple-orange-text);
+      border: 1px solid var(--apple-orange-border);
+    }}
 
-    /* Progress bar */
+    .text-success {{ color: var(--apple-green-text) !important; font-weight: 600; }}
+    .text-danger {{ color: var(--apple-red-text) !important; font-weight: 600; }}
+    .text-warning {{ color: var(--apple-orange-text) !important; font-weight: 600; }}
+
+    /* Progress bar Apple style */
     .progress-bar-bg {{
-      flex: 1;
-      height: 6px;
       background: rgba(255, 255, 255, 0.08);
-      border-radius: 4px;
+      border-radius: var(--radius-pill);
+      height: 6px;
       overflow: hidden;
+      width: 75px;
+      display: inline-block;
+      vertical-align: middle;
       margin-right: 8px;
-      min-width: 60px;
     }}
 
     [data-theme="light"] .progress-bar-bg {{
@@ -673,38 +800,37 @@ def build_html():
 
     .progress-bar-fill {{
       height: 100%;
-      border-radius: 4px;
-      transition: width 0.4s ease;
+      border-radius: var(--radius-pill);
+      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }}
 
-    /* Navigation Tabs */
+    /* Tabs Navigation */
     .tab-nav {{
       display: flex;
-      align-items: center;
       gap: 8px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 4px;
+      margin-bottom: 20px;
       overflow-x: auto;
-      scrollbar-width: none;
+      padding-bottom: 2px;
     }}
 
-    .tab-nav::-webkit-scrollbar {{ display: none; }}
-
     .tab-btn {{
-      padding: 9px 18px;
-      border-radius: var(--radius-md) var(--radius-md) 0 0;
-      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      font-family: inherit;
+      font-size: 13.5px;
       font-weight: 600;
       color: var(--text-secondary);
       background: transparent;
       border: none;
       cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
       white-space: nowrap;
-      position: relative;
     }}
 
     .tab-btn:hover {{
@@ -714,42 +840,32 @@ def build_html():
 
     .tab-btn.active {{
       color: var(--sj-blue);
+      border-bottom-color: var(--sj-blue);
+      background: var(--surface-subtle);
       font-weight: 700;
     }}
 
-    .tab-btn.active::after {{
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--sj-blue);
-      border-radius: 3px 3px 0 0;
-    }}
-
     .tab-counter {{
-      font-size: 10.5px;
+      font-size: 11px;
       padding: 2px 7px;
       border-radius: var(--radius-pill);
-      background: var(--surface-subtle);
-      border: 1px solid var(--border);
+      background: var(--surface-hover);
       color: var(--text-tertiary);
     }}
 
     .tab-btn.active .tab-counter {{
       background: var(--sj-blue-soft);
-      border-color: var(--sj-blue-border);
       color: var(--sj-blue);
     }}
 
-    /* Card Box */
+    /* Cards & Layout */
     .card {{
       background: var(--surface-card);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
-      overflow: hidden;
       box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-bottom: 20px;
     }}
 
     .card-header {{
@@ -758,28 +874,26 @@ def build_html():
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
+      gap: 16px;
     }}
 
     .card-title {{
       font-family: 'Outfit', sans-serif;
       font-size: 16px;
       font-weight: 700;
-      color: var(--text-primary);
+      letter-spacing: -0.2px;
     }}
 
     .card-subtitle {{
       font-size: 12px;
-      color: var(--text-secondary);
+      color: var(--text-tertiary);
       margin-top: 2px;
     }}
 
-    /* Charts Grid */
     .charts-grid {{
       display: grid;
       grid-template-columns: 2fr 1fr;
-      gap: 16px;
+      gap: 18px;
     }}
 
     @media (max-width: 1024px) {{
@@ -795,7 +909,7 @@ def build_html():
     /* Tables */
     .table-container {{
       overflow-x: auto;
-      max-height: 540px;
+      max-height: 560px;
       position: relative;
     }}
 
@@ -821,6 +935,42 @@ def build_html():
       white-space: nowrap;
     }}
 
+    thead th.sortable {{
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }}
+
+    thead th.sortable:hover {{
+      background: var(--surface-hover);
+      color: var(--sj-blue);
+    }}
+
+    thead th.sortable .sort-icon {{
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 10px;
+      opacity: 0.45;
+      vertical-align: middle;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }}
+
+    thead th.sortable:hover .sort-icon {{
+      opacity: 0.9;
+    }}
+
+    thead th.sortable.sorted {{
+      color: var(--sj-blue) !important;
+      background: rgba(0, 113, 227, 0.08) !important;
+      border-bottom: 2px solid var(--sj-blue) !important;
+    }}
+
+    thead th.sortable.sorted .sort-icon {{
+      opacity: 1;
+      font-weight: 800;
+      color: var(--sj-blue);
+    }}
+
     thead th.num, tbody td.num {{
       text-align: right;
     }}
@@ -838,6 +988,78 @@ def build_html():
       padding: 11px 14px;
       color: var(--text-primary);
       white-space: nowrap;
+    }}
+
+    /* Accordion / Drilldown de Linhas dentro de Grupos */
+    .clickable-group-row {{
+      cursor: pointer;
+      user-select: none;
+    }}
+
+    .clickable-group-row:hover {{
+      background: var(--surface-hover) !important;
+    }}
+
+    .expand-icon {{
+      display: inline-block;
+      font-size: 10px;
+      color: var(--text-tertiary);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-right: 4px;
+    }}
+
+    .expand-icon.open {{
+      transform: rotate(90deg);
+      color: var(--sj-blue);
+    }}
+
+    .group-accordion-row {{
+      background: var(--surface-subtle) !important;
+    }}
+
+    .group-accordion-row td {{
+      padding: 0 !important;
+      border-bottom: 2px solid var(--sj-blue-border) !important;
+    }}
+
+    .nested-accordion-container {{
+      padding: 14px 20px 18px 26px;
+      border-left: 3px solid var(--sj-blue);
+      background: rgba(0, 113, 227, 0.03);
+      max-height: 480px;
+      overflow-y: auto;
+    }}
+
+    .nested-linhas-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }}
+
+    .nested-linhas-table thead th {{
+      background: var(--surface-card);
+      color: var(--text-secondary);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }}
+
+    .nested-linhas-table tbody tr {{
+      border-bottom: 1px solid var(--border-subtle);
+    }}
+
+    .nested-linhas-table tbody tr:hover {{
+      background: var(--surface-hover);
+    }}
+
+    .nested-linhas-table tbody td {{
+      padding: 8px 12px;
+      color: var(--text-primary);
     }}
 
     /* Action buttons inside cards */
@@ -922,7 +1144,7 @@ def build_html():
           <div class="date-inputs-pair">
             <div class="date-input-wrap">
               <label for="filterDateIni">Início</label>
-              <input type="date" id="filterDateIni" class="apple-date-input" min="2026-09-01" max="2026-09-{max_dia_str}" value="2026-09-{max_dia_str}" onchange="onDateInputChange()">
+              <input type="date" id="filterDateIni" class="apple-date-input" min="2026-09-01" max="2026-09-{max_dia_str}" value="2026-09-01" onchange="onDateInputChange()">
             </div>
             <span class="date-range-separator">até</span>
             <div class="date-input-wrap">
@@ -933,31 +1155,58 @@ def build_html():
         </div>
 
         <div class="date-presets-group">
-          <span class="preset-pill active" id="presetYesterday" onclick="selectDatePreset('yesterday')">⚡ Ontem (D-1)</span>
-          <span class="preset-pill" id="presetMtd" onclick="selectDatePreset('mtd')">⭐ Mês Acumulado (MTD D-1)</span>
+          <span class="preset-pill active" id="presetMtd" onclick="selectDatePreset('mtd')">⭐ Mês Acumulado (MTD D-1)</span>
+          <span class="preset-pill" id="presetYesterday" onclick="selectDatePreset('yesterday')">⚡ Ontem (D-1)</span>
           <span class="preset-pill" id="preset7Days" onclick="selectDatePreset('7days')">📆 Últimos 7 Dias</span>
           <span class="preset-pill" id="presetThisWeek" onclick="selectDatePreset('this_week')">🗓️ Semana Atual</span>
         </div>
 
+        <!-- Toggle Com / Sem Figital (Puro Online vs Total Digital) -->
+        <div class="figital-control-group" title="Canais: Site, Site Tele Entrega, App, App Tele Entrega, iFood (+ Figital)">
+          <span class="figital-control-label">Canal:</span>
+          <div class="segmented-control">
+            <button class="segmented-btn active" id="btnFigitalSem" onclick="setFigitalMode('sem')">
+              🛒 Sem Figital <span class="hint">(Puro Online)</span>
+            </button>
+            <button class="segmented-btn" id="btnFigitalCom" onclick="setFigitalMode('com')">
+              ⚡ Com Figital <span class="hint">(Online + Loja)</span>
+            </button>
+          </div>
+        </div>
+
         <div class="date-period-badge" id="datePeriodInfo">
-          <span>{max_dia_str}/09/2026 • Ontem (D-1) (1 dia)</span>
+          <span>01 a {max_dia_str}/09/2026 ({max_dia} dias MTD D-1)</span>
         </div>
       </div>
 
-      <!-- Linha 2: Filtros Geográficos & Busca Rápida -->
+      <!-- Linha 2: Filtros Geográficos, Categorias, Linha & Busca Rápida -->
       <div class="filter-secondary-row">
         <div class="filter-controls-group">
           <div class="filter-select-wrap">
             <label for="filterDistrital">🏢 Distrital:</label>
-            <select id="filterDistrital" class="apple-select" onchange="applyFilters()">
+            <select id="filterDistrital" class="apple-select" onchange="onDistritalFilterChange()">
               <option value="all">Todas as Distritais (4)</option>
             </select>
           </div>
 
           <div class="filter-select-wrap">
             <label for="filterCoordenador">👔 Coordenador:</label>
-            <select id="filterCoordenador" class="apple-select" onchange="applyFilters()">
+            <select id="filterCoordenador" class="apple-select" onchange="onCoordenadorFilterChange()">
               <option value="all">Todos os Coordenadores (29)</option>
+            </select>
+          </div>
+
+          <div class="filter-select-wrap">
+            <label for="filterGrupo">📦 Grupo:</label>
+            <select id="filterGrupo" class="apple-select" onchange="onGrupoFilterChange()">
+              <option value="all">Todos os Grupos</option>
+            </select>
+          </div>
+
+          <div class="filter-select-wrap">
+            <label for="filterLinha">🏷️ Linha:</label>
+            <select id="filterLinha" class="apple-select" onchange="onLinhaFilterChange()">
+              <option value="all">Todas as Linhas</option>
             </select>
           </div>
         </div>
@@ -965,10 +1214,22 @@ def build_html():
         <div class="filter-controls-group">
           <div class="search-input-wrap">
             <span class="search-icon-inside">🔍</span>
-            <input type="text" id="filterSearch" class="apple-search-input" placeholder="Buscar loja, cidade ou número..." oninput="applyFilters()">
+            <input type="text" id="filterSearch" class="apple-search-input" placeholder="Buscar loja, coordenador, produto..." oninput="onSearchInputChange()">
           </div>
-          <button class="btn-reset-filters" onclick="resetFilters()">Limpar Filtros</button>
+          <button class="btn-reset-filters" onclick="resetFilters()" title="Limpar todos os filtros e retornar à visão geral">Limpar Filtros</button>
         </div>
+      </div>
+
+      <!-- Banner Informativo de Filtro Ativo -->
+      <div id="activeFilterBanner" class="active-filter-banner" style="display: none;">
+        <div class="active-filter-banner-content">
+          <span>📍</span>
+          <span style="color: var(--text-secondary);">Filtrando por:</span>
+          <span class="active-filter-badge-tag" id="activeFilterTag">Distrital</span>
+          <strong id="activeFilterText" style="color: var(--text-primary); font-size: 12.5px;">-</strong>
+          <span id="activeFilterDetails" style="color: var(--text-tertiary); font-size: 11px;">-</span>
+        </div>
+        <button class="btn-clear-active-badge" onclick="resetFilters()">✕ Remover Filtro</button>
       </div>
     </section>
 
@@ -979,32 +1240,32 @@ def build_html():
       <!-- 1. Meta do Mês -->
       <div class="kpi-card" style="--kpi-accent: #0071E3;">
         <div class="kpi-header">
-          <span class="kpi-label">Meta do Mês (Set/26)</span>
+          <span class="kpi-label" id="labelMetaMes">Meta do Mês (Set/26)</span>
           <span class="badge" style="background: rgba(0, 113, 227, 0.12); color: var(--sj-blue);">Oficial</span>
         </div>
         <div class="kpi-value" id="kpiMetaMes">{py_format_brl(kpis.get('meta_mes', 0))}</div>
-        <div class="kpi-subtext">Base Oficial Diarizada (30 Dias)</div>
+        <div class="kpi-subtext" id="kpiMetaMesSub">Base Oficial Diarizada (30 Dias)</div>
       </div>
 
       <!-- 2. Meta do Período -->
       <div class="kpi-card" style="--kpi-accent: #5856D6;">
         <div class="kpi-header">
           <span class="kpi-label" id="labelMetaPeriodo">Meta do Período</span>
-          <span class="badge" style="background: rgba(88, 86, 214, 0.12); color: #5856D6;" id="badgeMetaDias">1 Dia</span>
+          <span class="badge" style="background: rgba(88, 86, 214, 0.12); color: #5856D6;" id="badgeMetaDias">{max_dia} Dias MTD</span>
         </div>
         <div class="kpi-value" id="kpiMetaPeriodo">{py_format_brl(kpis.get('meta_mtd', 0))}</div>
-        <div class="kpi-subtext" id="subtextMetaPeriodo">Meta específica do dia {max_dia_str}/09</div>
+        <div class="kpi-subtext" id="subtextMetaPeriodo">Acumulado dias 01 a {max_dia_str}/09</div>
       </div>
 
       <!-- 3. Realizado Digital -->
       <div class="kpi-card" id="cardRealizadoDigital" style="--kpi-accent: #34C759;">
         <div class="kpi-header">
-          <span class="kpi-label">Venda Digital Realizada</span>
+          <span class="kpi-label" id="labelVendaDigitalCard">Venda Digital (Sem Figital)</span>
           <span class="badge badge-warning" id="kpiAtingBadge">0.0%</span>
         </div>
-        <div class="kpi-value" id="kpiVendaDigital">{py_format_brl(kpis.get('venda_digital', 0))}</div>
+        <div class="kpi-value" id="kpiVendaDigital">{py_format_brl(kpis.get('venda_sem_figital', 0))}</div>
         <div class="kpi-subtext" id="kpiGapSub">
-          GAP: <span id="kpiGapVal">R$ 0</span>
+          GAP: <span id="kpiGapVal">R$ 0</span> • <span id="subtextVendaDigitalCard" style="font-size: 11px; opacity: 0.85;">Site, Site Tele Entrega, App, App Tele Entrega, iFood</span>
         </div>
       </div>
 
@@ -1041,10 +1302,13 @@ def build_html():
         👔 Coordenadores <span class="tab-counter" id="badgeCoordenadoresCount">29</span>
       </button>
       <button class="tab-btn" onclick="switchTab('filiais')">
-        🏪 Filiais (Lojas) <span class="tab-counter" id="badgeFiliaisCount">593</span>
+        🏪 Filiais (Lojas) <span class="tab-counter" id="badgeFiliaisCount">590</span>
       </button>
       <button class="tab-btn" onclick="switchTab('categorias')">
-        📦 Categorias & Grupos <span class="tab-counter" id="badgeCategoriasCount">7</span>
+        📦 Categorias & Grupos <span class="tab-counter" id="badgeCategoriasCount">8</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('linhas')">
+        🏷️ Linhas de Produtos <span class="tab-counter" id="badgeLinhasCount">586</span>
       </button>
     </nav>
 
@@ -1054,8 +1318,8 @@ def build_html():
         <div class="card">
           <div class="card-header">
             <div>
-              <div class="card-title">Curva Diária — Realizado Digital vs Meta Diarizada</div>
-              <div class="card-subtitle">Evolução diária de vendas (R$) de 01 a 30 de Setembro • Destaque do Período Ativo</div>
+              <div class="card-title" id="chartCurvaTitle">Performance Diária — Venda Realizada vs Meta do Dia</div>
+              <div class="card-subtitle" id="chartCurvaSubtitle">Acompanhamento diário sem distorção acumulada • Verde: Superou Meta • Linha: Meta Diária</div>
             </div>
           </div>
           <div class="chart-box">
@@ -1066,8 +1330,8 @@ def build_html():
         <div class="card">
           <div class="card-header">
             <div>
-              <div class="card-title">Participação das Distritais</div>
-              <div class="card-subtitle">Share de Venda Digital no Período Selecionado</div>
+              <div class="card-title" id="chartShareTitle">Participação das Distritais</div>
+              <div class="card-subtitle" id="chartShareSubtitle">Share de Venda Digital no Período Selecionado</div>
             </div>
           </div>
           <div class="chart-box">
@@ -1085,15 +1349,19 @@ def build_html():
           <table>
             <thead>
               <tr>
-                <th>Distrital</th>
-                <th class="num">Meta Período</th>
-                <th class="num">Venda Digital</th>
-                <th>Atingimento</th>
-                <th class="num">GAP R$</th>
-                <th class="num">Projeção Mês</th>
-                <th class="num">Venda Total</th>
-                <th class="num">Share Dig.</th>
-                <th class="num">Lojas</th>
+                <th class="sortable" onclick="handleSortTable('distritaisOverview', 'nome')" data-table="distritaisOverview" data-col="nome">Distrital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'meta_periodo')" data-table="distritaisOverview" data-col="meta_periodo">Meta Período <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'venda_digital')" data-table="distritaisOverview" data-col="venda_digital">Venda Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('distritaisOverview', 'atingimento')" data-table="distritaisOverview" data-col="atingimento">Progresso <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'gap')" data-table="distritaisOverview" data-col="gap">GAP R$ (Desvio) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'projecao')" data-table="distritaisOverview" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'venda_total')" data-table="distritaisOverview" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'venda_fisica')" data-table="distritaisOverview" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'share_digital')" data-table="distritaisOverview" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'diff_share')" data-table="distritaisOverview" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'share_diretoria')" data-table="distritaisOverview" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'lojas')" data-table="distritaisOverview" data-col="lojas">Lojas <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'media_loja')" data-table="distritaisOverview" data-col="media_loja">R$ / Loja <span class="sort-icon">⇅</span></th>
               </tr>
             </thead>
             <tbody id="tbodyDistritaisOverview"></tbody>
@@ -1113,18 +1381,22 @@ def build_html():
           <table id="tableDistritaisFull">
             <thead>
               <tr>
-                <th>Ranking</th>
-                <th>Distrital</th>
-                <th class="num">Meta Mês</th>
-                <th class="num">Meta Período</th>
-                <th class="num">Venda Digital</th>
-                <th>Progresso</th>
-                <th class="num">GAP R$</th>
-                <th class="num">Projeção Mês</th>
-                <th class="num">Venda Total</th>
-                <th class="num">Share Digital</th>
-                <th class="num">Lojas</th>
-                <th>Status</th>
+                <th class="sortable" onclick="handleSortTable('distritaisFull', 'rank')" data-table="distritaisFull" data-col="rank">Ranking <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('distritaisFull', 'nome')" data-table="distritaisFull" data-col="nome">Distrital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'meta_mes')" data-table="distritaisFull" data-col="meta_mes">Meta Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'meta_periodo')" data-table="distritaisFull" data-col="meta_periodo">Meta Período <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'venda_digital')" data-table="distritaisFull" data-col="venda_digital">Venda Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('distritaisFull', 'atingimento')" data-table="distritaisFull" data-col="atingimento">Progresso <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'gap')" data-table="distritaisFull" data-col="gap">GAP R$ (Desvio) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'projecao')" data-table="distritaisFull" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'venda_total')" data-table="distritaisFull" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'venda_fisica')" data-table="distritaisFull" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'share_digital')" data-table="distritaisFull" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'diff_share')" data-table="distritaisFull" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'share_diretoria')" data-table="distritaisFull" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'lojas')" data-table="distritaisFull" data-col="lojas">Lojas <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'media_loja')" data-table="distritaisFull" data-col="media_loja">R$ / Loja <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('distritaisFull', 'status')" data-table="distritaisFull" data-col="status">Status <span class="sort-icon">⇅</span></th>
               </tr>
             </thead>
             <tbody id="tbodyDistritaisFull"></tbody>
@@ -1144,19 +1416,23 @@ def build_html():
           <table id="tableCoordenadoresFull">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Coordenador</th>
-                <th>Distrital</th>
-                <th class="num">Meta Mês</th>
-                <th class="num">Meta Período</th>
-                <th class="num">Venda Digital</th>
-                <th>Atingimento</th>
-                <th class="num">GAP R$</th>
-                <th class="num">Projeção Mês</th>
-                <th class="num">Venda Total</th>
-                <th class="num">Share Dig.</th>
-                <th class="num">Lojas</th>
-                <th>Status</th>
+                <th class="sortable" onclick="handleSortTable('coordenadores', 'rank')" data-table="coordenadores" data-col="rank"># <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('coordenadores', 'nome')" data-table="coordenadores" data-col="nome">Coordenador <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('coordenadores', 'distrital')" data-table="coordenadores" data-col="distrital">Distrital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'meta_mes')" data-table="coordenadores" data-col="meta_mes">Meta Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'meta_periodo')" data-table="coordenadores" data-col="meta_periodo">Meta Período <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'venda_digital')" data-table="coordenadores" data-col="venda_digital">Venda Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('coordenadores', 'atingimento')" data-table="coordenadores" data-col="atingimento">Atingimento <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'gap')" data-table="coordenadores" data-col="gap">GAP R$ (Desvio) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'projecao')" data-table="coordenadores" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'venda_total')" data-table="coordenadores" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'venda_fisica')" data-table="coordenadores" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'share_digital')" data-table="coordenadores" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'diff_share')" data-table="coordenadores" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'share_diretoria')" data-table="coordenadores" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'lojas')" data-table="coordenadores" data-col="lojas">Lojas <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'media_loja')" data-table="coordenadores" data-col="media_loja">R$ / Loja <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('coordenadores', 'status')" data-table="coordenadores" data-col="status">Status <span class="sort-icon">⇅</span></th>
               </tr>
             </thead>
             <tbody id="tbodyCoordenadoresFull"></tbody>
@@ -1182,19 +1458,23 @@ def build_html():
           <table id="tableFiliaisFull">
             <thead>
               <tr>
-                <th>#</th>
-                <th>ID</th>
-                <th>Filial / Loja</th>
-                <th>Distrital</th>
-                <th>Coordenador</th>
-                <th class="num">Meta Mês</th>
-                <th class="num">Meta Período</th>
-                <th class="num">Venda Digital</th>
-                <th>Atingimento</th>
-                <th class="num">GAP R$</th>
-                <th class="num">Venda Total</th>
-                <th class="num">Share Dig.</th>
-                <th>Status</th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'rank')" data-table="filiais" data-col="rank"># <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'id_loja')" data-table="filiais" data-col="id_loja">ID <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'nome')" data-table="filiais" data-col="nome">Filial / Loja <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'distrital')" data-table="filiais" data-col="distrital">Distrital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'coordenador')" data-table="filiais" data-col="coordenador">Coordenador <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'meta_mes')" data-table="filiais" data-col="meta_mes">Meta Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'meta_periodo')" data-table="filiais" data-col="meta_periodo">Meta Período <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'venda_digital')" data-table="filiais" data-col="venda_digital">Venda Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'atingimento')" data-table="filiais" data-col="atingimento">Atingimento <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'gap')" data-table="filiais" data-col="gap">GAP R$ (Desvio) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'projecao')" data-table="filiais" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'venda_total')" data-table="filiais" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'venda_fisica')" data-table="filiais" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'share_digital')" data-table="filiais" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'diff_share')" data-table="filiais" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'share_diretoria')" data-table="filiais" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('filiais', 'status')" data-table="filiais" data-col="status">Status <span class="sort-icon">⇅</span></th>
               </tr>
             </thead>
             <tbody id="tbodyFiliaisFull"></tbody>
@@ -1203,31 +1483,98 @@ def build_html():
       </div>
     </section>
 
-    <!-- Tab 5: Categorias -->
+    <!-- Tab 5: Categorias (Com Drill-down de Linhas) -->
     <section id="tab-categorias" class="tab-content hidden">
       <div class="card">
-        <div class="card-header">
-          <div class="card-title">Metas & Vendas por Categoria / Grupo de Produtos</div>
-          <button class="btn btn-sm" onclick="exportTableToCSV('tableCategoriasFull', 'categorias_diretoria_c.csv')">Exportar Tabela</button>
+        <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div class="card-title">Metas & Vendas por Categoria / Grupo de Produtos</div>
+            <div class="card-subtitle">Clique em qualquer grupo para abrir e expandir suas linhas de produtos associadas</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm" onclick="toggleExpandAllGrupos()" id="btnExpandAllGrupos">📂 Expandir Todas as Linhas</button>
+            <button class="btn btn-sm" onclick="exportTableToCSV('tableCategoriasFull', 'categorias_diretoria_c.csv')">Exportar Tabela</button>
+          </div>
         </div>
         <div class="table-container">
           <table id="tableCategoriasFull">
             <thead>
               <tr>
-                <th>Grupo / Categoria</th>
-                <th class="num">Meta Mês</th>
-                <th class="num">Meta Período</th>
-                <th class="num">Venda Digital</th>
-                <th>Atingimento</th>
-                <th class="num">GAP R$</th>
-                <th class="num">Projeção Mês</th>
-                <th class="num">Venda Total</th>
-                <th class="num">Share Digital</th>
-                <th>Status</th>
+                <th class="sortable" onclick="handleSortTable('categorias', 'grupo')" data-table="categorias" data-col="grupo">Grupo / Categoria (Clique para Abrir Linhas) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'meta_mes')" data-table="categorias" data-col="meta_mes">Meta Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'meta_periodo')" data-table="categorias" data-col="meta_periodo">Meta Período <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'venda_digital')" data-table="categorias" data-col="venda_digital" id="thCatVendaDigital">Venda Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('categorias', 'atingimento')" data-table="categorias" data-col="atingimento">Atingimento <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'gap')" data-table="categorias" data-col="gap">GAP R$ (Desvio) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'projecao')" data-table="categorias" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'venda_total')" data-table="categorias" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'venda_fisica')" data-table="categorias" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'share_digital')" data-table="categorias" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'diff_share')" data-table="categorias" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'share_diretoria')" data-table="categorias" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'total_linhas')" data-table="categorias" data-col="total_linhas">Linhas <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('categorias', 'status')" data-table="categorias" data-col="status">Status <span class="sort-icon">⇅</span></th>
               </tr>
             </thead>
             <tbody id="tbodyCategoriasFull"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 6: Linhas de Produtos -->
+    <section id="tab-linhas" class="tab-content hidden">
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="card-title">Abertura Estratégica por Linhas de Produtos</div>
+            <div class="card-subtitle" id="linhasHeaderSubtitle">Detalhamento analítico de metas e faturamento digital com filtro por categoria</div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div class="filter-select-wrap">
+              <label for="filterLinhaGrupo">Categoria:</label>
+              <select id="filterLinhaGrupo" class="apple-select" onchange="onLinhaGrupoTabChange()">
+                <option value="all">Todas as Categorias</option>
+              </select>
+            </div>
+            <div class="search-input-wrap">
+              <span class="search-icon-inside">🔍</span>
+              <input type="text" id="filterLinhaSearch" class="apple-search-input" placeholder="Buscar linha de produto..." oninput="onLinhaSearchTabChange()">
+            </div>
+            <button class="btn btn-sm" onclick="exportTableToCSV('tableLinhasFull', 'linhas_diretoria_c.csv')">Exportar CSV</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table id="tableLinhasFull">
+            <thead>
+              <tr>
+                <th class="sortable" onclick="handleSortTable('linhas', 'rank')" data-table="linhas" data-col="rank"># <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('linhas', 'linha')" data-table="linhas" data-col="linha">Linha de Produto <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('linhas', 'grupo')" data-table="linhas" data-col="grupo">Categoria / Grupo <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'meta_mes')" data-table="linhas" data-col="meta_mes">Meta Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'meta_periodo')" data-table="linhas" data-col="meta_periodo">Meta Período <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'venda_digital')" data-table="linhas" data-col="venda_digital" id="thLinhaVendaDigital">Venda Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('linhas', 'atingimento')" data-table="linhas" data-col="atingimento">Progresso <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'gap')" data-table="linhas" data-col="gap">GAP R$ (Desvio) <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'projecao')" data-table="linhas" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'venda_total')" data-table="linhas" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'venda_fisica')" data-table="linhas" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'share_digital')" data-table="linhas" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'diff_share')" data-table="linhas" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'share_diretoria')" data-table="linhas" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
+                <th class="sortable" onclick="handleSortTable('linhas', 'status')" data-table="linhas" data-col="status">Status <span class="sort-icon">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyLinhasFull"></tbody>
+          </table>
+        </div>
+        <div class="card-footer" id="linhasPaginationFooter" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-secondary);">
+          <span id="linhasCountInfo">Mostrando 1 - 50 de linhas</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-sm" id="btnLinhasPrev" onclick="changeLinhasPage(-1)">← Anterior</button>
+            <span id="linhasPageNum" style="font-weight: 600; padding: 0 4px;">Página 1</span>
+            <button class="btn btn-sm" id="btnLinhasNext" onclick="changeLinhasPage(1)">Próximo →</button>
+          </div>
         </div>
       </div>
     </section>
@@ -1248,11 +1595,17 @@ def build_html():
     const DASH_DATA = {raw_json_str};
 
     let maxDia = DASH_DATA.metadata.max_dia || 15;
-    let selectedDiaIni = maxDia; // Padrão FSJ: Sempre D-1
-    let selectedDiaEnd = maxDia; // Padrão FSJ: Sempre D-1
-    let activeDatePreset = 'yesterday';
+    let selectedDiaIni = 1; // Padrão MTD: 01 a 15
+    let selectedDiaEnd = maxDia;
+    let activeDatePreset = 'mtd';
+    let activeFigitalMode = 'sem'; // 'sem' | 'com' (Puro Online por padrão, matching 13.791.880,49)
     let currentTab = 'visao-geral';
     let showAllFiliais = false;
+    let linhasCurrentPage = 1;
+    const LINHAS_PER_PAGE = 50;
+
+    const expandedGrupos = new Set();
+    let lastFilterType = 'none'; // 'none' | 'distrital' | 'coordenador' | 'grupo' | 'linha'
 
     let chartCurvaInstance = null;
     let chartShareInstance = null;
@@ -1290,6 +1643,13 @@ def build_html():
       return Number(val).toFixed(1).replace('.', ',') + '%';
     }}
 
+    function formatDesvioPct(val) {{
+      if (val === null || val === undefined || isNaN(val)) return '0,0%';
+      const num = Number(val);
+      const sign = num > 0 ? '+' : '';
+      return sign + num.toFixed(1).replace('.', ',') + '%';
+    }}
+
     function getStatusBadge(pct) {{
       if (pct >= 100) return '<span class="badge badge-success">' + formatPct(pct) + '</span>';
       if (pct >= 95) return '<span class="badge badge-warning">' + formatPct(pct) + '</span>';
@@ -1312,12 +1672,123 @@ def build_html():
       `;
     }}
 
+    function formatDiffPP(diff) {{
+      if (diff === null || diff === undefined || isNaN(diff)) return '—';
+      const sign = diff >= 0 ? '+' : '';
+      const colorClass = diff >= 0 ? 'text-success' : 'text-danger';
+      const bg = diff >= 0 ? 'var(--apple-green-soft)' : 'var(--apple-red-soft)';
+      const border = diff >= 0 ? 'var(--apple-green-border)' : 'var(--apple-red-border)';
+      return `<span class="badge" style="background: ${{bg}}; border: 1px solid ${{border}}; font-size: 10.5px;"><strong class="${{colorClass}}">${{sign}}${{diff.toFixed(1).replace('.', ',')}} p.p.</strong></span>`;
+    }}
+
+    function formatShareDir(share) {{
+      if (share === null || share === undefined || isNaN(share)) return '0,0%';
+      return `<span style="color: var(--sj-blue); font-weight: 600;">${{share.toFixed(1).replace('.', ',')}}%</span>`;
+    }}
+
+    // =========================================================================
+    // SISTEMA DE ORDENAÇÃO INTERATIVA DE TABELAS (CLICK-TO-SORT)
+    // =========================================================================
+    let tableSort = {{
+      distritaisOverview: {{ col: 'venda_digital', dir: 'desc' }},
+      distritaisFull:     {{ col: 'venda_digital', dir: 'desc' }},
+      coordenadores:      {{ col: 'venda_digital', dir: 'desc' }},
+      filiais:            {{ col: 'venda_digital', dir: 'desc' }},
+      categorias:         {{ col: 'venda_digital', dir: 'desc' }},
+      linhas:             {{ col: 'venda_digital', dir: 'desc' }}
+    }};
+
+    function handleSortTable(tableKey, colKey) {{
+      const cur = tableSort[tableKey] || {{ col: 'venda_digital', dir: 'desc' }};
+      if (cur.col === colKey) {{
+        cur.dir = (cur.dir === 'desc') ? 'asc' : 'desc';
+      }} else {{
+        cur.col = colKey;
+        const isText = ['nome', 'distrital', 'coordenador', 'grupo', 'linha', 'id_loja', 'status'].includes(colKey);
+        cur.dir = isText ? 'asc' : 'desc';
+      }}
+      tableSort[tableKey] = cur;
+      updateSortHeaders(tableKey);
+      if (tableKey === 'linhas') {{
+        renderLinhasTable(false);
+      }} else {{
+        applyFilters();
+      }}
+    }}
+
+    function updateSortHeaders(tableKey) {{
+      const cur = tableSort[tableKey] || {{ col: 'venda_digital', dir: 'desc' }};
+      const ths = document.querySelectorAll(`th[data-table="${{tableKey}}"]`);
+      ths.forEach(th => {{
+        const col = th.getAttribute('data-col');
+        const iconSpan = th.querySelector('.sort-icon');
+        if (col === cur.col) {{
+          th.classList.add('sorted');
+          if (iconSpan) iconSpan.textContent = (cur.dir === 'asc' ? ' ▲' : ' ▼');
+        }} else {{
+          th.classList.remove('sorted');
+          if (iconSpan) iconSpan.textContent = ' ⇅';
+        }}
+      }});
+    }}
+
+    function updateAllSortHeaders() {{
+      Object.keys(tableSort).forEach(k => updateSortHeaders(k));
+    }}
+
+    function sortItemList(list, colKey, dir) {{
+      return [...list].sort((a, b) => {{
+        let va = a[colKey];
+        let vb = b[colKey];
+        if (va === vb) return 0;
+        if (va === null || va === undefined || (typeof va === 'number' && isNaN(va))) return 1;
+        if (vb === null || vb === undefined || (typeof vb === 'number' && isNaN(vb))) return -1;
+        if (typeof va === 'string') {{
+          const cmp = va.localeCompare(vb, 'pt-BR', {{ sensitivity: 'base' }});
+          return dir === 'asc' ? cmp : -cmp;
+        }}
+        return dir === 'asc' ? (va - vb) : (vb - va);
+      }});
+    }}
+
+    // =========================================================================
+    // TOGGLE FIGITAL (COM / SEM FIGITAL)
+    // =========================================================================
+    function setFigitalMode(mode) {{
+      activeFigitalMode = mode;
+      document.getElementById('btnFigitalCom')?.classList.toggle('active', mode === 'com');
+      document.getElementById('btnFigitalSem')?.classList.toggle('active', mode === 'sem');
+
+      const lblVenda = document.getElementById('labelVendaDigitalCard');
+      if (lblVenda) {{
+        lblVenda.textContent = mode === 'com' ? 'Venda Digital (Com Figital)' : 'Venda Digital (Sem Figital)';
+      }}
+      const subVenda = document.getElementById('subtextVendaDigitalCard');
+      if (subVenda) {{
+        subVenda.textContent = mode === 'com' 
+          ? 'Site, Site Tele Entrega, App, App Tele Entrega, iFood + Figital' 
+          : 'Site, Site Tele Entrega, App, App Tele Entrega, iFood';
+      }}
+      const thLinha = document.getElementById('thLinhaVendaDigital');
+      if (thLinha) {{
+        thLinha.textContent = mode === 'com' ? 'Venda Dig. (Com Figital)' : 'Venda Dig. (Sem Figital)';
+      }}
+      const thCat = document.getElementById('thCatVendaDigital');
+      if (thCat) {{
+        thCat.textContent = mode === 'com' ? 'Venda Dig. (Com Figital)' : 'Venda Dig. (Sem Figital)';
+      }}
+
+      recalcDashboard();
+    }}
+
     // =========================================================================
     // CÁLCULO DINÂMICO DE MÉTRICAS PELO PERÍODO DE DIAS [selectedDiaIni .. selectedDiaEnd]
     // =========================================================================
     function getPeriodMetrics(item) {{
       const m_dias = item.metas_dias || [];
-      const v_dias_dig = item.vendas_dias_digital || [];
+      const v_dias_dig = (activeFigitalMode === 'sem') 
+        ? (item.vendas_dias_sem_figital || []) 
+        : (item.vendas_dias_digital || []);
       const v_dias_tot = item.vendas_dias_total || [];
 
       let meta = 0.0;
@@ -1335,9 +1806,10 @@ def build_html():
       meta = Math.round(meta);
       venda_dig = Math.round(venda_dig);
       venda_tot = Math.round(venda_tot);
-      const venda_fis = venda_tot - venda_dig;
+      const venda_fis = Math.max(0, venda_tot - venda_dig);
 
       const gap = venda_dig - meta;
+      const desvio = meta > 0 ? (((venda_dig / meta) - 1) * 100) : 0.0;
       const ating = meta > 0 ? ((venda_dig / meta) * 100) : (venda_dig > 0 ? 100.0 : 0.0);
       const share_dig = venda_tot > 0 ? ((venda_dig / venda_tot) * 100) : 0.0;
 
@@ -1352,6 +1824,7 @@ def build_html():
         venda_total: venda_tot,
         venda_fisica: venda_fis,
         gap: gap,
+        desvio: desvio,
         atingimento: ating,
         share_digital: share_dig,
         projecao: proj,
@@ -1378,7 +1851,6 @@ def build_html():
         badge.innerHTML = `<span>${{pad(selectedDiaIni)}} a ${{pad(selectedDiaEnd)}}/09/2026 (${{diffDias}} dias)</span>`;
       }}
 
-      // Atualiza também badge de dias no card de meta
       const badgeMetaDias = document.getElementById('badgeMetaDias');
       if (badgeMetaDias) {{
         badgeMetaDias.textContent = diffDias === 1 ? '1 Dia' : `${{diffDias}} Dias`;
@@ -1413,14 +1885,12 @@ def build_html():
         selectedDiaIni = 1;
         selectedDiaEnd = maxDia;
       }} else if (preset === 'yesterday') {{
-        // D-1 Fechado (Ontem)
         selectedDiaIni = maxDia;
         selectedDiaEnd = maxDia;
       }} else if (preset === '7days') {{
         selectedDiaIni = Math.max(1, maxDia - 6);
         selectedDiaEnd = maxDia;
       }} else if (preset === 'this_week') {{
-        // Segunda-feira mais recente até maxDia (D-1)
         let segDia = 1;
         for (let d = maxDia; d >= 1; d--) {{
           const dt = new Date(2026, 8, d);
@@ -1479,12 +1949,121 @@ def build_html():
     }}
 
     // =========================================================================
+    // DETERMINAÇÃO DO ITEM ALVO ATIVO (HIERARQUIA E PRIORIDADE DE FILTROS)
+    // =========================================================================
+    function getActiveTargetItem() {{
+      const selDist = document.getElementById('filterDistrital')?.value || 'all';
+      const selCoord = document.getElementById('filterCoordenador')?.value || 'all';
+      const selGrupo = document.getElementById('filterGrupo')?.value || 'all';
+      const selLinha = document.getElementById('filterLinha')?.value || 'all';
+
+      // 1. Respeita a última categoria de filtro acionada pelo usuário
+      if (lastFilterType === 'linha' && selLinha !== 'all') {{
+        const found = (DASH_DATA.linhas || []).find(l => l.linha === selLinha);
+        if (found) return {{ item: found, type: 'Linha', name: found.linha, parent: found.grupo, lojas: null }};
+      }}
+      if (lastFilterType === 'grupo' && selGrupo !== 'all') {{
+        const found = (DASH_DATA.grupos || []).find(g => g.grupo === selGrupo);
+        if (found) return {{ item: found, type: 'Grupo', name: found.grupo, parent: 'Diretoria C', lojas: null }};
+      }}
+      if (lastFilterType === 'coordenador' && selCoord !== 'all') {{
+        const found = (DASH_DATA.coordenadores || []).find(c => c.nome === selCoord);
+        if (found) return {{ item: found, type: 'Coordenador', name: found.nome, parent: found.distrital, lojas: found.lojas }};
+      }}
+      if (lastFilterType === 'distrital' && selDist !== 'all') {{
+        const found = (DASH_DATA.distritais || []).find(d => d.nome === selDist);
+        if (found) return {{ item: found, type: 'Distrital', name: found.nome, parent: 'Diretoria C', lojas: found.lojas }};
+      }}
+
+      // 2. Fallbacks sequenciais se lastFilterType foi resetado
+      if (selLinha !== 'all') {{
+        const found = (DASH_DATA.linhas || []).find(l => l.linha === selLinha);
+        if (found) return {{ item: found, type: 'Linha', name: found.linha, parent: found.grupo, lojas: null }};
+      }}
+      if (selGrupo !== 'all') {{
+        const found = (DASH_DATA.grupos || []).find(g => g.grupo === selGrupo);
+        if (found) return {{ item: found, type: 'Grupo', name: found.grupo, parent: 'Diretoria C', lojas: null }};
+      }}
+      if (selCoord !== 'all') {{
+        const found = (DASH_DATA.coordenadores || []).find(c => c.nome === selCoord);
+        if (found) return {{ item: found, type: 'Coordenador', name: found.nome, parent: found.distrital, lojas: found.lojas }};
+      }}
+      if (selDist !== 'all') {{
+        const found = (DASH_DATA.distritais || []).find(d => d.nome === selDist);
+        if (found) return {{ item: found, type: 'Distrital', name: found.nome, parent: 'Diretoria C', lojas: found.lojas }};
+      }}
+
+      return {{ item: DASH_DATA.total, type: 'Diretoria', name: 'Diretoria Cíntia Silva', parent: 'Total', lojas: DASH_DATA.metadata.total_lojas || 590 }};
+    }}
+
+    function updateKpiFilterContext(activeTarget, search) {{
+      const banner = document.getElementById('activeFilterBanner');
+      const tagEl = document.getElementById('activeFilterTag');
+      const textEl = document.getElementById('activeFilterText');
+      const detailsEl = document.getElementById('activeFilterDetails');
+
+      const isFiltered = (activeTarget.type !== 'Diretoria') || (search && search.length > 0);
+
+      if (banner) {{
+        if (isFiltered) {{
+          banner.style.display = 'flex';
+          if (tagEl) tagEl.textContent = activeTarget.type !== 'Diretoria' ? activeTarget.type : 'Busca';
+          if (textEl) textEl.textContent = activeTarget.type !== 'Diretoria' ? activeTarget.name : `"${{search}}"`;
+          if (detailsEl) {{
+            let det = [];
+            if (activeTarget.type === 'Distrital') det.push(`${{activeTarget.lojas}} Lojas Ativas`);
+            if (activeTarget.type === 'Coordenador') det.push(`Distrital: ${{activeTarget.parent}} • ${{activeTarget.lojas}} Lojas`);
+            if (activeTarget.type === 'Grupo') det.push(`${{activeTarget.item.total_linhas || 0}} Linhas`);
+            if (activeTarget.type === 'Linha') det.push(`Categoria: ${{activeTarget.parent}}`);
+            if (search && activeTarget.type !== 'Diretoria') det.push(`Busca: "${{search}}"`);
+            detailsEl.textContent = det.length > 0 ? `(${{det.join(' • ')}})` : '';
+          }}
+        }} else {{
+          banner.style.display = 'none';
+        }}
+      }}
+
+      // Atualiza rótulo e subtítulo do Card 1 (Meta do Mês)
+      const lblMetaMes = document.getElementById('labelMetaMes');
+      const subMetaMes = document.getElementById('kpiMetaMesSub');
+      if (lblMetaMes) {{
+        lblMetaMes.textContent = activeTarget.type === 'Diretoria' ? 'Meta do Mês (Set/26)' : `Meta Mês • ${{activeTarget.name}}`;
+      }}
+      if (subMetaMes) {{
+        subMetaMes.textContent = activeTarget.type === 'Diretoria' ? 'Base Oficial Diarizada (30 Dias) • Total' : `Base Oficial Diarizada • ${{activeTarget.type}}`;
+      }}
+
+      // Atualiza rótulo do Card 3 (Venda Digital)
+      const lblVendaDig = document.getElementById('labelVendaDigitalCard');
+      if (lblVendaDig) {{
+        const figText = activeFigitalMode === 'sem' ? '(Sem Figital)' : '(Com Figital)';
+        lblVendaDig.textContent = activeTarget.type === 'Diretoria' ? `Venda Digital ${{figText}}` : `Venda Digital • ${{activeTarget.name}}`;
+      }}
+
+      // Atualiza contador de lojas do Card 5 (Venda Total Lojas)
+      const subLojas = document.getElementById('kpiLojasSub');
+      if (subLojas) {{
+        if (activeTarget.type === 'Grupo') {{
+          subLojas.innerHTML = `Física + Digital • <strong>${{activeTarget.item.total_linhas || 0}}</strong> Linhas na Categoria`;
+        }} else if (activeTarget.type === 'Linha') {{
+          subLojas.innerHTML = `Física + Digital • Categoria <strong>${{activeTarget.parent}}</strong>`;
+        }} else {{
+          const numLojas = activeTarget.lojas || activeTarget.item.lojas || DASH_DATA.metadata.total_lojas || 590;
+          subLojas.innerHTML = `Física + Digital • <strong id="kpiTotalLojasCount">${{numLojas}}</strong> Lojas Ativas`;
+        }}
+      }}
+    }}
+
+    // =========================================================================
     // RECALCULO COMPLETO DO DASHBOARD (KPIS + GRAFICOS + TABELAS)
     // =========================================================================
     function recalcDashboard() {{
-      // 1. Recalcula Top KPIs
-      const totMetrics = getPeriodMetrics(DASH_DATA.total);
+      const search = (document.getElementById('filterSearch')?.value || '').toLowerCase().trim();
+      const activeTarget = getActiveTargetItem();
+      const targetItem = activeTarget.item;
+      const totMetrics = getPeriodMetrics(targetItem);
 
+      document.getElementById('kpiMetaMes').textContent = formatBRL(totMetrics.meta_mes);
       document.getElementById('kpiMetaPeriodo').textContent = formatBRL(totMetrics.meta_periodo);
       document.getElementById('kpiVendaDigital').textContent = formatBRL(totMetrics.venda_digital);
       document.getElementById('kpiProjecao').textContent = formatBRL(totMetrics.projecao);
@@ -1498,8 +2077,7 @@ def build_html():
       cardReal.style.setProperty('--kpi-accent', totMetrics.atingimento >= 100 ? '#34C759' : (totMetrics.atingimento >= 95 ? '#FF9F0A' : '#FF453A'));
 
       const gapValEl = document.getElementById('kpiGapVal');
-      gapValEl.textContent = formatBRLGap(totMetrics.gap);
-      gapValEl.className = totMetrics.gap >= 0 ? 'text-success' : 'text-danger';
+      gapValEl.textContent = formatBRLGap(totMetrics.gap) + ' (' + formatDesvioPct(totMetrics.desvio) + ')';
       gapValEl.className = totMetrics.gap >= 0 ? 'text-success' : 'text-danger';
 
       const atingProjBadge = document.getElementById('kpiAtingProjBadge');
@@ -1508,10 +2086,8 @@ def build_html():
       const shareBadge = document.getElementById('kpiShareBadge');
       shareBadge.textContent = 'Share ' + formatPct(totMetrics.share_digital);
 
-      // 2. Atualiza Gráficos
-      renderCharts();
-
-      // 3. Aplica Filtros e Atualiza Tabelas
+      updateKpiFilterContext(activeTarget, search);
+      renderCharts(activeTarget);
       applyFilters();
     }}
 
@@ -1527,7 +2103,7 @@ def build_html():
       if (targetContent) targetContent.classList.remove('hidden');
 
       if (tabId === 'visao-geral') {{
-        setTimeout(renderCharts, 50);
+        setTimeout(() => renderCharts(getActiveTargetItem()), 50);
       }}
     }}
 
@@ -1537,7 +2113,7 @@ def build_html():
       const next = current === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', next);
       localStorage.setItem('fsj_cintia_theme', next);
-      renderCharts();
+      renderCharts(getActiveTargetItem());
     }}
 
     const savedTheme = localStorage.getItem('fsj_cintia_theme');
@@ -1545,51 +2121,121 @@ def build_html():
       document.documentElement.setAttribute('data-theme', savedTheme);
     }}
 
+    // =========================================================================
+    // FILTROS DROPDOWN (DISTRITAL, COORDENADOR, GRUPO, LINHA)
+    // =========================================================================
     function initFilterDropdowns() {{
+      // 1. Distritais
       const distSelect = document.getElementById('filterDistrital');
+      if (distSelect) {{
+        distSelect.innerHTML = '<option value="all">Todas as Distritais (4)</option>';
+        DASH_DATA.distritais.forEach(d => {{
+          const opt = document.createElement('option');
+          opt.value = d.nome;
+          opt.textContent = `${{d.nome}} (${{d.lojas}} lojas)`;
+          distSelect.appendChild(opt);
+        }});
+      }}
+
+      // 2. Coordenadores
+      populateCoordenadoresDropdown('all', false);
+
+      // 3. Grupos
+      const grpSelect = document.getElementById('filterGrupo');
+      const linhaGrpSelect = document.getElementById('filterLinhaGrupo');
+      if (grpSelect) {{
+        grpSelect.innerHTML = '<option value="all">Todos os Grupos</option>';
+        DASH_DATA.grupos.forEach(g => {{
+          const opt = document.createElement('option');
+          opt.value = g.grupo;
+          opt.textContent = `${{g.grupo}} (${{(g.linhas || []).length}} linhas)`;
+          grpSelect.appendChild(opt);
+        }});
+      }}
+      if (linhaGrpSelect) {{
+        linhaGrpSelect.innerHTML = '<option value="all">Todas as Categorias</option>';
+        DASH_DATA.grupos.forEach(g => {{
+          const opt = document.createElement('option');
+          opt.value = g.grupo;
+          opt.textContent = `${{g.grupo}} (${{(g.linhas || []).length}} linhas)`;
+          linhaGrpSelect.appendChild(opt);
+        }});
+      }}
+
+      // 4. Linhas
+      populateLinhasDropdown('all', false);
+    }}
+
+    function populateCoordenadoresDropdown(distFilter = 'all', keepSelected = false) {{
       const coordSelect = document.getElementById('filterCoordenador');
+      if (!coordSelect) return;
 
-      DASH_DATA.distritais.forEach(d => {{
-        const opt = document.createElement('option');
-        opt.value = d.nome;
-        opt.textContent = d.nome;
-        distSelect.appendChild(opt);
-      }});
+      const previousVal = coordSelect.value;
+      coordSelect.innerHTML = '';
 
-      DASH_DATA.coordenadores.forEach(c => {{
+      let coords = DASH_DATA.coordenadores || [];
+      if (distFilter !== 'all') {{
+        coords = coords.filter(c => c.distrital === distFilter);
+      }}
+
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = 'all';
+      defaultOpt.textContent = distFilter === 'all' 
+        ? `Todos os Coordenadores (${{coords.length}})` 
+        : `Todos os Coordenadores de ${{distFilter}} (${{coords.length}})`;
+      coordSelect.appendChild(defaultOpt);
+
+      coords.forEach(c => {{
         const opt = document.createElement('option');
         opt.value = c.nome;
-        opt.textContent = c.nome + ' (' + c.distrital + ')';
+        opt.textContent = distFilter === 'all' ? `${{c.nome}} (${{c.distrital}})` : c.nome;
         coordSelect.appendChild(opt);
       }});
+
+      if (keepSelected && previousVal && coords.some(c => c.nome === previousVal)) {{
+        coordSelect.value = previousVal;
+      }} else {{
+        coordSelect.value = 'all';
+      }}
     }}
 
-    function applyFilters() {{
-      const selDist = document.getElementById('filterDistrital').value;
-      const selCoord = document.getElementById('filterCoordenador').value;
-      const search = document.getElementById('filterSearch').value.toLowerCase().trim();
-
-      renderAllTables(selDist, selCoord, search);
-    }}
-
-    function resetFilters() {{
-      document.getElementById('filterDistrital').value = 'all';
-      document.getElementById('filterCoordenador').value = 'all';
-      document.getElementById('filterSearch').value = '';
+    // =========================================================================
+    // ACORDEÃO / DRILLDOWN DE LINHAS DENTRO DE GRUPOS
+    // =========================================================================
+    function toggleGroupAccordion(grupo) {{
+      if (expandedGrupos.has(grupo)) {{
+        expandedGrupos.delete(grupo);
+      }} else {{
+        expandedGrupos.add(grupo);
+      }}
       applyFilters();
     }}
 
-    function toggleShowAllFiliais() {{
-      showAllFiliais = !showAllFiliais;
-      const btn = document.getElementById('btnToggleFiliais');
-      if (btn) btn.textContent = showAllFiliais ? 'Limitar a 100 Lojas' : 'Ver Todas as Lojas';
+    function toggleExpandAllGrupos() {{
+      const totalGrupos = (DASH_DATA.grupos || []).length;
+      if (expandedGrupos.size >= totalGrupos) {{
+        expandedGrupos.clear();
+      }} else {{
+        (DASH_DATA.grupos || []).forEach(g => expandedGrupos.add(g.grupo));
+      }}
+      const btn = document.getElementById('btnExpandAllGrupos');
+      if (btn) {{
+        btn.textContent = expandedGrupos.size >= totalGrupos 
+          ? '📁 Recolher Todas as Linhas' 
+          : '📂 Expandir Todas as Linhas';
+      }}
       applyFilters();
     }}
 
     // =========================================================================
     // RENDERIZAÇÃO DAS TABELAS COM MÉTRICAS DINÂMICAS DO PERÍODO
     // =========================================================================
-    function renderAllTables(filterDist = 'all', filterCoord = 'all', search = '') {{
+    function renderAllTables(filterDist = 'all', filterCoord = 'all', filterGrupoVal = 'all', filterLinhaVal = 'all', search = '') {{
+      // Métricas consolidadas da Diretoria no período (para comparativos de share e peso na rede)
+      const dirTot = getPeriodMetrics(DASH_DATA.total || {{}});
+      const dirTotDigital = dirTot.venda_digital || 1.0;
+      const dirMediaShare = dirTot.share_digital || 0.0;
+
       // 1. Distritais Overview & Full
       const tbodyDistOver = document.getElementById('tbodyDistritaisOverview');
       const tbodyDistFull = document.getElementById('tbodyDistritaisFull');
@@ -1597,48 +2243,74 @@ def build_html():
       tbodyDistFull.innerHTML = '';
 
       let distList = DASH_DATA.distritais
-        .filter(d => filterDist === 'all' || d.nome === filterDist)
-        .map(d => {{
+        .filter(d => {{
+          if (filterDist !== 'all' && d.nome !== filterDist) return false;
+          if (search && !d.nome.toLowerCase().includes(search)) return false;
+          return true;
+        }})
+        .map((d, origIdx) => {{
           const m = getPeriodMetrics(d);
+          const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
+          const diff_share = m.share_digital - dirMediaShare;
+          const media_loja = (d.lojas && d.lojas > 0) ? Math.round(m.venda_digital / d.lojas) : m.venda_digital;
           return {{
+            rank: origIdx + 1,
             nome: d.nome,
             lojas: d.lojas,
             meta_mes: d.meta_mes,
-            ...m
+            ...m,
+            share_diretoria: share_diretoria,
+            diff_share: diff_share,
+            media_loja: media_loja
           }};
         }});
 
-      distList.sort((a, b) => b.venda_digital - a.venda_digital);
+      const badgeDist = document.getElementById('badgeDistritaisCount');
+      if (badgeDist) badgeDist.textContent = distList.length;
 
-      distList.forEach((d, idx) => {{
+      // 1a. Distritais Overview
+      let distOverviewList = sortItemList(distList, tableSort.distritaisOverview.col, tableSort.distritaisOverview.dir);
+      distOverviewList.forEach((d) => {{
         const rowOver = `
           <tr>
             <td><strong>${{d.nome}}</strong></td>
             <td class="num">${{formatBRL(d.meta_periodo)}}</td>
-            <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(d.venda_digital)}}</td>
+            <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(d.venda_digital)}}</td>
             <td>${{getProgressBar(d.atingimento)}}</td>
-            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(d.gap)}}</td>
+            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(d.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(d.desvio)}})</span></td>
             <td class="num">${{formatBRL(d.projecao)}}</td>
             <td class="num">${{formatBRL(d.venda_total)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatBRL(d.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(d.share_digital)}}</strong></td>
+            <td class="num">${{formatDiffPP(d.diff_share)}}</td>
+            <td class="num">${{formatShareDir(d.share_diretoria)}}</td>
             <td class="num">${{d.lojas}}</td>
+            <td class="num">${{formatBRL(d.media_loja)}}</td>
           </tr>
         `;
         tbodyDistOver.insertAdjacentHTML('beforeend', rowOver);
+      }});
 
+      // 1b. Distritais Full
+      let distFullList = sortItemList(distList, tableSort.distritaisFull.col, tableSort.distritaisFull.dir);
+      distFullList.forEach((d, idx) => {{
         const rowFull = `
           <tr>
-            <td><strong>#${{idx + 1}}</strong></td>
+            <td>#${{idx + 1}}</td>
             <td><strong>${{d.nome}}</strong></td>
             <td class="num">${{formatBRL(d.meta_mes)}}</td>
             <td class="num">${{formatBRL(d.meta_periodo)}}</td>
             <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(d.venda_digital)}}</td>
             <td>${{getProgressBar(d.atingimento)}}</td>
-            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(d.gap)}}</td>
-            <td class="num">${{formatBRL(d.projecao)}} (${{formatPct(d.atingimento_proj)}})</td>
+            <td class="num ${{d.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(d.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(d.desvio)}})</span></td>
+            <td class="num">${{formatBRL(d.projecao)}}</td>
             <td class="num">${{formatBRL(d.venda_total)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatBRL(d.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(d.share_digital)}}</strong></td>
+            <td class="num">${{formatDiffPP(d.diff_share)}}</td>
+            <td class="num">${{formatShareDir(d.share_diretoria)}}</td>
             <td class="num">${{d.lojas}}</td>
+            <td class="num">${{formatBRL(d.media_loja)}}</td>
             <td>${{getStatusBadge(d.atingimento)}}</td>
           </tr>
         `;
@@ -1652,21 +2324,28 @@ def build_html():
         .filter(c => {{
           if (filterDist !== 'all' && c.distrital !== filterDist) return false;
           if (filterCoord !== 'all' && c.nome !== filterCoord) return false;
-          if (search && !c.nome.toLowerCase().includes(search) && !c.distrital.toLowerCase().includes(search)) return false;
+          if (search && !c.nome.toLowerCase().includes(search)) return false;
           return true;
         }})
-        .map(c => {{
+        .map((c, origIdx) => {{
           const m = getPeriodMetrics(c);
+          const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
+          const diff_share = m.share_digital - dirMediaShare;
+          const media_loja = (c.lojas && c.lojas > 0) ? Math.round(m.venda_digital / c.lojas) : m.venda_digital;
           return {{
+            rank: origIdx + 1,
             nome: c.nome,
             distrital: c.distrital,
             lojas: c.lojas,
             meta_mes: c.meta_mes,
-            ...m
+            ...m,
+            share_diretoria: share_diretoria,
+            diff_share: diff_share,
+            media_loja: media_loja
           }};
         }});
 
-      coordList.sort((a, b) => b.venda_digital - a.venda_digital);
+      coordList = sortItemList(coordList, tableSort.coordenadores.col, tableSort.coordenadores.dir);
       document.getElementById('badgeCoordenadoresCount').textContent = coordList.length;
 
       coordList.forEach((c, idx) => {{
@@ -1677,13 +2356,17 @@ def build_html():
             <td><span class="badge" style="background: var(--surface-hover); color: var(--text-secondary);">${{c.distrital}}</span></td>
             <td class="num">${{formatBRL(c.meta_mes)}}</td>
             <td class="num">${{formatBRL(c.meta_periodo)}}</td>
-            <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(c.venda_digital)}}</td>
+            <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(c.venda_digital)}}</td>
             <td>${{getProgressBar(c.atingimento)}}</td>
-            <td class="num ${{c.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(c.gap)}}</td>
+            <td class="num ${{c.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(c.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(c.desvio)}})</span></td>
             <td class="num">${{formatBRL(c.projecao)}}</td>
             <td class="num">${{formatBRL(c.venda_total)}}</td>
-            <td class="num">${{formatPct(c.share_digital)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatBRL(c.venda_fisica)}}</td>
+            <td class="num"><strong>${{formatPct(c.share_digital)}}</strong></td>
+            <td class="num">${{formatDiffPP(c.diff_share)}}</td>
+            <td class="num">${{formatShareDir(c.share_diretoria)}}</td>
             <td class="num">${{c.lojas}}</td>
+            <td class="num">${{formatBRL(c.media_loja)}}</td>
             <td>${{getStatusBadge(c.atingimento)}}</td>
           </tr>
         `;
@@ -1703,19 +2386,24 @@ def build_html():
           }}
           return true;
         }})
-        .map(f => {{
+        .map((f, origIdx) => {{
           const m = getPeriodMetrics(f);
+          const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
+          const diff_share = m.share_digital - dirMediaShare;
           return {{
+            rank: origIdx + 1,
             nome: f.nome,
             id_loja: f.id_loja,
             distrital: f.distrital,
             coordenador: f.coordenador,
             meta_mes: f.meta_mes,
-            ...m
+            ...m,
+            share_diretoria: share_diretoria,
+            diff_share: diff_share
           }};
         }});
 
-      filList.sort((a, b) => b.venda_digital - a.venda_digital);
+      filList = sortItemList(filList, tableSort.filiais.col, tableSort.filiais.dir);
       document.getElementById('badgeFiliaisCount').textContent = filList.length;
 
       const subHeader = document.getElementById('filiaisHeaderSubtitle');
@@ -1737,97 +2425,388 @@ def build_html():
             <td>${{f.coordenador}}</td>
             <td class="num">${{formatBRL(f.meta_mes)}}</td>
             <td class="num">${{formatBRL(f.meta_periodo)}}</td>
-            <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(f.venda_digital)}}</td>
+            <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(f.venda_digital)}}</td>
             <td>${{getProgressBar(f.atingimento)}}</td>
-            <td class="num ${{f.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(f.gap)}}</td>
+            <td class="num ${{f.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(f.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(f.desvio)}})</span></td>
+            <td class="num">${{formatBRL(f.projecao)}}</td>
             <td class="num">${{formatBRL(f.venda_total)}}</td>
-            <td class="num">${{formatPct(f.share_digital)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatBRL(f.venda_fisica)}}</td>
+            <td class="num"><strong>${{formatPct(f.share_digital)}}</strong></td>
+            <td class="num">${{formatDiffPP(f.diff_share)}}</td>
+            <td class="num">${{formatShareDir(f.share_diretoria)}}</td>
             <td>${{getStatusBadge(f.atingimento)}}</td>
           </tr>
         `;
         tbodyFil.insertAdjacentHTML('beforeend', row);
       }}
 
-      // 4. Categorias / Grupos
+      // 4. Categorias / Grupos (com abertura / drilldown de linhas)
       const tbodyCat = document.getElementById('tbodyCategoriasFull');
       tbodyCat.innerHTML = '';
-      let catList = DASH_DATA.grupos.map(g => {{
-        const m = getPeriodMetrics(g);
-        return {{
-          grupo: g.grupo,
-          meta_mes: g.meta_mes,
-          ...m
-        }};
-      }});
+      let catList = DASH_DATA.grupos
+        .filter(g => {{
+          if (filterGrupoVal !== 'all' && g.grupo !== filterGrupoVal) return false;
+          if (filterLinhaVal !== 'all') {{
+            const hasLinha = (g.linhas || []).some(l => l.linha === filterLinhaVal);
+            if (!hasLinha) return false;
+          }}
+          if (search) {{
+            const matchGrp = g.grupo.toLowerCase().includes(search);
+            const matchLinha = (g.linhas || []).some(l => l.linha.toLowerCase().includes(search));
+            if (!matchGrp && !matchLinha) return false;
+          }}
+          return true;
+        }})
+        .map(g => {{
+          const m = getPeriodMetrics(g);
+          const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
+          const diff_share = m.share_digital - dirMediaShare;
+          return {{
+            grupo: g.grupo,
+            meta_mes: g.meta_mes,
+            linhas: g.linhas || [],
+            total_linhas: (g.linhas || []).length,
+            ...m,
+            share_diretoria: share_diretoria,
+            diff_share: diff_share
+          }};
+        }});
 
-      catList.sort((a, b) => b.venda_digital - a.venda_digital);
-      catList.forEach(g => {{
+      // Se filtro de linha ou busca ativa, auto-expande os grupos correspondentes
+      if (filterLinhaVal !== 'all' || (search && search.length > 0)) {{
+        catList.forEach(g => expandedGrupos.add(g.grupo));
+      }}
+
+      catList = sortItemList(catList, tableSort.categorias.col, tableSort.categorias.dir);
+      document.getElementById('badgeCategoriasCount').textContent = catList.length;
+
+      catList.forEach((g) => {{
+        const isExpanded = expandedGrupos.has(g.grupo);
+        const totalLinhas = (g.linhas || []).length;
+        
         const row = `
-          <tr>
-            <td><strong>${{g.grupo}}</strong></td>
+          <tr class="clickable-group-row" onclick="toggleGroupAccordion('${{g.grupo}}')">
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="expand-icon ${{isExpanded ? 'open' : ''}}">▶</span>
+                <strong>${{g.grupo}}</strong>
+                <span class="badge" style="background: var(--surface-subtle); color: var(--sj-blue); font-size: 11px;">${{totalLinhas}} Linhas</span>
+              </div>
+            </td>
             <td class="num">${{formatBRL(g.meta_mes)}}</td>
             <td class="num">${{formatBRL(g.meta_periodo)}}</td>
-            <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(g.venda_digital)}}</td>
+            <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(g.venda_digital)}}</td>
             <td>${{getProgressBar(g.atingimento)}}</td>
-            <td class="num ${{g.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(g.gap)}}</td>
+            <td class="num ${{g.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(g.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(g.desvio)}})</span></td>
             <td class="num">${{formatBRL(g.projecao)}}</td>
             <td class="num">${{formatBRL(g.venda_total)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatBRL(g.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(g.share_digital)}}</strong></td>
+            <td class="num">${{formatDiffPP(g.diff_share)}}</td>
+            <td class="num">${{formatShareDir(g.share_diretoria)}}</td>
+            <td class="num">${{totalLinhas}}</td>
             <td>${{getStatusBadge(g.atingimento)}}</td>
           </tr>
         `;
         tbodyCat.insertAdjacentHTML('beforeend', row);
+
+        if (isExpanded) {{
+          let linhasDoGrupo = (g.linhas || []).map(l => {{
+            const lm = getPeriodMetrics(l);
+            const share_grupo = g.venda_digital > 0 ? ((lm.venda_digital / g.venda_digital) * 100) : 0.0;
+            const share_diretoria = dirTotDigital > 0 ? ((lm.venda_digital / dirTotDigital) * 100) : 0.0;
+            const diff_share = lm.share_digital - dirMediaShare;
+            return {{
+              linha: l.linha,
+              grupo: l.grupo,
+              meta_mes: l.meta_mes,
+              ...lm,
+              share_grupo: share_grupo,
+              share_diretoria: share_diretoria,
+              diff_share: diff_share
+            }};
+          }});
+
+          if (filterLinhaVal !== 'all') {{
+            linhasDoGrupo = linhasDoGrupo.filter(l => l.linha === filterLinhaVal);
+          }}
+          if (search) {{
+            linhasDoGrupo = linhasDoGrupo.filter(l => l.linha.toLowerCase().includes(search));
+          }}
+
+          linhasDoGrupo.sort((a, b) => b.venda_digital - a.venda_digital);
+
+          let nestedRows = '';
+          linhasDoGrupo.forEach((l, lIdx) => {{
+            nestedRows += `
+              <tr>
+                <td><span style="color: var(--text-tertiary); font-size: 11px; margin-right: 6px;">${{lIdx + 1}}.</span> <strong>${{l.linha}}</strong></td>
+                <td class="num">${{formatBRL(l.meta_mes)}}</td>
+                <td class="num">${{formatBRL(l.meta_periodo)}}</td>
+                <td class="num" style="color: var(--sj-blue); font-weight: 600;">${{formatBRL(l.venda_digital)}}</td>
+                <td>${{getProgressBar(l.atingimento)}}</td>
+                <td class="num ${{l.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(l.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(l.desvio)}})</span></td>
+                <td class="num">${{formatBRL(l.projecao)}}</td>
+                <td class="num">${{formatBRL(l.venda_total)}}</td>
+                <td class="num" style="color: var(--text-secondary);">${{formatBRL(l.venda_fisica)}}</td>
+                <td class="num"><strong>${{formatPct(l.share_digital)}}</strong></td>
+                <td class="num">${{formatDiffPP(l.diff_share)}}</td>
+                <td class="num">${{formatShareDir(l.share_grupo)}}</td>
+                <td>${{getStatusBadge(l.atingimento)}}</td>
+              </tr>
+            `;
+          }});
+
+          if (linhasDoGrupo.length === 0) {{
+            nestedRows = `<tr><td colspan="14" style="text-align: center; color: var(--text-tertiary); padding: 12px;">Nenhuma linha encontrada para este filtro</td></tr>`;
+          }}
+
+          const accordionRow = `
+            <tr class="group-accordion-row">
+              <td colspan="14">
+                <div class="nested-accordion-container">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--sj-blue);">
+                      📦 Linhas de ${{g.grupo}} (${{linhasDoGrupo.length}} de ${{totalLinhas}} linhas)
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-tertiary);">
+                      Total Venda Linhas: <strong>${{formatBRL(g.venda_digital)}}</strong> • Share na Diretoria: <strong>${{formatPct(g.share_diretoria)}}</strong>
+                    </div>
+                  </div>
+                  <table class="nested-linhas-table">
+                    <thead>
+                      <tr>
+                        <th>Linha de Produto</th>
+                        <th class="num">Meta Mês</th>
+                        <th class="num">Meta Período</th>
+                        <th class="num">Venda Digital</th>
+                        <th>Progresso</th>
+                        <th class="num">GAP R$ (Desvio)</th>
+                        <th class="num">Projeção Mês</th>
+                        <th class="num">Venda Total</th>
+                        <th class="num">Venda Física</th>
+                        <th class="num">Share Dig.</th>
+                        <th class="num">Dif. Média</th>
+                        <th class="num">% Share Grupo</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${{nestedRows}}
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+          `;
+          tbodyCat.insertAdjacentHTML('beforeend', accordionRow);
+        }}
       }});
+
+      // Atualiza visual dos cabeçalhos ordenados
+      updateAllSortHeaders();
+
+      // 5. Linhas de Produtos (Paginada)
+      renderLinhasTable(false);
     }}
 
     // =========================================================================
-    // RENDERIZAÇÃO DOS GRÁFICOS (COM DESTAQUE DO PERÍODO SELECIONADO)
+    // RENDERIZAÇÃO DA TABELA DE LINHAS DE PRODUTOS (PAGINAÇÃO & FILTROS)
     // =========================================================================
-    function renderCharts() {{
-      const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
-      const textColor = isDark ? '#94A3B8' : '#475569';
-      const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+    function renderLinhasTable(resetPage = false) {{
+      if (resetPage) linhasCurrentPage = 1;
 
-      // 1. Chart Curva Diária
-      const ctxCurva = document.getElementById('chartCurvaDiaria')?.getContext('2d');
+      let filterGrp = 'all';
+      const topGrp = document.getElementById('filterGrupo')?.value || 'all';
+      const tabGrp = document.getElementById('filterLinhaGrupo')?.value || 'all';
+      if (topGrp !== 'all') filterGrp = topGrp;
+      else if (tabGrp !== 'all') filterGrp = tabGrp;
+
+      const selLinha = document.getElementById('filterLinha')?.value || 'all';
+      const topSearch = (document.getElementById('filterSearch')?.value || '').toLowerCase().trim();
+      const tabSearch = (document.getElementById('filterLinhaSearch')?.value || '').toLowerCase().trim();
+      const search = topSearch || tabSearch || '';
+
+      const tbody = document.getElementById('tbodyLinhasFull');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      // Métricas consolidadas da Diretoria no período
+      const dirTot = getPeriodMetrics(DASH_DATA.total || {{}});
+      const dirTotDigital = dirTot.venda_digital || 1.0;
+      const dirMediaShare = dirTot.share_digital || 0.0;
+
+      let list = (DASH_DATA.linhas || [])
+        .filter(l => {{
+          if (filterGrp !== 'all' && l.grupo !== filterGrp) return false;
+          if (selLinha !== 'all' && l.linha !== selLinha) return false;
+          if (search) {{
+            const target = (l.linha + ' ' + l.grupo).toLowerCase();
+            if (!target.includes(search)) return false;
+          }}
+          return true;
+        }})
+        .map((l, origIdx) => {{
+          const m = getPeriodMetrics(l);
+          const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
+          const diff_share = m.share_digital - dirMediaShare;
+          return {{
+            rank: origIdx + 1,
+            linha: l.linha,
+            grupo: l.grupo,
+            meta_mes: l.meta_mes,
+            ...m,
+            share_diretoria: share_diretoria,
+            diff_share: diff_share
+          }};
+        }});
+
+      list = sortItemList(list, tableSort.linhas.col, tableSort.linhas.dir);
+
+      const badgeCount = document.getElementById('badgeLinhasCount');
+      if (badgeCount) badgeCount.textContent = list.length;
+
+      const totalItems = list.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / LINHAS_PER_PAGE));
+      if (linhasCurrentPage > totalPages) linhasCurrentPage = totalPages;
+      if (linhasCurrentPage < 1) linhasCurrentPage = 1;
+
+      const startIdx = (linhasCurrentPage - 1) * LINHAS_PER_PAGE;
+      const endIdx = Math.min(startIdx + LINHAS_PER_PAGE, totalItems);
+
+      const countInfo = document.getElementById('linhasCountInfo');
+      if (countInfo) {{
+        countInfo.textContent = totalItems === 0 
+          ? 'Nenhuma linha encontrada' 
+          : `Mostrando ${{startIdx + 1}} - ${{endIdx}} de ${{totalItems}} linhas`;
+      }}
+
+      const pageNumEl = document.getElementById('linhasPageNum');
+      if (pageNumEl) pageNumEl.textContent = `Página ${{linhasCurrentPage}} de ${{totalPages}}`;
+
+      const btnPrev = document.getElementById('btnLinhasPrev');
+      if (btnPrev) btnPrev.disabled = (linhasCurrentPage <= 1);
+
+      const btnNext = document.getElementById('btnLinhasNext');
+      if (btnNext) btnNext.disabled = (linhasCurrentPage >= totalPages);
+
+      const pageRows = list.slice(startIdx, endIdx);
+      pageRows.forEach((l, idx) => {{
+        const globalRank = startIdx + idx + 1;
+        const row = `
+          <tr>
+            <td>#${{globalRank}}</td>
+            <td><strong>${{l.linha}}</strong></td>
+            <td><span class="badge" style="background: var(--surface-subtle); color: var(--text-secondary);">${{l.grupo}}</span></td>
+            <td class="num">${{formatBRL(l.meta_mes)}}</td>
+            <td class="num">${{formatBRL(l.meta_periodo)}}</td>
+            <td class="num" style="color: var(--sj-blue); font-weight: 700;">${{formatBRL(l.venda_digital)}}</td>
+            <td>${{getProgressBar(l.atingimento)}}</td>
+            <td class="num ${{l.gap >= 0 ? 'text-success' : 'text-danger'}}">${{formatBRLGap(l.gap)}} <span style="font-size: 10.5px; opacity: 0.85;">(${{formatDesvioPct(l.desvio)}})</span></td>
+            <td class="num">${{formatBRL(l.projecao)}}</td>
+            <td class="num">${{formatBRL(l.venda_total)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatBRL(l.venda_fisica)}}</td>
+            <td class="num"><strong>${{formatPct(l.share_digital)}}</strong></td>
+            <td class="num">${{formatDiffPP(l.diff_share)}}</td>
+            <td class="num">${{formatShareDir(l.share_diretoria)}}</td>
+            <td>${{getStatusBadge(l.atingimento)}}</td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML('beforeend', row);
+      }});
+
+      updateSortHeaders('linhas');
+    }}
+
+    function changeLinhasPage(delta) {{
+      linhasCurrentPage += delta;
+      renderLinhasTable(false);
+    }}
+
+    // =========================================================================
+    // RENDERIZAÇÃO DOS GRÁFICOS CHART.JS
+    // =========================================================================
+    function renderCharts(activeTarget) {{
+      const target = (activeTarget && activeTarget.item) ? activeTarget.item : (getActiveTargetItem().item || DASH_DATA.total);
+      const targetName = (activeTarget && activeTarget.name) ? activeTarget.name : 'Diretoria Cíntia Silva';
+      const targetType = (activeTarget && activeTarget.type) ? activeTarget.type : 'Diretoria';
+
+      const isDark = (document.documentElement.getAttribute('data-theme') !== 'light');
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+      const textColor = isDark ? '#94A3B8' : '#64748B';
+
+      // 1. Curva Diária
+      const ctxCurva = document.getElementById('chartCurvaDiaria');
       if (ctxCurva) {{
         if (chartCurvaInstance) chartCurvaInstance.destroy();
 
-        const labels = DASH_DATA.curva_diaria.map(d => d.data);
-        const metaValues = DASH_DATA.curva_diaria.map(d => d.meta_dia);
-        const realValues = DASH_DATA.curva_diaria.map(d => d.realizado_digital);
+        const labels = (DASH_DATA.curva_diaria || []).map(d => d.data);
+        const metasDiarias = target.metas_dias || (DASH_DATA.curva_diaria || []).map(d => d.meta_dia);
+        
+        const vDias = (activeFigitalMode === 'sem') 
+          ? (target.vendas_dias_sem_figital || []) 
+          : (target.vendas_dias_digital || []);
 
-        // Pontos de destaque baseados no período selecionado
-        const pointRadii = DASH_DATA.curva_diaria.map(d => (d.dia >= selectedDiaIni && d.dia <= selectedDiaEnd) ? 6 : 2);
-        const pointColors = DASH_DATA.curva_diaria.map(d => (d.dia >= selectedDiaIni && d.dia <= selectedDiaEnd) ? '#34C759' : '#0071E3');
+        const vendasDiarias = metasDiarias.map((_, idx) => {{
+          const d = idx + 1;
+          if (d > maxDia) return null;
+          return (idx < vDias.length && vDias[idx] !== undefined) ? vDias[idx] : 0;
+        }});
+
+        const chartSub = document.getElementById('chartCurvaSubtitle');
+        if (chartSub) {{
+          chartSub.textContent = `Visualizando: ${{targetName}} • Verde: Superou Meta Diária • Linha Laranja: Meta Diarizada`;
+        }}
 
         chartCurvaInstance = new Chart(ctxCurva, {{
-          type: 'line',
           data: {{
             labels: labels,
             datasets: [
               {{
-                label: 'Realizado Digital (R$)',
-                data: realValues,
-                borderColor: '#0071E3',
-                backgroundColor: 'rgba(0, 113, 227, 0.12)',
-                borderWidth: 3,
-                tension: 0.35,
-                fill: true,
-                pointRadius: pointRadii,
-                pointBackgroundColor: pointColors,
+                type: 'line',
+                label: 'Meta Diária Diarizada',
+                data: metasDiarias,
+                borderColor: '#FF9F0A',
+                backgroundColor: 'rgba(255, 159, 10, 0.12)',
+                borderWidth: 2.5,
+                borderDash: [5, 4],
+                pointRadius: 3.5,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#FF9F0A',
                 pointBorderColor: '#FFFFFF',
-                pointBorderWidth: 1
+                pointBorderWidth: 1.5,
+                tension: 0.25,
+                fill: false,
+                order: 1
               }},
               {{
-                label: 'Meta Diarizada (R$)',
-                data: metaValues,
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.35)',
-                borderWidth: 2,
-                borderDash: [5, 5],
-                tension: 0.1,
-                fill: false,
-                pointRadius: 0
+                type: 'bar',
+                label: activeFigitalMode === 'sem' ? `Realizado Digital Sem Figital (${{targetName}})` : `Realizado Digital Com Figital (${{targetName}})`,
+                data: vendasDiarias,
+                backgroundColor: (ctx) => {{
+                  const idx = ctx.dataIndex;
+                  const d = idx + 1;
+                  const val = vendasDiarias[idx];
+                  const meta = metasDiarias[idx];
+                  if (val === null || val === undefined) return 'transparent';
+                  const inRange = (d >= selectedDiaIni && d <= selectedDiaEnd);
+                  const superou = val >= meta;
+                  if (superou) {{
+                    return inRange ? 'rgba(52, 199, 89, 0.88)' : 'rgba(52, 199, 89, 0.35)';
+                  }} else {{
+                    return inRange ? 'rgba(0, 113, 227, 0.88)' : 'rgba(0, 113, 227, 0.35)';
+                  }}
+                }},
+                borderColor: (ctx) => {{
+                  const idx = ctx.dataIndex;
+                  const val = vendasDiarias[idx];
+                  const meta = metasDiarias[idx];
+                  if (val === null || val === undefined) return 'transparent';
+                  return val >= meta ? '#30D158' : '#0071E3';
+                }},
+                borderWidth: 1.5,
+                borderRadius: 5,
+                order: 2
               }}
             ]
           }},
@@ -1838,25 +2817,62 @@ def build_html():
             plugins: {{
               legend: {{
                 position: 'top',
-                labels: {{ color: textColor, font: {{ family: 'Inter', weight: '600', size: 11 }} }}
+                labels: {{
+                  color: textColor,
+                  font: {{ family: 'Inter', weight: '500', size: 11 }},
+                  usePointStyle: true
+                }}
               }},
               tooltip: {{
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.98)',
+                titleColor: isDark ? '#F8FAFC' : '#0F172A',
+                bodyColor: isDark ? '#CBD5E1' : '#334155',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+                borderWidth: 1,
+                padding: 12,
+                boxPadding: 6,
                 callbacks: {{
-                  label: (ctx) => ctx.dataset.label + ': ' + formatBRL(ctx.raw)
+                  title: (items) => {{
+                    if (!items.length) return '';
+                    const d = items[0].dataIndex + 1;
+                    return '📅 ' + String(d).padStart(2, '0') + '/09/2026';
+                  }},
+                  label: (ctx) => {{
+                    const idx = ctx.dataIndex;
+                    const val = ctx.raw;
+                    if (val === null || val === undefined) return null;
+                    if (ctx.dataset.type === 'line') {{
+                      return '🎯 Meta do Dia: ' + formatBRL(val);
+                    }} else {{
+                      const meta = metasDiarias[idx];
+                      const pct = meta > 0 ? ((val / meta) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
+                      const desvioPct = meta > 0 ? (((val / meta) - 1) * 100) : 0;
+                      const desvioStr = (desvioPct >= 0 ? '+' : '') + desvioPct.toFixed(1).replace('.', ',') + '%';
+                      const gap = val - meta;
+                      const gapStr = (gap >= 0 ? '+ ' : '- ') + formatBRL(Math.abs(gap));
+                      return [
+                        '🛒 ' + ctx.dataset.label + ': ' + formatBRL(val),
+                        '🎯 Meta do Dia: ' + formatBRL(meta),
+                        '📈 Desvio da Meta: ' + desvioStr + ' (' + gapStr + ' • ' + pct + ' ating.)'
+                      ];
+                    }}
+                  }}
                 }}
               }}
             }},
             scales: {{
               x: {{
                 grid: {{ color: gridColor }},
-                ticks: {{ color: textColor, font: {{ size: 11 }} }}
+                ticks: {{ color: textColor, font: {{ size: 10 }} }}
               }},
               y: {{
+                type: 'linear',
+                position: 'left',
                 grid: {{ color: gridColor }},
                 ticks: {{
                   color: textColor,
-                  font: {{ size: 11 }},
-                  callback: (val) => 'R$ ' + (val / 1000).toFixed(0) + 'k'
+                  font: {{ size: 10 }},
+                  callback: (v) => 'R$ ' + (v / 1000).toLocaleString('pt-BR') + 'k'
                 }}
               }}
             }}
@@ -1864,19 +2880,48 @@ def build_html():
         }});
       }}
 
-      // 2. Chart Share Distritais (Calculado com base no período selecionado)
-      const ctxShare = document.getElementById('chartShareDistritais')?.getContext('2d');
+      // 2. Share Donut Chart
+      const ctxShare = document.getElementById('chartShareDistritais');
       if (ctxShare) {{
         if (chartShareInstance) chartShareInstance.destroy();
 
-        const distMetrics = DASH_DATA.distritais.map(d => {{
-          const m = getPeriodMetrics(d);
-          return {{ nome: d.nome, venda_digital: m.venda_digital }};
-        }});
+        let labels = [];
+        let values = [];
+        const colors = ['#0071E3', '#34C759', '#FF9F0A', '#BF5AF2', '#5856D6', '#FF2D55', '#64D2FF', '#FFD60A'];
 
-        const labels = distMetrics.map(d => d.nome);
-        const values = distMetrics.map(d => d.venda_digital);
-        const colors = ['#0071E3', '#34C759', '#FF9F0A', '#BF5AF2'];
+        const titleEl = document.getElementById('chartShareTitle');
+        const subEl = document.getElementById('chartShareSubtitle');
+
+        if (targetType === 'Distrital') {{
+          if (titleEl) titleEl.textContent = `Participação dos Coordenadores — ${{targetName}}`;
+          if (subEl) subEl.textContent = 'Share de Venda Digital no Período Selecionado';
+          const coords = (DASH_DATA.coordenadores || []).filter(c => c.distrital === targetName);
+          const mList = coords.map(c => ({{ nome: c.nome, venda: getPeriodMetrics(c).venda_digital }})).sort((a,b) => b.venda - a.venda);
+          labels = mList.map(x => x.nome);
+          values = mList.map(x => x.venda);
+        }} else if (targetType === 'Grupo') {{
+          if (titleEl) titleEl.textContent = `Top Linhas — ${{targetName}}`;
+          if (subEl) subEl.textContent = 'Share de Venda Digital das Principais Linhas';
+          const lList = (target.linhas || []).map(l => ({{ nome: l.linha, venda: getPeriodMetrics(l).venda_digital }})).sort((a,b) => b.venda - a.venda);
+          const top7 = lList.slice(0, 7);
+          const rest = lList.slice(7);
+          const restSum = rest.reduce((acc, x) => acc + x.venda, 0);
+          labels = top7.map(x => x.nome);
+          values = top7.map(x => x.venda);
+          if (restSum > 0) {{
+            labels.push('Outras Linhas');
+            values.push(restSum);
+          }}
+        }} else {{
+          if (titleEl) titleEl.textContent = 'Participação das Distritais';
+          if (subEl) subEl.textContent = 'Share de Venda Digital no Período Selecionado';
+          const distMetrics = DASH_DATA.distritais.map(d => ({{
+            nome: d.nome,
+            venda: getPeriodMetrics(d).venda_digital
+          }}));
+          labels = distMetrics.map(d => d.nome);
+          values = distMetrics.map(d => d.venda);
+        }}
 
         chartShareInstance = new Chart(ctxShare, {{
           type: 'doughnut',
@@ -1884,7 +2929,7 @@ def build_html():
             labels: labels,
             datasets: [{{
               data: values,
-              backgroundColor: colors,
+              backgroundColor: colors.slice(0, labels.length),
               borderWidth: 0,
               hoverOffset: 6
             }}]
@@ -1959,6 +3004,8 @@ def build_html():
     sz_kb = os.path.getsize(OUTPUT_HTML) / 1024
     print(f"✅ Dashboard compilado com sucesso em {time.time()-t0:.2f}s!")
     print(f"   📁 Salvo em: {OUTPUT_HTML} ({sz_kb:.1f} KB)")
+
+build = build_html
 
 if __name__ == "__main__":
     build_html()

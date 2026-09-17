@@ -168,10 +168,9 @@ def consolidate():
     with open(VENDAS_JSON, "r", encoding="utf-8") as f:
         vendas_data = json.load(f)
 
-    raw_max_dia = vendas_data["metadata"].get("max_dia", 16)
-    # REGRA OFICIAL FSJ: SEMPRE D-1 (Ontem Fechado)
-    # Não considera o dia de hoje (intraday) para não distorcer o atingimento de metas.
-    max_dia = max(1, raw_max_dia - 1)
+    raw_max_dia = vendas_data["metadata"].get("max_dia", 15)
+    # REGRA OFICIAL FSJ: D-1 Fechado (até dia 15 de Setembro)
+    max_dia = raw_max_dia
     max_date = f"{max_dia:02d}/09/2026 (D-1 Fechado)"
     total_dias_mes = metas_data["metadata"].get("dias_totais", 30)
 
@@ -186,20 +185,31 @@ def consolidate():
     daily_sales_by_day = {d.get("dia"): d for d in daily_sales}
     
     total_vendas_dias_digital = []
+    total_vendas_dias_figital = []
+    total_vendas_dias_sem_figital = []
     total_vendas_dias_total = []
     total_vendas_dias_fisica = []
     for d_idx in range(1, max_dia + 1):
         s_dia = daily_sales_by_day.get(d_idx, {})
-        total_vendas_dias_digital.append(round(s_dia.get("venda_digital", 0.0), 2))
+        v_dig = round(s_dia.get("venda_digital", 0.0), 2)
+        v_fig = round(s_dia.get("venda_figital", 0.0), 2)
+        v_sem_fig = round(s_dia.get("venda_sem_figital", max(0.0, v_dig - v_fig)), 2)
+        total_vendas_dias_digital.append(v_dig)
+        total_vendas_dias_figital.append(v_fig)
+        total_vendas_dias_sem_figital.append(v_sem_fig)
         total_vendas_dias_total.append(round(s_dia.get("venda", 0.0), 2))
         total_vendas_dias_fisica.append(round(s_dia.get("venda_fisica", 0.0), 2))
 
     venda_digital_realizada = round(sum(total_vendas_dias_digital), 2)
+    venda_figital_realizada = round(sum(total_vendas_dias_figital), 2)
+    venda_sem_figital_realizada = round(sum(total_vendas_dias_sem_figital), 2)
     venda_total_realizada = round(sum(total_vendas_dias_total), 2)
     venda_fisica_realizada = round(sum(total_vendas_dias_fisica), 2)
 
     gap_digital = round(venda_digital_realizada - meta_mtd, 2)
     atingimento_mtd = round((venda_digital_realizada / meta_mtd * 100) if meta_mtd > 0 else 0.0, 2)
+    desvio_mtd = round(((venda_digital_realizada / meta_mtd - 1) * 100) if meta_mtd > 0 else 0.0, 2)
+    desvio_sem_figital = round(((venda_sem_figital_realizada / meta_mtd - 1) * 100) if meta_mtd > 0 else 0.0, 2)
 
     projecao_fechamento = round((venda_digital_realizada / max_dia * total_dias_mes) if max_dia > 0 else 0.0, 2)
     atingimento_proj = round((projecao_fechamento / meta_mes * 100) if meta_mes > 0 else 0.0, 2)
@@ -209,6 +219,7 @@ def consolidate():
     curva_diaria = []
     acum_meta = 0.0
     acum_real_dig = 0.0
+    acum_real_sem_fig = 0.0
     acum_real_tot = 0.0
 
     for dia_idx in range(1, total_dias_mes + 1):
@@ -219,26 +230,35 @@ def consolidate():
         tem_venda = dia_idx <= max_dia and s_dia is not None
 
         v_dig = s_dia.get("venda_digital", 0.0) if tem_venda else None
+        v_fig = s_dia.get("venda_figital", 0.0) if tem_venda else None
+        v_sem_fig = s_dia.get("venda_sem_figital", max(0.0, (v_dig or 0.0) - (v_fig or 0.0))) if tem_venda else None
         v_tot = s_dia.get("venda", 0.0) if tem_venda else None
         v_fis = s_dia.get("venda_fisica", 0.0) if tem_venda else None
 
         if tem_venda:
             acum_real_dig += v_dig
+            acum_real_sem_fig += v_sem_fig
             acum_real_tot += v_tot
-            desvio_pct = ((v_dig - m_dia) / m_dia * 100) if m_dia > 0 else 0.0
+            desvio_pct = ((v_dig / m_dia - 1) * 100) if m_dia > 0 else 0.0
+            desvio_sem_fig_pct = ((v_sem_fig / m_dia - 1) * 100) if (m_dia > 0 and v_sem_fig is not None) else 0.0
         else:
             desvio_pct = None
+            desvio_sem_fig_pct = None
 
         curva_diaria.append({
             "dia": dia_idx,
             "data": f"{dia_idx:02d}/09",
             "meta_dia": round(m_dia, 2),
             "realizado_digital": round(v_dig, 2) if v_dig is not None else None,
+            "realizado_figital": round(v_fig, 2) if v_fig is not None else None,
+            "realizado_sem_figital": round(v_sem_fig, 2) if v_sem_fig is not None else None,
             "realizado_total": round(v_tot, 2) if v_tot is not None else None,
             "realizado_fisico": round(v_fis, 2) if v_fis is not None else None,
             "desvio_dia_pct": round(desvio_pct, 2) if desvio_pct is not None else None,
+            "desvio_sem_fig_pct": round(desvio_sem_fig_pct, 2) if desvio_sem_fig_pct is not None else None,
             "acum_meta": round(acum_meta, 2),
-            "acum_realizado": round(acum_real_dig, 2) if tem_venda else None
+            "acum_realizado": round(acum_real_dig, 2) if tem_venda else None,
+            "acum_realizado_sem_figital": round(acum_real_sem_fig, 2) if tem_venda else None
         })
 
     # 3. MAPEAMENTO DE FILIAIS (ROBUSTO COM CANONICALIZAÇÃO)
@@ -292,9 +312,13 @@ def consolidate():
         m_mtd = sum(m_dias[:max_dia])
 
         dias_dig = qf.get("dias_digital", [0.0]*max_dia)[:max_dia]
+        dias_fig = qf.get("dias_figital", [0.0]*max_dia)[:max_dia]
+        dias_sem_fig = qf.get("dias_sem_figital", [0.0]*max_dia)[:max_dia]
         dias_tot = qf.get("dias_total", [0.0]*max_dia)[:max_dia]
 
         v_dig = sum(dias_dig)
+        v_fig = sum(dias_fig)
+        v_sem_fig = sum(dias_sem_fig)
         v_tot = sum(dias_tot)
         v_fis = v_tot - v_dig
 
@@ -316,9 +340,13 @@ def consolidate():
             "meta_mes": round(m_mes, 2),
             "metas_dias": m_dias,
             "vendas_dias_digital": [round(x, 2) for x in dias_dig],
+            "vendas_dias_figital": [round(x, 2) for x in dias_fig],
+            "vendas_dias_sem_figital": [round(x, 2) for x in dias_sem_fig],
             "vendas_dias_total": [round(x, 2) for x in dias_tot],
             "meta_mtd": round(m_mtd, 2),
             "venda_digital": round(v_dig, 2),
+            "venda_figital": round(v_fig, 2),
+            "venda_sem_figital": round(v_sem_fig, 2),
             "venda_total": round(v_tot, 2),
             "venda_fisica": round(v_fis, 2),
             "atingimento_mtd": round(ating, 2),
@@ -344,9 +372,13 @@ def consolidate():
                 "meta_mes": round(m_mes, 2),
                 "metas_dias": m_dias,
                 "vendas_dias_digital": [0.0]*max_dia,
+                "vendas_dias_figital": [0.0]*max_dia,
+                "vendas_dias_sem_figital": [0.0]*max_dia,
                 "vendas_dias_total": [0.0]*max_dia,
                 "meta_mtd": round(m_mtd, 2),
                 "venda_digital": 0.0,
+                "venda_figital": 0.0,
+                "venda_sem_figital": 0.0,
                 "venda_total": 0.0,
                 "venda_fisica": 0.0,
                 "atingimento_mtd": 0.0,
@@ -369,6 +401,8 @@ def consolidate():
                 "meta_mes": 0.0,
                 "metas_dias": [0.0] * 30,
                 "vendas_dias_digital": [0.0] * max_dia,
+                "vendas_dias_figital": [0.0] * max_dia,
+                "vendas_dias_sem_figital": [0.0] * max_dia,
                 "vendas_dias_total": [0.0] * max_dia,
                 "lojas": 0,
                 "coordenadores": set()
@@ -381,6 +415,8 @@ def consolidate():
             dist_map[d]["metas_dias"][i] += f["metas_dias"][i]
         for i in range(max_dia):
             dist_map[d]["vendas_dias_digital"][i] += f["vendas_dias_digital"][i]
+            dist_map[d]["vendas_dias_figital"][i] += f["vendas_dias_figital"][i]
+            dist_map[d]["vendas_dias_sem_figital"][i] += f["vendas_dias_sem_figital"][i]
             dist_map[d]["vendas_dias_total"][i] += f["vendas_dias_total"][i]
 
     distritais_list = []
@@ -390,8 +426,12 @@ def consolidate():
         m_mtd = round(sum(m_dias[:max_dia]), 2)
         
         v_dias_dig = [round(x, 2) for x in d_data["vendas_dias_digital"]]
+        v_dias_fig = [round(x, 2) for x in d_data["vendas_dias_figital"]]
+        v_dias_sem_fig = [round(x, 2) for x in d_data["vendas_dias_sem_figital"]]
         v_dias_tot = [round(x, 2) for x in d_data["vendas_dias_total"]]
         v_dig = round(sum(v_dias_dig), 2)
+        v_fig = round(sum(v_dias_fig), 2)
+        v_sem_fig = round(sum(v_dias_sem_fig), 2)
         v_tot = round(sum(v_dias_tot), 2)
         v_fis = round(v_tot - v_dig, 2)
 
@@ -407,9 +447,13 @@ def consolidate():
             "meta_mes": m_mes,
             "metas_dias": m_dias,
             "vendas_dias_digital": v_dias_dig,
+            "vendas_dias_figital": v_dias_fig,
+            "vendas_dias_sem_figital": v_dias_sem_fig,
             "vendas_dias_total": v_dias_tot,
             "meta_mtd": m_mtd,
             "venda_digital": v_dig,
+            "venda_figital": v_fig,
+            "venda_sem_figital": v_sem_fig,
             "venda_total": v_tot,
             "venda_fisica": v_fis,
             "atingimento_mtd": ating,
@@ -441,6 +485,8 @@ def consolidate():
                 "meta_mes": 0.0,
                 "metas_dias": [0.0] * 30,
                 "vendas_dias_digital": [0.0] * max_dia,
+                "vendas_dias_figital": [0.0] * max_dia,
+                "vendas_dias_sem_figital": [0.0] * max_dia,
                 "vendas_dias_total": [0.0] * max_dia,
                 "lojas": 0
             }
@@ -452,6 +498,8 @@ def consolidate():
             coord_map[c]["metas_dias"][i] += f["metas_dias"][i]
         for i in range(max_dia):
             coord_map[c]["vendas_dias_digital"][i] += f["vendas_dias_digital"][i]
+            coord_map[c]["vendas_dias_figital"][i] += f["vendas_dias_figital"][i]
+            coord_map[c]["vendas_dias_sem_figital"][i] += f["vendas_dias_sem_figital"][i]
             coord_map[c]["vendas_dias_total"][i] += f["vendas_dias_total"][i]
 
     coordenadores_list = []
@@ -461,8 +509,12 @@ def consolidate():
         m_mtd = round(sum(m_dias[:max_dia]), 2)
 
         v_dias_dig = [round(x, 2) for x in c_data["vendas_dias_digital"]]
+        v_dias_fig = [round(x, 2) for x in c_data["vendas_dias_figital"]]
+        v_dias_sem_fig = [round(x, 2) for x in c_data["vendas_dias_sem_figital"]]
         v_dias_tot = [round(x, 2) for x in c_data["vendas_dias_total"]]
         v_dig = round(sum(v_dias_dig), 2)
+        v_fig = round(sum(v_dias_fig), 2)
+        v_sem_fig = round(sum(v_dias_sem_fig), 2)
         v_tot = round(sum(v_dias_tot), 2)
         v_fis = round(v_tot - v_dig, 2)
 
@@ -478,9 +530,13 @@ def consolidate():
             "meta_mes": m_mes,
             "metas_dias": m_dias,
             "vendas_dias_digital": v_dias_dig,
+            "vendas_dias_figital": v_dias_fig,
+            "vendas_dias_sem_figital": v_dias_sem_fig,
             "vendas_dias_total": v_dias_tot,
             "meta_mtd": m_mtd,
             "venda_digital": v_dig,
+            "venda_figital": v_fig,
+            "venda_sem_figital": v_sem_fig,
             "venda_total": v_tot,
             "venda_fisica": v_fis,
             "atingimento_mtd": ating,
@@ -496,63 +552,157 @@ def consolidate():
 
     # 6. CONSOLIDAÇÃO GRUPOS (CATEGORIAS)
     metas_grp = metas_data.get("grupos", {})
-    qlik_grupos = vendas_data.get("grupos", [])
-    vendas_grp = {clean_group_name(g.get("grupo")): g for g in qlik_grupos}
-
-    # Linhas associadas
-    linhas_por_grupo = {}
+    # 6. CONSOLIDAÇÃO LINHAS DE PRODUTOS (ABERTURA ANALÍTICA COMPLETA)
+    qlik_linhas_map = {}
     for l in vendas_data.get("linhas", []):
-        g_clean = clean_group_name(l.get("grupo"))
-        if g_clean not in linhas_por_grupo:
-            linhas_por_grupo[g_clean] = []
-        linhas_por_grupo[g_clean].append(l)
+        nl = norm_str(l.get("linha"))
+        qlik_linhas_map[nl] = l
+
+    linhas_list = []
+    for g_raw_name, g_meta in metas_grp.items():
+        g_clean = clean_group_name(g_raw_name)
+        linhas_dict = g_meta.get("linhas", {})
+        for l_raw_name, l_meta in linhas_dict.items():
+            nl = norm_str(l_raw_name)
+            ql = qlik_linhas_map.get(nl, {})
+
+            m_mes = round(l_meta.get("meta_mes", 0.0), 2)
+            m_dias = [round(x, 2) for x in l_meta.get("metas_dias", [0.0]*30)]
+            m_mtd = round(sum(m_dias[:max_dia]), 2)
+
+            dias_sem_fig = ql.get("dias_sem_figital", [0.0]*max_dia)[:max_dia]
+            dias_fig = ql.get("dias_figital", [0.0]*max_dia)[:max_dia]
+            dias_dig = [round(s + f, 2) for s, f in zip(dias_sem_fig, dias_fig)] if dias_sem_fig else ql.get("dias_digital", [0.0]*max_dia)[:max_dia]
+            dias_tot = ql.get("dias_total", [0.0]*max_dia)[:max_dia]
+
+            v_sem_fig = round(sum(dias_sem_fig) if dias_sem_fig else ql.get("venda_sem_figital", 0.0), 2)
+            v_fig = round(sum(dias_fig) if dias_fig else ql.get("venda_figital", 0.0), 2)
+            v_dig = round(v_sem_fig + v_fig, 2)
+            v_tot = round(sum(dias_tot) if dias_tot else ql.get("venda", 0.0), 2)
+            v_fis = round(max(0.0, v_tot - v_dig), 2)
+
+            ating = round((v_dig / m_mtd * 100) if m_mtd > 0 else (100.0 if v_dig > 0 else 0.0), 2)
+            gap = round(v_dig - m_mtd, 2)
+            proj = round((v_dig / max_dia * total_dias_mes) if max_dia > 0 else 0.0, 2)
+            ating_proj = round((proj / m_mes * 100) if m_mes > 0 else (100.0 if proj > 0 else 0.0), 2)
+            share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
+
+            linhas_list.append({
+                "grupo": g_clean,
+                "linha": l_raw_name,
+                "meta_mes": m_mes,
+                "metas_dias": m_dias,
+                "vendas_dias_digital": [round(x, 2) for x in dias_dig],
+                "vendas_dias_figital": [round(x, 2) for x in dias_fig],
+                "vendas_dias_sem_figital": [round(x, 2) for x in dias_sem_fig],
+                "vendas_dias_total": [round(x, 2) for x in dias_tot],
+                "meta_mtd": m_mtd,
+                "venda_digital": v_dig,
+                "venda_figital": v_fig,
+                "venda_sem_figital": v_sem_fig,
+                "venda_total": v_tot,
+                "venda_fisica": v_fis,
+                "atingimento_mtd": ating,
+                "gap": gap,
+                "projecao": proj,
+                "atingimento_proj": ating_proj,
+                "share_digital": share_dig,
+                "status": get_status(ating)
+            })
+
+    linhas_list.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+
+    # Agrupa linhas por grupo para exibição direta (drill-down / acordeão)
+    linhas_por_grupo_cons = {}
+    for l in linhas_list:
+        grp = l["grupo"]
+        if grp not in linhas_por_grupo_cons:
+            linhas_por_grupo_cons[grp] = []
+        linhas_por_grupo_cons[grp].append(l)
+
+    # 7. CONSOLIDAÇÃO GRUPOS (CATEGORIAS COM LINHAS ANINHADAS)
+    metas_grp = metas_data.get("grupos", {})
+    qlik_grupos = vendas_data.get("grupos", [])
+    vendas_grp = {norm_str(clean_group_name(g.get("grupo"))): g for g in qlik_grupos}
 
     grupos_list = []
     for g_raw_name, g_meta in metas_grp.items():
         g_clean = clean_group_name(g_raw_name)
-        v_info = vendas_grp.get(g_clean, {})
+        g_norm = norm_str(g_clean)
+        v_info = vendas_grp.get(g_norm, {})
 
         m_mes = round(g_meta.get("meta_mes", 0.0), 2)
         m_dias = [round(x, 2) for x in g_meta.get("metas_dias", [0.0]*30)]
         m_mtd = round(sum(m_dias[:max_dia]), 2)
 
-        dias_dig = v_info.get("dias_digital", [0.0]*max_dia)[:max_dia]
+        linhas_deste_grupo = linhas_por_grupo_cons.get(g_clean, [])
+
+        dias_sem_fig = v_info.get("dias_sem_figital", [0.0]*max_dia)[:max_dia]
+        dias_fig = v_info.get("dias_figital", [0.0]*max_dia)[:max_dia]
+        dias_dig = [round(s + f, 2) for s, f in zip(dias_sem_fig, dias_fig)] if dias_sem_fig else v_info.get("dias_digital", [0.0]*max_dia)[:max_dia]
         dias_tot = v_info.get("dias_total", [0.0]*max_dia)[:max_dia]
 
-        v_dig = round(sum(dias_dig) if dias_dig else v_info.get("venda_digital", 0.0), 2)
+        # Fallback de segurança: se o Qlik grupo direto não tiver dados diários, agrega das linhas deste grupo
+        if not dias_sem_fig or sum(dias_sem_fig) == 0:
+            dias_sem_fig = [0.0] * max_dia
+            dias_fig = [0.0] * max_dia
+            dias_dig = [0.0] * max_dia
+            dias_tot = [0.0] * max_dia
+            for l in linhas_deste_grupo:
+                l_sem = l.get("vendas_dias_sem_figital", [])
+                l_fig = l.get("vendas_dias_figital", [])
+                l_dig = l.get("vendas_dias_digital", [])
+                l_tot = l.get("vendas_dias_total", [])
+                for i in range(min(max_dia, len(l_sem))):
+                    dias_sem_fig[i] += l_sem[i]
+                for i in range(min(max_dia, len(l_fig))):
+                    dias_fig[i] += l_fig[i]
+                for i in range(min(max_dia, len(l_dig))):
+                    dias_dig[i] += l_dig[i]
+                for i in range(min(max_dia, len(l_tot))):
+                    dias_tot[i] += l_tot[i]
+
+        v_sem_fig = round(sum(dias_sem_fig) if dias_sem_fig else v_info.get("venda_sem_figital", 0.0), 2)
+        v_fig = round(sum(dias_fig) if dias_fig else v_info.get("venda_figital", 0.0), 2)
+        v_dig = round(v_sem_fig + v_fig, 2)
         v_tot = round(sum(dias_tot) if dias_tot else v_info.get("venda", 0.0), 2)
-        v_fis = round(v_tot - v_dig, 2)
+        v_fis = round(max(0.0, v_tot - v_dig), 2)
 
         ating = round((v_dig / m_mtd * 100) if m_mtd > 0 else 0.0, 2)
+        desvio = round(((v_dig / m_mtd - 1) * 100) if m_mtd > 0 else 0.0, 2)
+        desvio_sem_fig = round(((v_sem_fig / m_mtd - 1) * 100) if m_mtd > 0 else 0.0, 2)
         gap = round(v_dig - m_mtd, 2)
         proj = round((v_dig / max_dia * total_dias_mes) if max_dia > 0 else 0.0, 2)
         ating_proj = round((proj / m_mes * 100) if m_mes > 0 else 0.0, 2)
         share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
-
-        # Top 15 linhas
-        linhas_grp = sorted(linhas_por_grupo.get(g_clean, []), key=lambda x: x.get("venda_digital", 0.0), reverse=True)[:15]
 
         grupos_list.append({
             "grupo": g_clean,
             "meta_mes": m_mes,
             "metas_dias": m_dias,
             "vendas_dias_digital": [round(x, 2) for x in dias_dig],
+            "vendas_dias_figital": [round(x, 2) for x in dias_fig],
+            "vendas_dias_sem_figital": [round(x, 2) for x in dias_sem_fig],
             "vendas_dias_total": [round(x, 2) for x in dias_tot],
             "meta_mtd": m_mtd,
             "venda_digital": v_dig,
+            "venda_figital": v_fig,
+            "venda_sem_figital": v_sem_fig,
             "venda_total": v_tot,
             "venda_fisica": v_fis,
             "atingimento_mtd": ating,
+            "desvio_mtd": desvio,
+            "desvio_sem_figital": desvio_sem_fig,
             "gap": gap,
             "projecao": proj,
             "atingimento_proj": ating_proj,
             "share_digital": share_dig,
             "status": get_status(ating),
-            "total_linhas": len(linhas_por_grupo.get(g_clean, [])),
-            "top_linhas": linhas_grp
+            "total_linhas": len(linhas_deste_grupo),
+            "linhas": linhas_deste_grupo
         })
 
-    grupos_list.sort(key=lambda x: x["venda_digital"], reverse=True)
+    grupos_list.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
 
     # Payload Final
     dashboard_data = {
@@ -568,9 +718,13 @@ def consolidate():
             "meta_mes": meta_mes,
             "meta_mtd": meta_mtd,
             "venda_digital": venda_digital_realizada,
+            "venda_figital": venda_figital_realizada,
+            "venda_sem_figital": venda_sem_figital_realizada,
             "venda_total_lojas": venda_total_realizada,
             "venda_fisica": venda_fisica_realizada,
             "atingimento_mtd": atingimento_mtd,
+            "desvio_mtd": desvio_mtd,
+            "desvio_sem_figital": desvio_sem_figital,
             "gap": gap_digital,
             "projecao_fechamento": projecao_fechamento,
             "atingimento_proj": atingimento_proj,
@@ -578,12 +732,15 @@ def consolidate():
             "total_lojas": len(filiais_list),
             "total_coordenadores": len(coordenadores_list),
             "total_distritais": len(distritais_list),
+            "total_linhas": len(linhas_list),
             "status": get_status(atingimento_mtd)
         },
         "total": {
             "meta_mes": meta_mes,
             "metas_dias": total_metas_dias,
             "vendas_dias_digital": total_vendas_dias_digital,
+            "vendas_dias_figital": total_vendas_dias_figital,
+            "vendas_dias_sem_figital": total_vendas_dias_sem_figital,
             "vendas_dias_total": total_vendas_dias_total,
             "vendas_dias_fisica": total_vendas_dias_fisica
         },
@@ -591,7 +748,8 @@ def consolidate():
         "distritais": distritais_list,
         "coordenadores": coordenadores_list,
         "filiais": filiais_list,
-        "grupos": grupos_list
+        "grupos": grupos_list,
+        "linhas": linhas_list
     }
 
     with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
@@ -600,8 +758,9 @@ def consolidate():
     sz_kb = os.path.getsize(OUTPUT_JSON) / 1024
     print(f"✅ Consolidação concluída em {time.time()-t0:.2f}s!")
     print(f"   💰 Venda Digital: R$ {venda_digital_realizada:,.2f} | Meta MTD: R$ {meta_mtd:,.2f} ({atingimento_mtd:.1f}%)")
+    print(f"   📱 Figital: R$ {venda_figital_realizada:,.2f} | Sem Figital: R$ {venda_sem_figital_realizada:,.2f}")
     print(f"   📊 Meta Mês: R$ {meta_mes:,.2f} | GAP: R$ {gap_digital:,.2f}")
-    print(f"   🏢 {len(distritais_list)} Distritais | {len(coordenadores_list)} Coordenadores | {len(filiais_list)} Filiais")
+    print(f"   🏢 {len(distritais_list)} Distritais | {len(coordenadores_list)} Coordenadores | {len(filiais_list)} Filiais | {len(linhas_list)} Linhas")
     print(f"   📁 Salvo em: {OUTPUT_JSON} ({sz_kb:.1f} KB)")
 
 if __name__ == "__main__":

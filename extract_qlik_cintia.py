@@ -1,14 +1,22 @@
 """
 extract_qlik_cintia.py — Extração de dados da Diretoria C (Cíntia Silva) do QLIK CLOUD SaaS
-Conecta via WebSocket QIX Engine API ao App Acompanhamento Vendas (bd585cf0-316d-4173-aef1-81f9daa9125c).
-Extrai vendas de Setembro/2026:
-1. Diário Geral da Diretoria C (venda líquida, física, digital e qtd)
+Conecta via WebSocket QIX Engine API ao App Vendas Análise - Analítico (dcfc3ede-5eab-407c-a9ce-12b546eb5bdf).
+
+Canais Digitais Oficiais (Sem Figital) — Meta/Realizado oficial Qlik:
+- APP, APP Tele Entrega, SITE, SITE Tele Entrega, iFood
+Canal Figital (Exclusivo separado para toggle Com/Sem Figital):
+- Figital
+
+Extrai:
+1. Diário Geral (Dia Venda, Dt_Venda)
 2. Distritais (4 distritais)
 3. Coordenadores (29 coordenadores)
-4. Filiais (~587 lojas)
+4. Filiais (587 lojas)
 5. Filiais x Dia
-6. Grupos (8 grupos)
-7. Grupos x Linhas (~500 linhas de produtos)
+6. Grupos (7 categorias principais)
+7. Grupos x Dia
+8. Linhas de Produtos (~571 linhas)
+9. Linhas x Dia
 """
 import os
 import sys
@@ -28,7 +36,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 OUTPUT_JSON = os.path.join(DATA_DIR, "vendas_qlik_cintia.json")
 
 QLIK_CLOUD_HOST = "fsj.us.qlikcloud.com"
-APP_ID = "bd585cf0-316d-4173-aef1-81f9daa9125c"  # Acompanhamento Vendas
+APP_ID = "dcfc3ede-5eab-407c-a9ce-12b546eb5bdf"  # Vendas Análise - Analítico
 HOME_URL = f"https://{QLIK_CLOUD_HOST}/analytics/home"
 
 STORAGE_STATE_PATHS = [
@@ -49,7 +57,7 @@ def find_storage_state():
 async def extract_qlik():
     t0 = time.time()
     print("=" * 70)
-    print("  EXTRAÇÃO QLIK CLOUD SAAS — DIRETORIA CÍNTIA SILVA")
+    print("  EXTRAÇÃO QLIK CLOUD SAAS — VENDAS ANÁLISE ANALÍTICO (CÍNTIA SILVA)")
     print("=" * 70)
 
     storage_state_file = find_storage_state()
@@ -71,7 +79,6 @@ async def extract_qlik():
         except Exception as e:
             print(f"Erro ao carregar Hub: {e}", flush=True)
 
-        # Verifica se precisa de login (Keycloak SSO)
         if "idp.farmaciassaojoao.com.br" in page.url or "login" in page.url.lower():
             print("Detectada tela de autenticação Keycloak SSO. Realizando login...", flush=True)
             try:
@@ -148,38 +155,49 @@ async def extract_qlik():
                         const op = await send("OpenDoc", -1, [appId]);
                         const doc = op.result.qReturn.qHandle;
 
-                        const setFilter = "Diretor={'Cintia Silva'}, [Ano-Mês Venda]={'2026-09'}";
+                        const setBase = "Diretoria={'Cintia Silva'}, [Ano-Mês Venda]={'2026-09'}";
+                        const canaisSemFig = "[Canal Detalhado]={'APP', 'APP Tele Entrega', 'SITE', 'SITE Tele Entrega', 'iFood'}";
+                        const canaisFig = "[Canal Detalhado]={'Figital'}";
+                        const canaisFisica = "[Canal Detalhado]={'Venda Balcão', 'Venda Caixa', 'Auto Atendimento'}";
 
                         // 0. Max Date da Venda
-                        const evalMaxDate = await send("Evaluate", doc, ["Date(Max([Data Venda]), 'DD/MM/YYYY')"]);
+                        const evalMaxDate = await send("Evaluate", doc, ["Date(Max({<" + setBase + ">} [Dt_Venda]), 'DD/MM/YYYY')"]);
 
-                        // 1. Vendas Diárias Geral Diretoria C (dias 1 ao 16)
+                        // 1. Diário Geral Diretoria C (dias 1..30)
                         const cDaily = await send("CreateSessionObject", doc, [{
                             qInfo: { qType: 'q_daily' },
                             qHyperCubeDef: {
                                 qDimensions: [
                                     { qDef: { qFieldDefs: ['Dia Venda'] } },
-                                    { qDef: { qFieldDefs: ['Data Venda'] } }
+                                    { qDef: { qFieldDefs: ['Dt_Venda'] } }
                                 ],
                                 qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Quantidade])`, qLabel: 'qtd' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'N', 'Não', 'Nao', 'NAO'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_fisica' } }
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFisica}>} [Vl_Mercadoria])`, qLabel: 'venda_fisica' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
                                 ],
                                 qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 35, qWidth: 6 }],
                                 qSuppressZero: true
                             }
                         }]);
                         const lDaily = await send("GetLayout", cDaily.result.qReturn.qHandle, []);
-                        const daily = (lDaily.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => ({
-                            dia: parseInt(r[0].qText),
-                            data: r[1].qText,
-                            venda: r[2].qNum || 0,
-                            qtd: r[3].qNum || 0,
-                            venda_digital: r[4].qNum || 0,
-                            venda_fisica: r[5].qNum || 0
-                        })).sort((a, b) => a.dia - b.dia);
+                        const daily = (lDaily.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => {
+                            const vSemFig = r[2].qNum || 0;
+                            const vFig = r[3].qNum || 0;
+                            const vFis = r[4].qNum || 0;
+                            const vTot = r[5].qNum || 0;
+                            return {
+                                dia: parseInt(r[0].qText),
+                                data: r[1].qText,
+                                venda: vTot,
+                                qtd: 0,
+                                venda_digital: vSemFig + vFig,
+                                venda_sem_figital: vSemFig,
+                                venda_figital: vFig,
+                                venda_fisica: vFis
+                            };
+                        }).sort((a, b) => a.dia - b.dia);
 
                         const maxDia = daily.length > 0 ? Math.max(...daily.map(d => d.dia)) : 16;
 
@@ -189,25 +207,31 @@ async def extract_qlik():
                             qHyperCubeDef: {
                                 qDimensions: [{ qDef: { qFieldDefs: ['Distrital'] } }],
                                 qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Quantidade])`, qLabel: 'qtd' } },
-                                    { qDef: { qDef: `Count(DISTINCT {<${setFilter}>} [ID Loja])`, qLabel: 'lojas' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'N', 'Não', 'Nao', 'NAO'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_fisica' } }
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } },
+                                    { qDef: { qDef: `Count(DISTINCT {<${setBase}>} [Filial_ID])`, qLabel: 'lojas' } }
                                 ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 20, qWidth: 6 }],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 20, qWidth: 5 }],
                                 qSuppressZero: true
                             }
                         }]);
                         const lDist = await send("GetLayout", cDist.result.qReturn.qHandle, []);
-                        const distritais = (lDist.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => ({
-                            distrital: r[0].qText,
-                            venda: r[1].qNum || 0,
-                            qtd: r[2].qNum || 0,
-                            lojas: r[3].qNum || 0,
-                            venda_digital: r[4].qNum || 0,
-                            venda_fisica: r[5].qNum || 0
-                        }));
+                        const distritais = (lDist.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => {
+                            const vSemFig = r[1].qNum || 0;
+                            const vFig = r[2].qNum || 0;
+                            const vTot = r[3].qNum || 0;
+                            return {
+                                distrital: r[0].qText,
+                                venda: vTot,
+                                qtd: 0,
+                                lojas: r[4].qNum || 0,
+                                venda_digital: vSemFig + vFig,
+                                venda_sem_figital: vSemFig,
+                                venda_figital: vFig,
+                                venda_fisica: Math.max(0, vTot - (vSemFig + vFig))
+                            };
+                        });
 
                         // 3. Coordenadores
                         const cCoord = await send("CreateSessionObject", doc, [{
@@ -218,211 +242,292 @@ async def extract_qlik():
                                     { qDef: { qFieldDefs: ['Coordenador'] } }
                                 ],
                                 qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Quantidade])`, qLabel: 'qtd' } },
-                                    { qDef: { qDef: `Count(DISTINCT {<${setFilter}>} [ID Loja])`, qLabel: 'lojas' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'N', 'Não', 'Nao', 'NAO'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_fisica' } }
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } },
+                                    { qDef: { qDef: `Count(DISTINCT {<${setBase}>} [Filial_ID])`, qLabel: 'lojas' } }
                                 ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 50, qWidth: 7 }],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 50, qWidth: 6 }],
                                 qSuppressZero: true
                             }
                         }]);
                         const lCoord = await send("GetLayout", cCoord.result.qReturn.qHandle, []);
-                        const coordenadores = (lCoord.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => ({
-                            distrital: r[0].qText,
-                            coordenador: r[1].qText,
-                            venda: r[2].qNum || 0,
-                            qtd: r[3].qNum || 0,
-                            lojas: r[4].qNum || 0,
-                            venda_digital: r[5].qNum || 0,
-                            venda_fisica: r[6].qNum || 0
-                        }));
+                        const coordenadores = (lCoord.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => {
+                            const vSemFig = r[2].qNum || 0;
+                            const vFig = r[3].qNum || 0;
+                            const vTot = r[4].qNum || 0;
+                            return {
+                                distrital: r[0].qText,
+                                coordenador: r[1].qText,
+                                venda: vTot,
+                                qtd: 0,
+                                lojas: r[5].qNum || 0,
+                                venda_digital: vSemFig + vFig,
+                                venda_sem_figital: vSemFig,
+                                venda_figital: vFig,
+                                venda_fisica: Math.max(0, vTot - (vSemFig + vFig))
+                            };
+                        });
 
-                        // 4. Filiais (Lojas)
-                        const cFilial = await send("CreateSessionObject", doc, [{
-                            qInfo: { qType: 'q_filiais' },
+                        // 4. Filiais Geral
+                        const cFil = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_fil' },
                             qHyperCubeDef: {
                                 qDimensions: [
+                                    { qDef: { qFieldDefs: ['Filial_ID'] } },
+                                    { qDef: { qFieldDefs: ['Desc_Filial'] } },
                                     { qDef: { qFieldDefs: ['Distrital'] } },
-                                    { qDef: { qFieldDefs: ['Coordenador'] } },
-                                    { qDef: { qFieldDefs: ['Nome Filial'] } },
-                                    { qDef: { qFieldDefs: ['ID Loja'] } }
+                                    { qDef: { qFieldDefs: ['Coordenador'] } }
                                 ],
                                 qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Quantidade])`, qLabel: 'qtd' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'N', 'Não', 'Nao', 'NAO'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_fisica' } }
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
                                 ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 500, qWidth: 8 }],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 7 }],
                                 qSuppressZero: true
                             }
                         }]);
-                        const hFilial = cFilial.result.qReturn.qHandle;
-                        const lFilial = await send("GetLayout", hFilial, []);
-                        const totalFiliaisRows = lFilial.result.qLayout.qHyperCube.qSize.qcy;
-                        const filiaisMatrix = await fetchAllDataPages(hFilial, totalFiliaisRows, 8);
-                        const filiais = filiaisMatrix.map(r => ({
-                            distrital: r[0],
-                            coordenador: r[1],
-                            filial: r[2],
-                            idLoja: r[3],
-                            venda: typeof r[4] === 'number' ? r[4] : 0,
-                            qtd: typeof r[5] === 'number' ? r[5] : 0,
-                            venda_digital: typeof r[6] === 'number' ? r[6] : 0,
-                            venda_fisica: typeof r[7] === 'number' ? r[7] : 0
-                        }));
+                        const lFil = await send("GetLayout", cFil.result.qReturn.qHandle, []);
+                        const totalRowsFil = lFil.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawFilRows = await fetchAllDataPages(cFil.result.qReturn.qHandle, totalRowsFil, 7);
+                        const filiais = rawFilRows.map(r => {
+                            const vSemFig = typeof r[4] === 'number' ? r[4] : 0;
+                            const vFig = typeof r[5] === 'number' ? r[5] : 0;
+                            const vTot = typeof r[6] === 'number' ? r[6] : 0;
+                            return {
+                                filial_id: String(r[0]),
+                                filial: String(r[1]),
+                                distrital: String(r[2]),
+                                coordenador: String(r[3]),
+                                venda: vTot,
+                                qtd: 0,
+                                venda_digital: vSemFig + vFig,
+                                venda_sem_figital: vSemFig,
+                                venda_figital: vFig,
+                                venda_fisica: Math.max(0, vTot - (vSemFig + vFig))
+                            };
+                        });
 
-                        // 5. Grupos (Categorias Macro)
-                        const cGrupos = await send("CreateSessionObject", doc, [{
-                            qInfo: { qType: 'q_grupos' },
-                            qHyperCubeDef: {
-                                qDimensions: [{ qDef: { qFieldDefs: ['Grupo'] } }],
-                                qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Quantidade])`, qLabel: 'qtd' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'N', 'Não', 'Nao', 'NAO'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_fisica' } }
-                                ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 30, qWidth: 5 }],
-                                qSuppressZero: true
-                            }
-                        }]);
-                        const lGrupos = await send("GetLayout", cGrupos.result.qReturn.qHandle, []);
-                        const grupos = (lGrupos.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => ({
-                            grupo: r[0].qText,
-                            venda: r[1].qNum || 0,
-                            qtd: r[2].qNum || 0,
-                            venda_digital: r[3].qNum || 0,
-                            venda_fisica: r[4].qNum || 0
-                        }));
-
-                        // 6. Grupos x Linhas
-                        const cLinhas = await send("CreateSessionObject", doc, [{
-                            qInfo: { qType: 'q_linhas' },
+                        // 5. Filiais x Dia
+                        const cFilDia = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_fil_dia' },
                             qHyperCubeDef: {
                                 qDimensions: [
-                                    { qDef: { qFieldDefs: ['Grupo'] } },
-                                    { qDef: { qFieldDefs: ['Linha'] } }
-                                ],
-                                qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Quantidade])`, qLabel: 'qtd' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'N', 'Não', 'Nao', 'NAO'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_fisica' } }
-                                ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 500, qWidth: 6 }],
-                                qSuppressZero: true
-                            }
-                        }]);
-                        const hLinhas = cLinhas.result.qReturn.qHandle;
-                        const lLinhas = await send("GetLayout", hLinhas, []);
-                        const totalLinhasRows = lLinhas.result.qLayout.qHyperCube.qSize.qcy;
-                        const linhasMatrix = await fetchAllDataPages(hLinhas, totalLinhasRows, 6);
-                        const linhas = linhasMatrix.map(r => ({
-                            grupo: r[0],
-                            linha: r[1],
-                            venda: typeof r[2] === 'number' ? r[2] : 0,
-                            qtd: typeof r[3] === 'number' ? r[3] : 0,
-                            venda_digital: typeof r[4] === 'number' ? r[4] : 0,
-                            venda_fisica: typeof r[5] === 'number' ? r[5] : 0
-                        }));
-
-                        // 7. Filiais x Dia Venda (Diarização de Vendas por Loja)
-                        const cFilialDia = await send("CreateSessionObject", doc, [{
-                            qInfo: { qType: 'q_filial_dia' },
-                            qHyperCubeDef: {
-                                qDimensions: [
-                                    { qDef: { qFieldDefs: ['ID Loja'] } },
+                                    { qDef: { qFieldDefs: ['Filial_ID'] } },
                                     { qDef: { qFieldDefs: ['Dia Venda'] } }
                                 ],
                                 qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_total' } }
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
                                 ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 4 }],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 5 }],
                                 qSuppressZero: true
                             }
                         }]);
-                        const hFilialDia = cFilialDia.result.qReturn.qHandle;
-                        const lFilialDia = await send("GetLayout", hFilialDia, []);
-                        const totalFilialDiaRows = lFilialDia.result.qLayout.qHyperCube.qSize.qcy;
-                        const filialDiaMatrix = await fetchAllDataPages(hFilialDia, totalFilialDiaRows, 4);
+                        const lFilDia = await send("GetLayout", cFilDia.result.qReturn.qHandle, []);
+                        const totalRowsFilDia = lFilDia.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawFilDiaRows = await fetchAllDataPages(cFilDia.result.qReturn.qHandle, totalRowsFilDia, 5);
 
-                        const filialDailyMap = {};
-                        for (const r of filialDiaMatrix) {
-                            const idLoja = String(r[0]);
+                        const filiaisDiaMap = {};
+                        rawFilDiaRows.forEach(r => {
+                            const fid = String(r[0]);
                             const dia = parseInt(r[1]);
-                            const vDig = typeof r[2] === 'number' ? r[2] : 0;
-                            const vTot = typeof r[3] === 'number' ? r[3] : 0;
-                            if (!filialDailyMap[idLoja]) {
-                                filialDailyMap[idLoja] = { digital: {}, total: {} };
-                            }
-                            filialDailyMap[idLoja].digital[dia] = vDig;
-                            filialDailyMap[idLoja].total[dia] = vTot;
-                        }
+                            const vSemFig = typeof r[2] === 'number' ? r[2] : 0;
+                            const vFig = typeof r[3] === 'number' ? r[3] : 0;
+                            const vTot = typeof r[4] === 'number' ? r[4] : 0;
+                            if (!filiaisDiaMap[fid]) filiaisDiaMap[fid] = {};
+                            filiaisDiaMap[fid][dia] = { sem_fig: vSemFig, fig: vFig, tot: vTot };
+                        });
 
-                        for (const f of filiais) {
-                            const id = String(f.idLoja);
-                            const dMap = filialDailyMap[id] || { digital: {}, total: {} };
+                        filiais.forEach(f => {
+                            const dMap = filiaisDiaMap[f.filial_id] || {};
+                            f.dias_sem_figital = [];
+                            f.dias_figital = [];
                             f.dias_digital = [];
                             f.dias_total = [];
                             for (let d = 1; d <= maxDia; d++) {
-                                f.dias_digital.push(Math.round((dMap.digital[d] || 0) * 100) / 100);
-                                f.dias_total.push(Math.round((dMap.total[d] || 0) * 100) / 100);
+                                const entry = dMap[d] || { sem_fig: 0, fig: 0, tot: 0 };
+                                f.dias_sem_figital.push(entry.sem_fig);
+                                f.dias_figital.push(entry.fig);
+                                f.dias_digital.push(entry.sem_fig + entry.fig);
+                                f.dias_total.push(entry.tot);
                             }
-                        }
+                        });
 
-                        // 8. Grupos x Dia Venda (Diarização de Vendas por Categoria)
-                        const cGrupoDia = await send("CreateSessionObject", doc, [{
-                            qInfo: { qType: 'q_grupo_dia' },
+                        // 6. Grupos Geral
+                        const cGrp = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_grp' },
                             qHyperCubeDef: {
-                                qDimensions: [
-                                    { qDef: { qFieldDefs: ['Grupo'] } },
-                                    { qDef: { qFieldDefs: ['Dia Venda'] } }
-                                ],
+                                qDimensions: [{ qDef: { qFieldDefs: ['Desc_Grupo'] } }],
                                 qMeasures: [
-                                    { qDef: { qDef: `Sum({<${setFilter}, [Venda Digital?]={'S', 'Sim', 'SIM'}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_digital' } },
-                                    { qDef: { qDef: `Sum({<${setFilter}>} [Valor Mercadoria] - [Valor Desconto])`, qLabel: 'venda_total' } }
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
                                 ],
-                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 200, qWidth: 4 }],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 30, qWidth: 4 }],
                                 qSuppressZero: true
                             }
                         }]);
-                        const hGrupoDia = cGrupoDia.result.qReturn.qHandle;
-                        const lGrupoDia = await send("GetLayout", hGrupoDia, []);
-                        const totalGrupoDiaRows = lGrupoDia.result.qLayout.qHyperCube.qSize.qcy;
-                        const grupoDiaMatrix = await fetchAllDataPages(hGrupoDia, totalGrupoDiaRows, 4);
+                        const lGrp = await send("GetLayout", cGrp.result.qReturn.qHandle, []);
+                        const grupos = (lGrp.result.qLayout.qHyperCube.qDataPages[0]?.qMatrix || []).map(r => {
+                            const vSemFig = r[1].qNum || 0;
+                            const vFig = r[2].qNum || 0;
+                            const vTot = r[3].qNum || 0;
+                            return {
+                                grupo: r[0].qText,
+                                venda: vTot,
+                                qtd: 0,
+                                venda_digital: vSemFig + vFig,
+                                venda_sem_figital: vSemFig,
+                                venda_figital: vFig,
+                                venda_fisica: Math.max(0, vTot - (vSemFig + vFig))
+                            };
+                        });
 
-                        const grupoDailyMap = {};
-                        for (const r of grupoDiaMatrix) {
+                        // 7. Grupos x Dia
+                        const cGrpDia = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_grp_dia' },
+                            qHyperCubeDef: {
+                                qDimensions: [
+                                    { qDef: { qFieldDefs: ['Desc_Grupo'] } },
+                                    { qDef: { qFieldDefs: ['Dia Venda'] } }
+                                ],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 5 }],
+                                qSuppressZero: true
+                            }
+                        }]);
+                        const lGrpDia = await send("GetLayout", cGrpDia.result.qReturn.qHandle, []);
+                        const totalRowsGrpDia = lGrpDia.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawGrpDiaRows = await fetchAllDataPages(cGrpDia.result.qReturn.qHandle, totalRowsGrpDia, 5);
+
+                        const grpDiaMap = {};
+                        rawGrpDiaRows.forEach(r => {
                             const grp = String(r[0]);
                             const dia = parseInt(r[1]);
-                            const vDig = typeof r[2] === 'number' ? r[2] : 0;
-                            const vTot = typeof r[3] === 'number' ? r[3] : 0;
-                            if (!grupoDailyMap[grp]) {
-                                grupoDailyMap[grp] = { digital: {}, total: {} };
-                            }
-                            grupoDailyMap[grp].digital[dia] = vDig;
-                            grupoDailyMap[grp].total[dia] = vTot;
-                        }
+                            const vSemFig = typeof r[2] === 'number' ? r[2] : 0;
+                            const vFig = typeof r[3] === 'number' ? r[3] : 0;
+                            const vTot = typeof r[4] === 'number' ? r[4] : 0;
+                            if (!grpDiaMap[grp]) grpDiaMap[grp] = {};
+                            grpDiaMap[grp][dia] = { sem_fig: vSemFig, fig: vFig, tot: vTot };
+                        });
 
-                        for (const g of grupos) {
-                            const grp = String(g.grupo);
-                            const dMap = grupoDailyMap[grp] || { digital: {}, total: {} };
+                        grupos.forEach(g => {
+                            const dMap = grpDiaMap[g.grupo] || {};
+                            g.dias_sem_figital = [];
+                            g.dias_figital = [];
                             g.dias_digital = [];
                             g.dias_total = [];
                             for (let d = 1; d <= maxDia; d++) {
-                                g.dias_digital.push(Math.round((dMap.digital[d] || 0) * 100) / 100);
-                                g.dias_total.push(Math.round((dMap.total[d] || 0) * 100) / 100);
+                                const entry = dMap[d] || { sem_fig: 0, fig: 0, tot: 0 };
+                                g.dias_sem_figital.push(entry.sem_fig);
+                                g.dias_figital.push(entry.fig);
+                                g.dias_digital.push(entry.sem_fig + entry.fig);
+                                g.dias_total.push(entry.tot);
                             }
-                        }
+                        });
+
+                        // 8. Linhas Geral
+                        const cLin = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_lin' },
+                            qHyperCubeDef: {
+                                qDimensions: [
+                                    { qDef: { qFieldDefs: ['Desc_Grupo'] } },
+                                    { qDef: { qFieldDefs: ['Desc_Linha'] } }
+                                ],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 5 }],
+                                qSuppressZero: true
+                            }
+                        }]);
+                        const lLin = await send("GetLayout", cLin.result.qReturn.qHandle, []);
+                        const totalRowsLin = lLin.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawLinRows = await fetchAllDataPages(cLin.result.qReturn.qHandle, totalRowsLin, 5);
+                        const linhas = rawLinRows.map(r => {
+                            const vSemFig = typeof r[2] === 'number' ? r[2] : 0;
+                            const vFig = typeof r[3] === 'number' ? r[3] : 0;
+                            const vTot = typeof r[4] === 'number' ? r[4] : 0;
+                            return {
+                                grupo: String(r[0]),
+                                linha: String(r[1]),
+                                venda: vTot,
+                                qtd: 0,
+                                venda_digital: vSemFig + vFig,
+                                venda_sem_figital: vSemFig,
+                                venda_figital: vFig,
+                                venda_fisica: Math.max(0, vTot - (vSemFig + vFig))
+                            };
+                        });
+
+                        // 9. Linhas x Dia
+                        const cLinDia = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_lin_dia' },
+                            qHyperCubeDef: {
+                                qDimensions: [
+                                    { qDef: { qFieldDefs: ['Desc_Linha'] } },
+                                    { qDef: { qFieldDefs: ['Dia Venda'] } }
+                                ],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 5 }],
+                                qSuppressZero: true
+                            }
+                        }]);
+                        const lLinDia = await send("GetLayout", cLinDia.result.qReturn.qHandle, []);
+                        const totalRowsLinDia = lLinDia.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawLinDiaRows = await fetchAllDataPages(cLinDia.result.qReturn.qHandle, totalRowsLinDia, 5);
+
+                        const linDiaMap = {};
+                        rawLinDiaRows.forEach(r => {
+                            const lin = String(r[0]);
+                            const dia = parseInt(r[1]);
+                            const vSemFig = typeof r[2] === 'number' ? r[2] : 0;
+                            const vFig = typeof r[3] === 'number' ? r[3] : 0;
+                            const vTot = typeof r[4] === 'number' ? r[4] : 0;
+                            if (!linDiaMap[lin]) linDiaMap[lin] = {};
+                            linDiaMap[lin][dia] = { sem_fig: vSemFig, fig: vFig, tot: vTot };
+                        });
+
+                        linhas.forEach(l => {
+                            const dMap = linDiaMap[l.linha] || {};
+                            l.dias_sem_figital = [];
+                            l.dias_figital = [];
+                            l.dias_digital = [];
+                            l.dias_total = [];
+                            for (let d = 1; d <= maxDia; d++) {
+                                const entry = dMap[d] || { sem_fig: 0, fig: 0, tot: 0 };
+                                l.dias_sem_figital.push(entry.sem_fig);
+                                l.dias_figital.push(entry.fig);
+                                l.dias_digital.push(entry.sem_fig + entry.fig);
+                                l.dias_total.push(entry.tot);
+                            }
+                        });
 
                         ws.close();
                         resolve({
-                            maxDate: evalMaxDate.result.qReturn,
-                            maxDia: maxDia,
+                            metadata: {
+                                extraido_em: new Date().toISOString(),
+                                max_date: evalMaxDate.result.qReturn,
+                                max_dia: maxDia,
+                                total_distritais: distritais.length,
+                                total_coordenadores: coordenadores.length,
+                                total_filiais: filiais.length,
+                                total_grupos: grupos.length,
+                                total_linhas: linhas.length
+                            },
                             daily,
                             distritais,
                             coordenadores,
@@ -432,51 +537,42 @@ async def extract_qlik():
                         });
                     } catch(err) {
                         ws.close();
-                        reject(err);
+                        resolve({ error: String(err) });
                     }
                 };
-
-                setTimeout(() => {
-                    ws.close();
-                    reject(new Error("Timeout de 45s na conexão Qlik WebSocket"));
-                }, 45000);
             });
         }"""
 
-        qlik_data = await page.evaluate(script, {"appId": APP_ID, "token": csrf_token})
+        print("Enviando requisição de extração dos 9 hipercubos...", flush=True)
+        results = await page.evaluate(script, {"appId": APP_ID, "token": csrf_token})
         await browser.close()
 
-    payload = {
-        "metadata": {
-            "extraido_em": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "max_date": qlik_data.get("maxDate"),
-            "max_dia": qlik_data.get("maxDia"),
-            "total_distritais": len(qlik_data.get("distritais", [])),
-            "total_coordenadores": len(qlik_data.get("coordenadores", [])),
-            "total_filiais": len(qlik_data.get("filiais", [])),
-            "total_grupos": len(qlik_data.get("grupos", [])),
-            "total_linhas": len(qlik_data.get("linhas", []))
-        },
-        "daily": qlik_data.get("daily", []),
-        "distritais": qlik_data.get("distritais", []),
-        "coordenadores": qlik_data.get("coordenadores", []),
-        "filiais": qlik_data.get("filiais", []),
-        "grupos": qlik_data.get("grupos", []),
-        "linhas": qlik_data.get("linhas", [])
-    }
+        if "error" in results:
+            raise RuntimeError(f"Erro no QIX Engine: {results['error']}")
 
-    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+        print(f"3/3 Salvando dados em {OUTPUT_JSON}...", flush=True)
+        with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
 
-    elapsed = time.time() - t0
-    tot_dig = sum(d.get("venda_digital", 0) for d in qlik_data.get("distritais", []))
-    tot_geral = sum(d.get("venda", 0) for d in qlik_data.get("distritais", []))
-    print(f"✅ Extração Qlik Cloud concluída com sucesso em {elapsed:.1f}s!")
-    print(f"   📅 Data de Corte: {qlik_data.get('maxDate')} (Dia {qlik_data.get('maxDia')})")
-    print(f"   💰 Venda Digital: R$ {tot_dig:,.2f} | Total Geral Lojas: R$ {tot_geral:,.2f}")
-    print(f"   🏢 Distritais: {len(qlik_data.get('distritais', []))} | Coordenadores: {len(qlik_data.get('coordenadores', []))} | Filiais: {len(qlik_data.get('filiais', []))}")
-    print(f"   📁 Salvo em: {OUTPUT_JSON} ({os.path.getsize(OUTPUT_JSON)/1024:.1f} KB)")
-    return payload
+        meta = results.get("metadata", {})
+        print(f"✅ Extração concluída em {time.time() - t0:.2f}s!")
+        print(f"   Max Data: {meta.get('max_date')} (Dia {meta.get('max_dia')})")
+        print(f"   Distritais: {meta.get('total_distritais')}")
+        print(f"   Coordenadores: {meta.get('total_coordenadores')}")
+        print(f"   Filiais: {meta.get('total_filiais')}")
+        print(f"   Grupos: {meta.get('total_grupos')}")
+        print(f"   Linhas: {meta.get('total_linhas')}")
+
+        # Check total MTD up to dia 15
+        daily = results.get("daily", [])
+        v15_sem_fig = sum(d["venda_sem_figital"] for d in daily if d["dia"] <= 15)
+        v15_fig = sum(d["venda_figital"] for d in daily if d["dia"] <= 15)
+        v15_com_fig = sum(d["venda_digital"] for d in daily if d["dia"] <= 15)
+        print("---------------------------------------------------------------")
+        print(f"  Venda Digital (Sem Figital) dias 1 a 15: R$ {v15_sem_fig:,.2f}")
+        print(f"  Venda Figital dias 1 a 15:              R$ {v15_fig:,.2f}")
+        print(f"  Venda Digital (Com Figital) dias 1 a 15: R$ {v15_com_fig:,.2f}")
+        print("---------------------------------------------------------------")
 
 if __name__ == "__main__":
     asyncio.run(extract_qlik())
