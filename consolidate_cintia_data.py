@@ -215,6 +215,124 @@ def consolidate():
     atingimento_proj = round((projecao_fechamento / meta_mes * 100) if meta_mes > 0 else 0.0, 2)
     share_digital = round((venda_digital_realizada / venda_total_realizada * 100) if venda_total_realizada > 0 else 0.0, 2)
 
+    # 1b. DADOS HISTÓRICOS 2025 (LY - LAST YEAR)
+    total_vendas_dias_sem_figital_ly = [0.0] * max_dia
+    total_vendas_dias_figital_ly = [0.0] * max_dia
+    total_vendas_dias_digital_ly = [0.0] * max_dia
+    total_vendas_dias_total_ly = [0.0] * max_dia
+
+    daily_ly_by_day = {d.get("dia"): d for d in vendas_data.get("daily_ly", [])}
+    for d_idx in range(1, max_dia + 1):
+        s_dia = daily_ly_by_day.get(d_idx, {})
+        sem = round(s_dia.get("venda_sem_figital", 0.0), 2)
+        fig = round(s_dia.get("venda_figital", 0.0), 2)
+        tot = round(s_dia.get("venda_total", 0.0), 2)
+        total_vendas_dias_sem_figital_ly[d_idx - 1] = sem
+        total_vendas_dias_figital_ly[d_idx - 1] = fig
+        total_vendas_dias_digital_ly[d_idx - 1] = round(sem + fig, 2)
+        total_vendas_dias_total_ly[d_idx - 1] = tot
+
+    venda_digital_ly = round(sum(total_vendas_dias_digital_ly), 2)
+    venda_sem_figital_ly = round(sum(total_vendas_dias_sem_figital_ly), 2)
+    venda_figital_ly = round(sum(total_vendas_dias_figital_ly), 2)
+    venda_total_ly = round(sum(total_vendas_dias_total_ly), 2)
+    share_digital_ly = round((venda_digital_ly / venda_total_ly * 100) if venda_total_ly > 0 else 0.0, 2)
+    diff_pp_ly = round(share_digital - share_digital_ly, 2)
+
+    # Mapas de LY para enriquecimento das entidades
+    dist_ly_map = {}
+    for r in vendas_data.get("distritais_ly", []):
+        d = r.get("distrital")
+        dia = r.get("dia")
+        if not d or not dia or dia > max_dia: continue
+        if d not in dist_ly_map:
+            dist_ly_map[d] = {
+                "sem_fig": [0.0] * max_dia,
+                "fig": [0.0] * max_dia,
+                "dig": [0.0] * max_dia,
+                "tot": [0.0] * max_dia
+            }
+        idx = dia - 1
+        sem = round(r.get("venda_sem_figital", 0.0), 2)
+        fig = round(r.get("venda_figital", 0.0), 2)
+        tot = round(r.get("venda_total", 0.0), 2)
+        dist_ly_map[d]["sem_fig"][idx] = sem
+        dist_ly_map[d]["fig"][idx] = fig
+        dist_ly_map[d]["dig"][idx] = round(sem + fig, 2)
+        dist_ly_map[d]["tot"][idx] = tot
+
+    coord_ly_map = {}
+    for r in vendas_data.get("coordenadores_ly", []):
+        c = r.get("coordenador")
+        dia = r.get("dia")
+        if not c or not dia or dia > max_dia: continue
+        c_norm = norm_str(c)
+        if c_norm in COORD_MAPPING:
+            c = "Eunice dos Santos Trainee"
+        if c not in coord_ly_map:
+            coord_ly_map[c] = {
+                "sem_fig": [0.0] * max_dia,
+                "fig": [0.0] * max_dia,
+                "dig": [0.0] * max_dia,
+                "tot": [0.0] * max_dia
+            }
+        idx = dia - 1
+        sem = round(r.get("venda_sem_figital", 0.0), 2)
+        fig = round(r.get("venda_figital", 0.0), 2)
+        tot = round(r.get("venda_total", 0.0), 2)
+        coord_ly_map[c]["sem_fig"][idx] += sem
+        coord_ly_map[c]["fig"][idx] += fig
+        coord_ly_map[c]["dig"][idx] += round(sem + fig, 2)
+        coord_ly_map[c]["tot"][idx] += tot
+
+    grp_ly_map = {}
+    for r in vendas_data.get("grupos_ly", []):
+        g = norm_str(clean_group_name(r.get("grupo")))
+        dia = r.get("dia")
+        if not g or not dia or dia > max_dia: continue
+        if g not in grp_ly_map:
+            grp_ly_map[g] = {
+                "sem_fig": [0.0] * max_dia,
+                "fig": [0.0] * max_dia,
+                "dig": [0.0] * max_dia,
+                "tot": [0.0] * max_dia
+            }
+        idx = dia - 1
+        sem = round(r.get("venda_sem_figital", 0.0), 2)
+        fig = round(r.get("venda_figital", 0.0), 2)
+        tot = round(r.get("venda_total", 0.0), 2)
+        grp_ly_map[g]["sem_fig"][idx] += sem
+        grp_ly_map[g]["fig"][idx] += fig
+        grp_ly_map[g]["dig"][idx] += round(sem + fig, 2)
+        grp_ly_map[g]["tot"][idx] += tot
+
+    filiais_ly_map = {}
+    for r in vendas_data.get("filiais_ly", []):
+        fid = str(r.get("filial_id", "")).strip()
+        if fid:
+            sem = round(r.get("venda_sem_figital", 0.0), 2)
+            fig = round(r.get("venda_figital", 0.0), 2)
+            tot = round(r.get("venda_total", 0.0), 2)
+            filiais_ly_map[fid] = {
+                "venda_sem_figital_ly": sem,
+                "venda_figital_ly": fig,
+                "venda_digital_ly": round(sem + fig, 2),
+                "venda_total_ly": tot
+            }
+
+    linhas_ly_map = {}
+    for r in vendas_data.get("linhas_ly", []):
+        k = (norm_str(clean_group_name(r.get("grupo"))), norm_str(r.get("linha")))
+        sem = round(r.get("venda_sem_figital", 0.0), 2)
+        fig = round(r.get("venda_figital", 0.0), 2)
+        tot = round(r.get("venda_total", 0.0), 2)
+        linhas_ly_map[k] = {
+            "venda_sem_figital_ly": sem,
+            "venda_figital_ly": fig,
+            "venda_digital_ly": round(sem + fig, 2),
+            "venda_total_ly": tot
+        }
+
     # 2. CURVA DIÁRIA
     curva_diaria = []
     acum_meta = 0.0
@@ -279,7 +397,7 @@ def consolidate():
     for qf in qlik_filiais:
         raw_name = qf.get("filial", "")
         raw_norm = normalize_name(raw_name, keep_state=True)
-        id_loja = str(qf.get("idLoja", ""))
+        id_loja = str(qf.get("filial_id") or qf.get("idLoja", ""))
         clean_raw = unicodedata.normalize("NFD", raw_name).encode("ascii", "ignore").decode("utf-8").lower().strip()
         clean_raw = re.sub(r"\s+", " ", clean_raw)
 
@@ -331,6 +449,14 @@ def consolidate():
         distrital_val = (f_meta.get("distrital") if f_meta else None) or qf.get("distrital", "")
         coordenador_val = (f_meta.get("coordenador") if f_meta else None) or qf.get("coordenador", "")
 
+        f_ly = filiais_ly_map.get(id_loja, {})
+        v_sem_ly = f_ly.get("venda_sem_figital_ly", 0.0)
+        v_fig_ly = f_ly.get("venda_figital_ly", 0.0)
+        v_dig_ly = f_ly.get("venda_digital_ly", 0.0)
+        v_tot_ly = f_ly.get("venda_total_ly", 0.0)
+        sh_dig_ly = round((v_dig_ly / v_tot_ly * 100) if v_tot_ly > 0 else 0.0, 2)
+        diff_pp_fil = round(share_dig - sh_dig_ly, 2)
+
         filiais_list.append({
             "nome": target_name or raw_name,
             "nome_qlik": raw_name,
@@ -349,6 +475,12 @@ def consolidate():
             "venda_sem_figital": round(v_sem_fig, 2),
             "venda_total": round(v_tot, 2),
             "venda_fisica": round(v_fis, 2),
+            "venda_sem_figital_ly": round(v_sem_ly, 2),
+            "venda_figital_ly": round(v_fig_ly, 2),
+            "venda_digital_ly": round(v_dig_ly, 2),
+            "venda_total_ly": round(v_tot_ly, 2),
+            "share_digital_ly": sh_dig_ly,
+            "diff_pp_ly": diff_pp_fil,
             "atingimento_mtd": round(ating, 2),
             "gap": round(gap, 2),
             "projecao": round(proj, 2),
@@ -381,6 +513,12 @@ def consolidate():
                 "venda_sem_figital": 0.0,
                 "venda_total": 0.0,
                 "venda_fisica": 0.0,
+                "venda_sem_figital_ly": 0.0,
+                "venda_figital_ly": 0.0,
+                "venda_digital_ly": 0.0,
+                "venda_total_ly": 0.0,
+                "share_digital_ly": 0.0,
+                "diff_pp_ly": 0.0,
                 "atingimento_mtd": 0.0,
                 "gap": round(-m_mtd, 2),
                 "projecao": 0.0,
@@ -442,6 +580,17 @@ def consolidate():
         share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
         share_dir = round((v_dig / venda_digital_realizada * 100) if venda_digital_realizada > 0 else 0.0, 2)
 
+        d_ly = dist_ly_map.get(d_name, {})
+        dias_sem_ly = d_ly.get("sem_fig", [0.0]*max_dia)
+        dias_fig_ly = d_ly.get("fig", [0.0]*max_dia)
+        dias_dig_ly = d_ly.get("dig", [0.0]*max_dia)
+        dias_tot_ly = d_ly.get("tot", [0.0]*max_dia)
+        v_dig_ly = round(sum(dias_dig_ly), 2)
+        v_sem_ly = round(sum(dias_sem_ly), 2)
+        v_tot_ly = round(sum(dias_tot_ly), 2)
+        sh_dig_ly = round((v_dig_ly / v_tot_ly * 100) if v_tot_ly > 0 else 0.0, 2)
+        diff_pp_dist = round(share_dig - sh_dig_ly, 2)
+
         distritais_list.append({
             "nome": d_name,
             "meta_mes": m_mes,
@@ -450,12 +599,21 @@ def consolidate():
             "vendas_dias_figital": v_dias_fig,
             "vendas_dias_sem_figital": v_dias_sem_fig,
             "vendas_dias_total": v_dias_tot,
+            "vendas_dias_digital_ly": dias_dig_ly,
+            "vendas_dias_figital_ly": dias_fig_ly,
+            "vendas_dias_sem_figital_ly": dias_sem_ly,
+            "vendas_dias_total_ly": dias_tot_ly,
             "meta_mtd": m_mtd,
             "venda_digital": v_dig,
             "venda_figital": v_fig,
             "venda_sem_figital": v_sem_fig,
             "venda_total": v_tot,
             "venda_fisica": v_fis,
+            "venda_digital_ly": v_dig_ly,
+            "venda_sem_figital_ly": v_sem_ly,
+            "venda_total_ly": v_tot_ly,
+            "share_digital_ly": sh_dig_ly,
+            "diff_pp_ly": diff_pp_dist,
             "atingimento_mtd": ating,
             "gap": gap,
             "projecao": proj,
@@ -524,6 +682,17 @@ def consolidate():
         ating_proj = round((proj / m_mes * 100) if m_mes > 0 else 0.0, 2)
         share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
 
+        c_ly = coord_ly_map.get(c_name, {})
+        dias_sem_ly = c_ly.get("sem_fig", [0.0]*max_dia)
+        dias_fig_ly = c_ly.get("fig", [0.0]*max_dia)
+        dias_dig_ly = c_ly.get("dig", [0.0]*max_dia)
+        dias_tot_ly = c_ly.get("tot", [0.0]*max_dia)
+        v_dig_ly = round(sum(dias_dig_ly), 2)
+        v_sem_ly = round(sum(dias_sem_ly), 2)
+        v_tot_ly = round(sum(dias_tot_ly), 2)
+        sh_dig_ly = round((v_dig_ly / v_tot_ly * 100) if v_tot_ly > 0 else 0.0, 2)
+        diff_pp_coord = round(share_dig - sh_dig_ly, 2)
+
         coordenadores_list.append({
             "nome": c_name,
             "distrital": c_data["distrital"],
@@ -533,12 +702,21 @@ def consolidate():
             "vendas_dias_figital": v_dias_fig,
             "vendas_dias_sem_figital": v_dias_sem_fig,
             "vendas_dias_total": v_dias_tot,
+            "vendas_dias_digital_ly": dias_dig_ly,
+            "vendas_dias_figital_ly": dias_fig_ly,
+            "vendas_dias_sem_figital_ly": dias_sem_ly,
+            "vendas_dias_total_ly": dias_tot_ly,
             "meta_mtd": m_mtd,
             "venda_digital": v_dig,
             "venda_figital": v_fig,
             "venda_sem_figital": v_sem_fig,
             "venda_total": v_tot,
             "venda_fisica": v_fis,
+            "venda_digital_ly": v_dig_ly,
+            "venda_sem_figital_ly": v_sem_ly,
+            "venda_total_ly": v_tot_ly,
+            "share_digital_ly": sh_dig_ly,
+            "diff_pp_ly": diff_pp_coord,
             "atingimento_mtd": ating,
             "gap": gap,
             "projecao": proj,
@@ -587,6 +765,14 @@ def consolidate():
             ating_proj = round((proj / m_mes * 100) if m_mes > 0 else (100.0 if proj > 0 else 0.0), 2)
             share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
 
+            lin_ly = linhas_ly_map.get((norm_str(clean_group_name(g_clean)), norm_str(l_raw_name)), {})
+            v_sem_ly = lin_ly.get("venda_sem_figital_ly", 0.0)
+            v_fig_ly = lin_ly.get("venda_figital_ly", 0.0)
+            v_dig_ly = lin_ly.get("venda_digital_ly", 0.0)
+            v_tot_ly = lin_ly.get("venda_total_ly", 0.0)
+            sh_dig_ly = round((v_dig_ly / v_tot_ly * 100) if v_tot_ly > 0 else 0.0, 2)
+            diff_pp_lin = round(share_dig - sh_dig_ly, 2)
+
             linhas_list.append({
                 "grupo": g_clean,
                 "linha": l_raw_name,
@@ -602,6 +788,12 @@ def consolidate():
                 "venda_sem_figital": v_sem_fig,
                 "venda_total": v_tot,
                 "venda_fisica": v_fis,
+                "venda_sem_figital_ly": round(v_sem_ly, 2),
+                "venda_figital_ly": round(v_fig_ly, 2),
+                "venda_digital_ly": round(v_dig_ly, 2),
+                "venda_total_ly": round(v_tot_ly, 2),
+                "share_digital_ly": sh_dig_ly,
+                "diff_pp_ly": diff_pp_lin,
                 "atingimento_mtd": ating,
                 "gap": gap,
                 "projecao": proj,
@@ -676,6 +868,17 @@ def consolidate():
         ating_proj = round((proj / m_mes * 100) if m_mes > 0 else 0.0, 2)
         share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
 
+        g_ly = grp_ly_map.get(norm_str(clean_group_name(g_clean)), {})
+        dias_sem_ly = g_ly.get("sem_fig", [0.0]*max_dia)
+        dias_fig_ly = g_ly.get("fig", [0.0]*max_dia)
+        dias_dig_ly = g_ly.get("dig", [0.0]*max_dia)
+        dias_tot_ly = g_ly.get("tot", [0.0]*max_dia)
+        v_dig_ly = round(sum(dias_dig_ly), 2)
+        v_sem_ly = round(sum(dias_sem_ly), 2)
+        v_tot_ly = round(sum(dias_tot_ly), 2)
+        sh_dig_ly = round((v_dig_ly / v_tot_ly * 100) if v_tot_ly > 0 else 0.0, 2)
+        diff_pp_grp = round(share_dig - sh_dig_ly, 2)
+
         grupos_list.append({
             "grupo": g_clean,
             "meta_mes": m_mes,
@@ -684,12 +887,21 @@ def consolidate():
             "vendas_dias_figital": [round(x, 2) for x in dias_fig],
             "vendas_dias_sem_figital": [round(x, 2) for x in dias_sem_fig],
             "vendas_dias_total": [round(x, 2) for x in dias_tot],
+            "vendas_dias_digital_ly": dias_dig_ly,
+            "vendas_dias_figital_ly": dias_fig_ly,
+            "vendas_dias_sem_figital_ly": dias_sem_ly,
+            "vendas_dias_total_ly": dias_tot_ly,
             "meta_mtd": m_mtd,
             "venda_digital": v_dig,
             "venda_figital": v_fig,
             "venda_sem_figital": v_sem_fig,
             "venda_total": v_tot,
             "venda_fisica": v_fis,
+            "venda_digital_ly": v_dig_ly,
+            "venda_sem_figital_ly": v_sem_ly,
+            "venda_total_ly": v_tot_ly,
+            "share_digital_ly": sh_dig_ly,
+            "diff_pp_ly": diff_pp_grp,
             "atingimento_mtd": ating,
             "desvio_mtd": desvio,
             "desvio_sem_figital": desvio_sem_fig,
@@ -790,6 +1002,14 @@ def consolidate():
                     if lm_mes == 0 and lv_tot == 0 and lv_dig == 0:
                         continue
 
+                    lin_ly = linhas_ly_map.get((norm_str(clean_group_name(g_clean)), norm_str(l_raw)), {})
+                    lv_sem_ly = lin_ly.get("venda_sem_figital_ly", 0.0)
+                    lv_fig_ly = lin_ly.get("venda_figital_ly", 0.0)
+                    lv_dig_ly = lin_ly.get("venda_digital_ly", 0.0)
+                    lv_tot_ly = lin_ly.get("venda_total_ly", 0.0)
+                    l_sh_dig_ly = round((lv_dig_ly / lv_tot_ly * 100) if lv_tot_ly > 0 else 0.0, 2)
+                    l_diff_pp = round(((lv_dig / lv_tot * 100) if lv_tot > 0 else 0.0) - l_sh_dig_ly, 2)
+
                     linha_obj = {
                         "linha": l_raw,
                         "grupo": g_clean,
@@ -799,11 +1019,29 @@ def consolidate():
                         "venda_figital": lv_fig,
                         "venda_digital": lv_dig,
                         "venda_total": lv_tot,
-                        "venda_fisica": lv_fis
+                        "venda_fisica": lv_fis,
+                        "venda_sem_figital_ly": lv_sem_ly,
+                        "venda_figital_ly": lv_fig_ly,
+                        "venda_digital_ly": lv_dig_ly,
+                        "venda_total_ly": lv_tot_ly,
+                        "share_digital_ly": l_sh_dig_ly,
+                        "diff_pp_ly": l_diff_pp
                     }
                     linhas_deste_grupo.append(linha_obj)
 
                 linhas_deste_grupo.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+
+                g_ly = grp_ly_map.get(norm_str(clean_group_name(g_clean)), {})
+                g_dias_sem_ly = g_ly.get("sem_fig", [0.0]*max_dia)
+                g_dias_fig_ly = g_ly.get("fig", [0.0]*max_dia)
+                g_dias_dig_ly = g_ly.get("dig", [0.0]*max_dia)
+                g_dias_tot_ly = g_ly.get("tot", [0.0]*max_dia)
+                gv_dig_ly = round(sum(g_dias_dig_ly), 2)
+                gv_sem_ly = round(sum(g_dias_sem_ly), 2)
+                gv_tot_ly = round(sum(g_dias_tot_ly), 2)
+                g_sh_dig_ly = round((gv_dig_ly / gv_tot_ly * 100) if gv_tot_ly > 0 else 0.0, 2)
+                g_diff_pp = round(share_dig - g_sh_dig_ly, 2)
+
                 grp_obj = {
                     "grupo": g_clean,
                     "meta_mes": m_mes,
@@ -812,12 +1050,21 @@ def consolidate():
                     "vendas_dias_figital": dias_fig,
                     "vendas_dias_sem_figital": dias_sem_fig,
                     "vendas_dias_total": dias_tot,
+                    "vendas_dias_digital_ly": g_dias_dig_ly,
+                    "vendas_dias_figital_ly": g_dias_fig_ly,
+                    "vendas_dias_sem_figital_ly": g_dias_sem_ly,
+                    "vendas_dias_total_ly": g_dias_tot_ly,
                     "meta_mtd": m_mtd,
                     "venda_digital": v_dig,
                     "venda_figital": v_fig,
                     "venda_sem_figital": v_sem_fig,
                     "venda_total": v_tot,
                     "venda_fisica": v_fis,
+                    "venda_digital_ly": gv_dig_ly,
+                    "venda_sem_figital_ly": gv_sem_ly,
+                    "venda_total_ly": gv_tot_ly,
+                    "share_digital_ly": g_sh_dig_ly,
+                    "diff_pp_ly": g_diff_pp,
                     "atingimento_mtd": ating,
                     "desvio_mtd": desvio,
                     "desvio_sem_figital": desvio_sem_fig,
@@ -908,6 +1155,14 @@ def consolidate():
 
             linhas_deste_grupo = []
             for ln, ld in gd["linhas_dict"].items():
+                lin_ly = linhas_ly_map.get((norm_str(clean_group_name(gn)), norm_str(ln)), {})
+                lv_sem_ly = lin_ly.get("venda_sem_figital_ly", 0.0)
+                lv_fig_ly = lin_ly.get("venda_figital_ly", 0.0)
+                lv_dig_ly = lin_ly.get("venda_digital_ly", 0.0)
+                lv_tot_ly = lin_ly.get("venda_total_ly", 0.0)
+                l_sh_dig_ly = round((lv_dig_ly / lv_tot_ly * 100) if lv_tot_ly > 0 else 0.0, 2)
+                l_diff_pp = round(((ld["venda_digital"] / ld["venda_total"] * 100) if ld["venda_total"] > 0 else 0.0) - l_sh_dig_ly, 2)
+
                 linhas_deste_grupo.append({
                     "linha": ln,
                     "grupo": gn,
@@ -917,9 +1172,26 @@ def consolidate():
                     "venda_figital": round(ld["venda_figital"], 2),
                     "venda_digital": round(ld["venda_digital"], 2),
                     "venda_total": round(ld["venda_total"], 2),
-                    "venda_fisica": round(ld["venda_fisica"], 2)
+                    "venda_fisica": round(ld["venda_fisica"], 2),
+                    "venda_sem_figital_ly": lv_sem_ly,
+                    "venda_figital_ly": lv_fig_ly,
+                    "venda_digital_ly": lv_dig_ly,
+                    "venda_total_ly": lv_tot_ly,
+                    "share_digital_ly": l_sh_dig_ly,
+                    "diff_pp_ly": l_diff_pp
                 })
             linhas_deste_grupo.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+
+            g_ly = grp_ly_map.get(norm_str(clean_group_name(gn)), {})
+            g_dias_sem_ly = g_ly.get("sem_fig", [0.0]*max_dia)
+            g_dias_fig_ly = g_ly.get("fig", [0.0]*max_dia)
+            g_dias_dig_ly = g_ly.get("dig", [0.0]*max_dia)
+            g_dias_tot_ly = g_ly.get("tot", [0.0]*max_dia)
+            gv_dig_ly = round(sum(g_dias_dig_ly), 2)
+            gv_sem_ly = round(sum(g_dias_sem_ly), 2)
+            gv_tot_ly = round(sum(g_dias_tot_ly), 2)
+            g_sh_dig_ly = round((gv_dig_ly / gv_tot_ly * 100) if gv_tot_ly > 0 else 0.0, 2)
+            g_diff_pp = round(share_dig - g_sh_dig_ly, 2)
 
             d_grupos.append({
                 "grupo": gn,
@@ -929,12 +1201,21 @@ def consolidate():
                 "vendas_dias_figital": dias_fig,
                 "vendas_dias_sem_figital": dias_sem,
                 "vendas_dias_total": dias_tot,
+                "vendas_dias_digital_ly": g_dias_dig_ly,
+                "vendas_dias_figital_ly": g_dias_fig_ly,
+                "vendas_dias_sem_figital_ly": g_dias_sem_ly,
+                "vendas_dias_total_ly": g_dias_tot_ly,
                 "meta_mtd": m_mtd,
                 "venda_digital": v_dig,
                 "venda_figital": v_fig,
                 "venda_sem_figital": v_sem,
                 "venda_total": v_tot,
                 "venda_fisica": v_fis,
+                "venda_digital_ly": gv_dig_ly,
+                "venda_sem_figital_ly": gv_sem_ly,
+                "venda_total_ly": gv_tot_ly,
+                "share_digital_ly": g_sh_dig_ly,
+                "diff_pp_ly": g_diff_pp,
                 "atingimento_mtd": ating,
                 "desvio_mtd": desvio,
                 "desvio_sem_figital": desvio_sem,
@@ -967,6 +1248,12 @@ def consolidate():
             "venda_sem_figital": venda_sem_figital_realizada,
             "venda_total_lojas": venda_total_realizada,
             "venda_fisica": venda_fisica_realizada,
+            "venda_digital_ly": venda_digital_ly,
+            "venda_sem_figital_ly": venda_sem_figital_ly,
+            "venda_figital_ly": venda_figital_ly,
+            "venda_total_ly": venda_total_ly,
+            "share_digital_ly": share_digital_ly,
+            "diff_pp_ly": diff_pp_ly,
             "atingimento_mtd": atingimento_mtd,
             "desvio_mtd": desvio_mtd,
             "desvio_sem_figital": desvio_sem_figital,
@@ -987,7 +1274,24 @@ def consolidate():
             "vendas_dias_figital": total_vendas_dias_figital,
             "vendas_dias_sem_figital": total_vendas_dias_sem_figital,
             "vendas_dias_total": total_vendas_dias_total,
-            "vendas_dias_fisica": total_vendas_dias_fisica
+            "vendas_dias_fisica": total_vendas_dias_fisica,
+            "vendas_dias_digital_ly": total_vendas_dias_digital_ly,
+            "vendas_dias_figital_ly": total_vendas_dias_figital_ly,
+            "vendas_dias_sem_figital_ly": total_vendas_dias_sem_figital_ly,
+            "vendas_dias_total_ly": total_vendas_dias_total_ly,
+            "venda_digital": venda_digital_realizada,
+            "venda_sem_figital": venda_sem_figital_realizada,
+            "venda_figital": venda_figital_realizada,
+            "venda_total": venda_total_realizada,
+            "venda_fisica": venda_fisica_realizada,
+            "share_digital": share_digital,
+            "meta_mtd": meta_mtd,
+            "venda_digital_ly": venda_digital_ly,
+            "venda_sem_figital_ly": venda_sem_figital_ly,
+            "venda_figital_ly": venda_figital_ly,
+            "venda_total_ly": venda_total_ly,
+            "share_digital_ly": share_digital_ly,
+            "diff_pp_ly": diff_pp_ly
         },
         "curva_diaria": curva_diaria,
         "distritais": distritais_list,

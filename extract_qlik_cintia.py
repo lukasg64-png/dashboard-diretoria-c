@@ -594,6 +594,143 @@ async def extract_qlik():
                             venda_total: typeof r[6] === 'number' ? r[6] : 0
                         }));
 
+                        // 12. Diário 2025 Ano Passado (dias 1..16)
+                        const setBase2025 = "Diretoria={'Cintia Silva'}, [Ano-Mês Venda]={'2025-09'}";
+                        const setBase2025_16 = setBase2025 + ", [Dia Venda]={'1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16'}";
+
+                        const cDiaLY = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_dia_ly' },
+                            qHyperCubeDef: {
+                                qDimensions: [{ qDef: { qFieldDefs: ['Dia Venda'] } }],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisSemFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}>} [Vl_Mercadoria])` } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 31, qWidth: 4 }]
+                            }
+                        }]);
+                        const layDiaLY = await send("GetLayout", cDiaLY.result.qReturn.qHandle, []);
+                        const daily_ly = layDiaLY.result.qLayout.qHyperCube.qDataPages[0].qMatrix.map(r => ({
+                            dia: parseInt(r[0].qText),
+                            venda_sem_figital: typeof r[1].qNum === 'number' ? r[1].qNum : 0,
+                            venda_figital: typeof r[2].qNum === 'number' ? r[2].qNum : 0,
+                            venda_total: typeof r[3].qNum === 'number' ? r[3].qNum : 0
+                        }));
+
+                        // 13. Distritais 2025 (dias 1..16 diarizado)
+                        const cDistLY = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_dist_ly' },
+                            qHyperCubeDef: {
+                                qDimensions: [{ qDef: { qFieldDefs: ['Distrital'] } }, { qDef: { qFieldDefs: ['Dia Venda'] } }],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisSemFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}>} [Vl_Mercadoria])` } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 100, qWidth: 5 }]
+                            }
+                        }]);
+                        const layDistLY = await send("GetLayout", cDistLY.result.qReturn.qHandle, []);
+                        const distritais_ly = layDistLY.result.qLayout.qHyperCube.qDataPages[0].qMatrix.map(r => ({
+                            distrital: String(r[0].qText),
+                            dia: parseInt(r[1].qText),
+                            venda_sem_figital: typeof r[2].qNum === 'number' ? r[2].qNum : 0,
+                            venda_figital: typeof r[3].qNum === 'number' ? r[3].qNum : 0,
+                            venda_total: typeof r[4].qNum === 'number' ? r[4].qNum : 0
+                        }));
+
+                        // 14. Coordenadores 2025 (dias 1..16 diarizado)
+                        const cCoordLY = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_coord_ly' },
+                            qHyperCubeDef: {
+                                qDimensions: [{ qDef: { qFieldDefs: ['Distrital'] } }, { qDef: { qFieldDefs: ['Coordenador'] } }, { qDef: { qFieldDefs: ['Dia Venda'] } }],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisSemFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}>} [Vl_Mercadoria])` } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 6 }]
+                            }
+                        }]);
+                        const layCoordLY = await send("GetLayout", cCoordLY.result.qReturn.qHandle, []);
+                        const coordenadores_ly = layCoordLY.result.qLayout.qHyperCube.qDataPages[0].qMatrix.map(r => ({
+                            distrital: String(r[0].qText),
+                            coordenador: String(r[1].qText),
+                            dia: parseInt(r[2].qText),
+                            venda_sem_figital: typeof r[3].qNum === 'number' ? r[3].qNum : 0,
+                            venda_figital: typeof r[4].qNum === 'number' ? r[4].qNum : 0,
+                            venda_total: typeof r[5].qNum === 'number' ? r[5].qNum : 0
+                        }));
+
+                        // 15. Grupos 2025 (dias 1..16 diarizado)
+                        const cGrpLY = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_grp_ly' },
+                            qHyperCubeDef: {
+                                qDimensions: [{ qDef: { qFieldDefs: ['Desc_Grupo'] } }, { qDef: { qFieldDefs: ['Dia Venda'] } }],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisSemFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}>} [Vl_Mercadoria])` } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 200, qWidth: 5 }]
+                            }
+                        }]);
+                        const layGrpLY = await send("GetLayout", cGrpLY.result.qReturn.qHandle, []);
+                        const grupos_ly = layGrpLY.result.qLayout.qHyperCube.qDataPages[0].qMatrix.map(r => ({
+                            grupo: String(r[0].qText),
+                            dia: parseInt(r[1].qText),
+                            venda_sem_figital: typeof r[2].qNum === 'number' ? r[2].qNum : 0,
+                            venda_figital: typeof r[3].qNum === 'number' ? r[3].qNum : 0,
+                            venda_total: typeof r[4].qNum === 'number' ? r[4].qNum : 0
+                        }));
+
+                        // 16. Filiais 2025 (MTD 1..16)
+                        const cFilLY = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_fil_ly' },
+                            qHyperCubeDef: {
+                                qDimensions: [{ qDef: { qFieldDefs: ['Filial_ID'] } }, { qDef: { qFieldDefs: ['Desc_Filial'] } }],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisSemFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}>} [Vl_Mercadoria])` } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 5 }]
+                            }
+                        }]);
+                        const layFilLY = await send("GetLayout", cFilLY.result.qReturn.qHandle, []);
+                        const rawFilLYRows = await fetchAllDataPages(cFilLY.result.qReturn.qHandle, layFilLY.result.qLayout.qHyperCube.qSize.qcy, 5);
+                        const filiais_ly = rawFilLYRows.map(r => ({
+                            filial_id: String(r[0]),
+                            desc_filial: String(r[1]),
+                            venda_sem_figital: typeof r[2] === 'number' ? r[2] : 0,
+                            venda_figital: typeof r[3] === 'number' ? r[3] : 0,
+                            venda_total: typeof r[4] === 'number' ? r[4] : 0
+                        }));
+
+                        // 17. Linhas 2025 (MTD 1..16)
+                        const cLinLY = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_lin_ly' },
+                            qHyperCubeDef: {
+                                qDimensions: [{ qDef: { qFieldDefs: ['Desc_Grupo'] } }, { qDef: { qFieldDefs: ['Desc_Linha'] } }],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisSemFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}, ${canaisFig}>} [Vl_Mercadoria])` } },
+                                    { qDef: { qDef: `Sum({<${setBase2025_16}>} [Vl_Mercadoria])` } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 1000, qWidth: 5 }]
+                            }
+                        }]);
+                        const layLinLY = await send("GetLayout", cLinLY.result.qReturn.qHandle, []);
+                        const rawLinLYRows = await fetchAllDataPages(cLinLY.result.qReturn.qHandle, layLinLY.result.qLayout.qHyperCube.qSize.qcy, 5);
+                        const linhas_ly = rawLinLYRows.map(r => ({
+                            grupo: String(r[0]),
+                            linha: String(r[1]),
+                            venda_sem_figital: typeof r[2] === 'number' ? r[2] : 0,
+                            venda_figital: typeof r[3] === 'number' ? r[3] : 0,
+                            venda_total: typeof r[4] === 'number' ? r[4] : 0
+                        }));
+
                         ws.close();
                         resolve({
                             metadata: {
@@ -606,7 +743,9 @@ async def extract_qlik():
                                 total_grupos: grupos.length,
                                 total_linhas: linhas.length,
                                 total_coord_grupos_dia: coordenadores_grupos_dia.length,
-                                total_coord_linhas: coordenadores_linhas.length
+                                total_coord_linhas: coordenadores_linhas.length,
+                                total_filiais_ly: filiais_ly.length,
+                                total_linhas_ly: linhas_ly.length
                             },
                             daily,
                             distritais,
@@ -615,7 +754,13 @@ async def extract_qlik():
                             grupos,
                             linhas,
                             coordenadores_grupos_dia,
-                            coordenadores_linhas
+                            coordenadores_linhas,
+                            daily_ly,
+                            distritais_ly,
+                            coordenadores_ly,
+                            grupos_ly,
+                            filiais_ly,
+                            linhas_ly
                         });
                     } catch(err) {
                         ws.close();

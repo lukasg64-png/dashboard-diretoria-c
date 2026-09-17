@@ -1357,8 +1357,9 @@ def build_html():
                 <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'projecao')" data-table="distritaisOverview" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'venda_total')" data-table="distritaisOverview" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'venda_fisica')" data-table="distritaisOverview" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'share_digital')" data-table="distritaisOverview" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'diff_share')" data-table="distritaisOverview" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'share_digital')" data-table="distritaisOverview" data-col="share_digital">Share Atual <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'share_digital_ly')" data-table="distritaisOverview" data-col="share_digital_ly">Share LY <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'diff_pp_ly')" data-table="distritaisOverview" data-col="diff_pp_ly">Evol. P.P. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'share_diretoria')" data-table="distritaisOverview" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'lojas')" data-table="distritaisOverview" data-col="lojas">Lojas <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisOverview', 'media_loja')" data-table="distritaisOverview" data-col="media_loja">R$ / Loja <span class="sort-icon">⇅</span></th>
@@ -1391,8 +1392,9 @@ def build_html():
                 <th class="sortable num" onclick="handleSortTable('distritaisFull', 'projecao')" data-table="distritaisFull" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisFull', 'venda_total')" data-table="distritaisFull" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisFull', 'venda_fisica')" data-table="distritaisFull" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'share_digital')" data-table="distritaisFull" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'diff_share')" data-table="distritaisFull" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'share_digital')" data-table="distritaisFull" data-col="share_digital">Share Atual <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'share_digital_ly')" data-table="distritaisFull" data-col="share_digital_ly">Share LY <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('distritaisFull', 'diff_pp_ly')" data-table="distritaisFull" data-col="diff_pp_ly">Evol. P.P. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisFull', 'share_diretoria')" data-table="distritaisFull" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisFull', 'lojas')" data-table="distritaisFull" data-col="lojas">Lojas <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('distritaisFull', 'media_loja')" data-table="distritaisFull" data-col="media_loja">R$ / Loja <span class="sort-icon">⇅</span></th>
@@ -1427,8 +1429,9 @@ def build_html():
                 <th class="sortable num" onclick="handleSortTable('coordenadores', 'projecao')" data-table="coordenadores" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('coordenadores', 'venda_total')" data-table="coordenadores" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('coordenadores', 'venda_fisica')" data-table="coordenadores" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('coordenadores', 'share_digital')" data-table="coordenadores" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('coordenadores', 'diff_share')" data-table="coordenadores" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'share_digital')" data-table="coordenadores" data-col="share_digital">Share Atual <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'share_digital_ly')" data-table="coordenadores" data-col="share_digital_ly">Share LY <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('coordenadores', 'diff_pp_ly')" data-table="coordenadores" data-col="diff_pp_ly">Evol. P.P. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('coordenadores', 'share_diretoria')" data-table="coordenadores" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('coordenadores', 'lojas')" data-table="coordenadores" data-col="lojas">Lojas <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('coordenadores', 'media_loja')" data-table="coordenadores" data-col="media_loja">R$ / Loja <span class="sort-icon">⇅</span></th>
@@ -1471,8 +1474,9 @@ def build_html():
                 <th class="sortable num" onclick="handleSortTable('filiais', 'projecao')" data-table="filiais" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('filiais', 'venda_total')" data-table="filiais" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('filiais', 'venda_fisica')" data-table="filiais" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('filiais', 'share_digital')" data-table="filiais" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('filiais', 'diff_share')" data-table="filiais" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'share_digital')" data-table="filiais" data-col="share_digital">Share Atual <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'share_digital_ly')" data-table="filiais" data-col="share_digital_ly">Share LY <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('filiais', 'diff_pp_ly')" data-table="filiais" data-col="diff_pp_ly">Evol. P.P. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('filiais', 'share_diretoria')" data-table="filiais" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
                 <th class="sortable" onclick="handleSortTable('filiais', 'status')" data-table="filiais" data-col="status">Status <span class="sort-icon">⇅</span></th>
               </tr>
@@ -1509,8 +1513,9 @@ def build_html():
                 <th class="sortable num" onclick="handleSortTable('categorias', 'projecao')" data-table="categorias" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('categorias', 'venda_total')" data-table="categorias" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('categorias', 'venda_fisica')" data-table="categorias" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('categorias', 'share_digital')" data-table="categorias" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('categorias', 'diff_share')" data-table="categorias" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'share_digital')" data-table="categorias" data-col="share_digital">Share Atual <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'share_digital_ly')" data-table="categorias" data-col="share_digital_ly">Share LY <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('categorias', 'diff_pp_ly')" data-table="categorias" data-col="diff_pp_ly">Evol. P.P. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('categorias', 'share_diretoria')" data-table="categorias" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('categorias', 'total_linhas')" data-table="categorias" data-col="total_linhas">Linhas <span class="sort-icon">⇅</span></th>
                 <th class="sortable" onclick="handleSortTable('categorias', 'status')" data-table="categorias" data-col="status">Status <span class="sort-icon">⇅</span></th>
@@ -1559,8 +1564,9 @@ def build_html():
                 <th class="sortable num" onclick="handleSortTable('linhas', 'projecao')" data-table="linhas" data-col="projecao">Projeção Mês <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('linhas', 'venda_total')" data-table="linhas" data-col="venda_total">Venda Total <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('linhas', 'venda_fisica')" data-table="linhas" data-col="venda_fisica">Venda Física <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('linhas', 'share_digital')" data-table="linhas" data-col="share_digital">Share Digital <span class="sort-icon">⇅</span></th>
-                <th class="sortable num" onclick="handleSortTable('linhas', 'diff_share')" data-table="linhas" data-col="diff_share">Dif. Média <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'share_digital')" data-table="linhas" data-col="share_digital">Share Atual <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'share_digital_ly')" data-table="linhas" data-col="share_digital_ly">Share LY <span class="sort-icon">⇅</span></th>
+                <th class="sortable num" onclick="handleSortTable('linhas', 'diff_pp_ly')" data-table="linhas" data-col="diff_pp_ly">Evol. P.P. <span class="sort-icon">⇅</span></th>
                 <th class="sortable num" onclick="handleSortTable('linhas', 'share_diretoria')" data-table="linhas" data-col="share_diretoria">% Share Dir. <span class="sort-icon">⇅</span></th>
                 <th class="sortable" onclick="handleSortTable('linhas', 'status')" data-table="linhas" data-col="status">Status <span class="sort-icon">⇅</span></th>
               </tr>
@@ -1816,7 +1822,9 @@ def build_html():
     function getPeriodMetrics(item) {{
       if (!item) return {{
         meta_periodo: 0, venda_digital: 0, venda_total: 0, venda_fisica: 0,
-        gap: 0, desvio: 0, atingimento: 0, share_digital: 0, projecao: 0, atingimento_proj: 0, meta_mes: 0
+        gap: 0, desvio: 0, atingimento: 0, share_digital: 0,
+        venda_digital_ly: 0, venda_total_ly: 0, share_digital_ly: 0, diff_pp_ly: 0,
+        projecao: 0, atingimento_proj: 0, meta_mes: 0
       }};
 
       const m_dias = item.metas_dias || [];
@@ -1825,11 +1833,19 @@ def build_html():
         : (item.vendas_dias_digital || []);
       const v_dias_tot = item.vendas_dias_total || [];
 
+      // Arrays diários de 2025 (LY)
+      const v_dias_dig_ly = (activeFigitalMode === 'sem')
+        ? (item.vendas_dias_sem_figital_ly || item.vendas_dias_digital_ly || [])
+        : (item.vendas_dias_digital_ly || []);
+      const v_dias_tot_ly = item.vendas_dias_total_ly || [];
+
       let meta = 0.0;
       let venda_dig = 0.0;
       let venda_tot = 0.0;
+      let venda_dig_ly = 0.0;
+      let venda_tot_ly = 0.0;
 
-      // Se o item tiver arrays diários explícitos (Grupos, Distritais, Coordenadores, Filiais, Rede)
+      // Se o item tiver arrays diários explícitos (Grupos, Distritais, Coordenadores, Rede)
       if (v_dias_dig.length > 0 || m_dias.length > 0) {{
         for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
           if (d - 1 < m_dias.length) meta += (m_dias[d - 1] || 0.0);
@@ -1837,6 +1853,10 @@ def build_html():
         for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
           if (d - 1 < v_dias_dig.length) venda_dig += (v_dias_dig[d - 1] || 0.0);
           if (d - 1 < v_dias_tot.length) venda_tot += (v_dias_tot[d - 1] || 0.0);
+        }}
+        for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
+          if (d - 1 < v_dias_dig_ly.length) venda_dig_ly += (v_dias_dig_ly[d - 1] || 0.0);
+          if (d - 1 < v_dias_tot_ly.length) venda_tot_ly += (v_dias_tot_ly[d - 1] || 0.0);
         }}
       }} else if (item._parentGrp) {{
         // Linha compacta (escala proporcionalmente à curva diária do grupo pai)
@@ -1852,22 +1872,55 @@ def build_html():
         venda_dig = (v_base || 0.0) * ratioSale;
         venda_tot = (item.venda_total || 0.0) * ratioSale;
         meta = (item.meta_mtd || 0.0) * ratioMeta;
+
+        const pBaseSaleLy = (activeFigitalMode === 'sem')
+          ? (parentGrp.venda_sem_figital_ly || parentGrp.venda_digital_ly || 1.0)
+          : (parentGrp.venda_digital_ly || 1.0);
+        const ratioSaleLy = pBaseSaleLy > 0 ? (pMetrics.venda_digital_ly / pBaseSaleLy) : 1.0;
+        const v_base_ly = (activeFigitalMode === 'sem')
+          ? (item.venda_sem_figital_ly || item.venda_digital_ly || 0.0)
+          : (item.venda_digital_ly || 0.0);
+        venda_dig_ly = (v_base_ly || 0.0) * ratioSaleLy;
+        venda_tot_ly = (item.venda_total_ly || 0.0) * ratioSaleLy;
       }} else {{
-        // Fallback direto
-        venda_dig = (activeFigitalMode === 'sem') ? (item.venda_sem_figital || 0.0) : (item.venda_digital || 0.0);
-        venda_tot = item.venda_total || 0.0;
-        meta = item.meta_mtd || 0.0;
+        // Filiais ou fallback direto
+        const v_base = (activeFigitalMode === 'sem') ? (item.venda_sem_figital || 0.0) : (item.venda_digital || 0.0);
+        const v_base_ly = (activeFigitalMode === 'sem') ? (item.venda_sem_figital_ly || item.venda_digital_ly || 0.0) : (item.venda_digital_ly || 0.0);
+        
+        if (selectedDiaIni > 1 || selectedDiaEnd < 16) {{
+          const totalMetrics = getPeriodMetrics(DASH_DATA.total || {{}});
+          const ratioDig = (DASH_DATA.total && DASH_DATA.total.venda_digital > 0) ? (totalMetrics.venda_digital / DASH_DATA.total.venda_digital) : 1.0;
+          const ratioTot = (DASH_DATA.total && DASH_DATA.total.venda_total > 0) ? (totalMetrics.venda_total / DASH_DATA.total.venda_total) : 1.0;
+          const ratioDigLy = (DASH_DATA.total && DASH_DATA.total.venda_digital_ly > 0) ? (totalMetrics.venda_digital_ly / DASH_DATA.total.venda_digital_ly) : 1.0;
+          const ratioTotLy = (DASH_DATA.total && DASH_DATA.total.venda_total_ly > 0) ? (totalMetrics.venda_total_ly / DASH_DATA.total.venda_total_ly) : 1.0;
+          
+          venda_dig = v_base * ratioDig;
+          venda_tot = (item.venda_total || 0.0) * ratioTot;
+          meta = (item.meta_mtd || 0.0) * ratioDig;
+          venda_dig_ly = v_base_ly * ratioDigLy;
+          venda_tot_ly = (item.venda_total_ly || 0.0) * ratioTotLy;
+        }} else {{
+          venda_dig = v_base;
+          venda_tot = item.venda_total || 0.0;
+          meta = item.meta_mtd || 0.0;
+          venda_dig_ly = v_base_ly;
+          venda_tot_ly = item.venda_total_ly || 0.0;
+        }}
       }}
 
       meta = Math.round(meta);
       venda_dig = Math.round(venda_dig);
       venda_tot = Math.round(venda_tot);
+      venda_dig_ly = Math.round(venda_dig_ly);
+      venda_tot_ly = Math.round(venda_tot_ly);
       const venda_fis = Math.max(0, venda_tot - venda_dig);
 
       const gap = venda_dig - meta;
       const desvio = meta > 0 ? (((venda_dig / meta) - 1) * 100) : 0.0;
       const ating = meta > 0 ? ((venda_dig / meta) * 100) : (venda_dig > 0 ? 100.0 : 0.0);
       const share_dig = venda_tot > 0 ? ((venda_dig / venda_tot) * 100) : 0.0;
+      const share_dig_ly = venda_tot_ly > 0 ? ((venda_dig_ly / venda_tot_ly) * 100) : (item.share_digital_ly || 0.0);
+      const diff_pp = share_dig - share_dig_ly;
 
       const dias_sel = (selectedDiaEnd - selectedDiaIni + 1);
       const meta_mes = item.meta_mes || 0.0;
@@ -1883,6 +1936,10 @@ def build_html():
         desvio: desvio,
         atingimento: ating,
         share_digital: share_dig,
+        venda_digital_ly: venda_dig_ly,
+        venda_total_ly: venda_tot_ly,
+        share_digital_ly: share_dig_ly,
+        diff_pp_ly: diff_pp,
         projecao: proj,
         atingimento_proj: ating_proj,
         meta_mes: meta_mes
@@ -2503,7 +2560,8 @@ def build_html():
             <td class="num">${{formatBRL(d.venda_total)}}</td>
             <td class="num" style="color: var(--text-secondary);">${{formatBRL(d.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(d.share_digital)}}</strong></td>
-            <td class="num">${{formatDiffPP(d.diff_share)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatPct(d.share_digital_ly)}}</td>
+            <td class="num">${{formatDiffPP(d.diff_pp_ly)}}</td>
             <td class="num">${{formatShareDir(d.share_diretoria)}}</td>
             <td class="num">${{d.lojas}}</td>
             <td class="num">${{formatBRL(d.media_loja)}}</td>
@@ -2528,7 +2586,8 @@ def build_html():
             <td class="num">${{formatBRL(d.venda_total)}}</td>
             <td class="num" style="color: var(--text-secondary);">${{formatBRL(d.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(d.share_digital)}}</strong></td>
-            <td class="num">${{formatDiffPP(d.diff_share)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatPct(d.share_digital_ly)}}</td>
+            <td class="num">${{formatDiffPP(d.diff_pp_ly)}}</td>
             <td class="num">${{formatShareDir(d.share_diretoria)}}</td>
             <td class="num">${{d.lojas}}</td>
             <td class="num">${{formatBRL(d.media_loja)}}</td>
@@ -2584,7 +2643,8 @@ def build_html():
             <td class="num">${{formatBRL(c.venda_total)}}</td>
             <td class="num" style="color: var(--text-secondary);">${{formatBRL(c.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(c.share_digital)}}</strong></td>
-            <td class="num">${{formatDiffPP(c.diff_share)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatPct(c.share_digital_ly)}}</td>
+            <td class="num">${{formatDiffPP(c.diff_pp_ly)}}</td>
             <td class="num">${{formatShareDir(c.share_diretoria)}}</td>
             <td class="num">${{c.lojas}}</td>
             <td class="num">${{formatBRL(c.media_loja)}}</td>
@@ -2630,8 +2690,8 @@ def build_html():
       const subHeader = document.getElementById('filiaisHeaderSubtitle');
       if (subHeader) {{
         subHeader.textContent = showAllFiliais 
-          ? `Exibindo todas as ${{filList.length}} lojas encontradas` 
-          : `Exibindo as primeiras ${{Math.min(filList.length, 100)}} de ${{filList.length}} lojas (clique em "Ver Todas as Lojas" para lista completa)`;
+        ? `Exibindo todas as ${{filList.length}} lojas encontradas` 
+        : `Exibindo as primeiras ${{Math.min(filList.length, 100)}} de ${{filList.length}} lojas (clique em "Ver Todas as Lojas" para lista completa)`;
       }}
 
       const maxLimit = showAllFiliais ? filList.length : Math.min(filList.length, 100);
@@ -2653,7 +2713,8 @@ def build_html():
             <td class="num">${{formatBRL(f.venda_total)}}</td>
             <td class="num" style="color: var(--text-secondary);">${{formatBRL(f.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(f.share_digital)}}</strong></td>
-            <td class="num">${{formatDiffPP(f.diff_share)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatPct(f.share_digital_ly)}}</td>
+            <td class="num">${{formatDiffPP(f.diff_pp_ly)}}</td>
             <td class="num">${{formatShareDir(f.share_diretoria)}}</td>
             <td>${{getStatusBadge(f.atingimento)}}</td>
           </tr>
@@ -2745,7 +2806,8 @@ def build_html():
             <td class="num">${{formatBRL(g.venda_total)}}</td>
             <td class="num" style="color: var(--text-secondary);">${{formatBRL(g.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(g.share_digital)}}</strong></td>
-            <td class="num">${{formatDiffPP(g.diff_share)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatPct(g.share_digital_ly)}}</td>
+            <td class="num">${{formatDiffPP(g.diff_pp_ly)}}</td>
             <td class="num">${{formatShareDir(g.share_diretoria)}}</td>
             <td class="num">${{totalLinhas}}</td>
             <td>${{getStatusBadge(g.atingimento)}}</td>
@@ -2793,7 +2855,8 @@ def build_html():
                 <td class="num">${{formatBRL(l.venda_total)}}</td>
                 <td class="num" style="color: var(--text-secondary);">${{formatBRL(l.venda_fisica)}}</td>
                 <td class="num"><strong>${{formatPct(l.share_digital)}}</strong></td>
-                <td class="num">${{formatDiffPP(l.diff_share)}}</td>
+                <td class="num" style="color: var(--text-secondary);">${{formatPct(l.share_digital_ly)}}</td>
+                <td class="num">${{formatDiffPP(l.diff_pp_ly)}}</td>
                 <td class="num">${{formatShareDir(l.share_grupo)}}</td>
                 <td>${{getStatusBadge(l.atingimento)}}</td>
               </tr>
@@ -2806,7 +2869,7 @@ def build_html():
 
           const accordionRow = `
             <tr class="group-accordion-row">
-              <td colspan="14">
+              <td colspan="15">
                 <div class="nested-accordion-container">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                     <div style="font-size: 12px; font-weight: 700; color: var(--sj-blue);">
@@ -2828,8 +2891,9 @@ def build_html():
                         <th class="num">Projeção Mês</th>
                         <th class="num">Venda Total</th>
                         <th class="num">Venda Física</th>
-                        <th class="num">Share Dig.</th>
-                        <th class="num">Dif. Média</th>
+                        <th class="num">Share Atual</th>
+                        <th class="num">Share LY</th>
+                        <th class="num">Evol. P.P.</th>
                         <th class="num">% Share Grupo</th>
                         <th>Status</th>
                       </tr>
@@ -2974,7 +3038,8 @@ def build_html():
             <td class="num">${{formatBRL(l.venda_total)}}</td>
             <td class="num" style="color: var(--text-secondary);">${{formatBRL(l.venda_fisica)}}</td>
             <td class="num"><strong>${{formatPct(l.share_digital)}}</strong></td>
-            <td class="num">${{formatDiffPP(l.diff_share)}}</td>
+            <td class="num" style="color: var(--text-secondary);">${{formatPct(l.share_digital_ly)}}</td>
+            <td class="num">${{formatDiffPP(l.diff_pp_ly)}}</td>
             <td class="num">${{formatShareDir(l.share_diretoria)}}</td>
             <td>${{getStatusBadge(l.atingimento)}}</td>
           </tr>
