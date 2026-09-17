@@ -1999,6 +1999,7 @@
     }
 
     // =========================================================================
+    // =========================================================================
     // DETERMINAÇÃO DO ITEM ALVO ATIVO (HIERARQUIA E PRIORIDADE DE FILTROS)
     // =========================================================================
     function getActiveTargetItem() {
@@ -2007,7 +2008,91 @@
       const selGrupo = document.getElementById('filterGrupo')?.value || 'all';
       const selLinha = document.getElementById('filterLinha')?.value || 'all';
 
-      // 1. Respeita a última categoria de filtro acionada pelo usuário
+      // 1. COMBINAÇÃO COORDENADOR + LINHA
+      if (selCoord !== 'all' && selLinha !== 'all') {
+        const foundCoord = (DASH_DATA.coordenadores || []).find(c => c.nome === selCoord);
+        if (foundCoord && foundCoord.grupos) {
+          for (const g of foundCoord.grupos) {
+            const l = (g.linhas || []).find(x => x.linha === selLinha);
+            if (l) {
+              const itemLinha = { ...l, _parentGrp: g };
+              return { 
+                item: itemLinha, 
+                type: 'Linha', 
+                name: `${l.linha} (${foundCoord.nome})`, 
+                parent: `Coord: ${foundCoord.nome} • ${g.grupo}`, 
+                lojas: foundCoord.lojas,
+                distrital: foundCoord.distrital,
+                coordenador: foundCoord.nome,
+                grupo: g.grupo
+              };
+            }
+          }
+        }
+      }
+
+      // 2. COMBINAÇÃO DISTRITAL + LINHA
+      if (selDist !== 'all' && selLinha !== 'all') {
+        const foundDist = (DASH_DATA.distritais || []).find(d => d.nome === selDist);
+        if (foundDist && foundDist.grupos) {
+          for (const g of foundDist.grupos) {
+            const l = (g.linhas || []).find(x => x.linha === selLinha);
+            if (l) {
+              const itemLinha = { ...l, _parentGrp: g };
+              return { 
+                item: itemLinha, 
+                type: 'Linha', 
+                name: `${l.linha} (${foundDist.nome})`, 
+                parent: `Distrital: ${foundDist.nome} • ${g.grupo}`, 
+                lojas: foundDist.lojas,
+                distrital: foundDist.nome,
+                grupo: g.grupo
+              };
+            }
+          }
+        }
+      }
+
+      // 3. COMBINAÇÃO COORDENADOR + GRUPO
+      if (selCoord !== 'all' && selGrupo !== 'all') {
+        const foundCoord = (DASH_DATA.coordenadores || []).find(c => c.nome === selCoord);
+        if (foundCoord && foundCoord.grupos) {
+          const g = foundCoord.grupos.find(x => x.grupo === selGrupo);
+          if (g) {
+            return {
+              item: g,
+              type: 'Grupo',
+              name: `${g.grupo} (${foundCoord.nome})`,
+              parent: `Coord: ${foundCoord.nome} (${foundCoord.distrital})`,
+              lojas: foundCoord.lojas,
+              distrital: foundCoord.distrital,
+              coordenador: foundCoord.nome,
+              grupo: g.grupo
+            };
+          }
+        }
+      }
+
+      // 4. COMBINAÇÃO DISTRITAL + GRUPO
+      if (selDist !== 'all' && selGrupo !== 'all') {
+        const foundDist = (DASH_DATA.distritais || []).find(d => d.nome === selDist);
+        if (foundDist && foundDist.grupos) {
+          const g = foundDist.grupos.find(x => x.grupo === selGrupo);
+          if (g) {
+            return {
+              item: g,
+              type: 'Grupo',
+              name: `${g.grupo} (${foundDist.nome})`,
+              parent: `Distrital: ${foundDist.nome}`,
+              lojas: foundDist.lojas,
+              distrital: foundDist.nome,
+              grupo: g.grupo
+            };
+          }
+        }
+      }
+
+      // 5. PRIORIDADE DO ÚLTIMO FILTRO TOCADO
       if (lastFilterType === 'linha' && selLinha !== 'all') {
         const found = (DASH_DATA.linhas || []).find(l => l.linha === selLinha);
         if (found) return { item: found, type: 'Linha', name: found.linha, parent: found.grupo, lojas: null };
@@ -2025,7 +2110,7 @@
         if (found) return { item: found, type: 'Distrital', name: found.nome, parent: 'Diretoria C', lojas: found.lojas };
       }
 
-      // 2. Fallbacks sequenciais se lastFilterType foi resetado
+      // 6. FALLBACKS SEQUENCIAIS SE lastFilterType NÃO COUBER
       if (selLinha !== 'all') {
         const found = (DASH_DATA.linhas || []).find(l => l.linha === selLinha);
         if (found) return { item: found, type: 'Linha', name: found.linha, parent: found.grupo, lojas: null };
@@ -2052,20 +2137,35 @@
       const textEl = document.getElementById('activeFilterText');
       const detailsEl = document.getElementById('activeFilterDetails');
 
-      const isFiltered = (activeTarget.type !== 'Diretoria') || (search && search.length > 0);
+      const selDist = document.getElementById('filterDistrital')?.value || 'all';
+      const selCoord = document.getElementById('filterCoordenador')?.value || 'all';
+      const selGrupo = document.getElementById('filterGrupo')?.value || 'all';
+      const selLinha = document.getElementById('filterLinha')?.value || 'all';
+
+      const isFiltered = (activeTarget.type !== 'Diretoria') || (search && search.length > 0) || (selDist !== 'all') || (selCoord !== 'all') || (selGrupo !== 'all') || (selLinha !== 'all');
 
       if (banner) {
         if (isFiltered) {
           banner.style.display = 'flex';
-          if (tagEl) tagEl.textContent = activeTarget.type !== 'Diretoria' ? activeTarget.type : 'Busca';
-          if (textEl) textEl.textContent = activeTarget.type !== 'Diretoria' ? activeTarget.name : `"${search}"`;
+          
+          let parts = [];
+          if (selDist !== 'all') parts.push(`Distrital: ${selDist}`);
+          if (selCoord !== 'all') parts.push(`Coord: ${selCoord}`);
+          if (selGrupo !== 'all') parts.push(`Grupo: ${selGrupo}`);
+          if (selLinha !== 'all') parts.push(`Linha: ${selLinha}`);
+          if (search) parts.push(`Busca: "${search}"`);
+
+          if (tagEl) {
+            if (parts.length > 1) tagEl.textContent = 'Filtro Combinado';
+            else tagEl.textContent = activeTarget.type !== 'Diretoria' ? activeTarget.type : 'Busca';
+          }
+          if (textEl) {
+            textEl.textContent = parts.length > 0 ? parts.join(' • ') : activeTarget.name;
+          }
           if (detailsEl) {
             let det = [];
-            if (activeTarget.type === 'Distrital') det.push(`${activeTarget.lojas} Lojas Ativas`);
-            if (activeTarget.type === 'Coordenador') det.push(`Distrital: ${activeTarget.parent} • ${activeTarget.lojas} Lojas`);
-            if (activeTarget.type === 'Grupo') det.push(`${activeTarget.item.total_linhas || 0} Linhas`);
-            if (activeTarget.type === 'Linha') det.push(`Categoria: ${activeTarget.parent}`);
-            if (search && activeTarget.type !== 'Diretoria') det.push(`Busca: "${search}"`);
+            if (activeTarget.lojas) det.push(`${activeTarget.lojas} Lojas Ativas`);
+            if (activeTarget.item && activeTarget.item.total_linhas) det.push(`${activeTarget.item.total_linhas} Linhas`);
             detailsEl.textContent = det.length > 0 ? `(${det.join(' • ')})` : '';
           }
         } else {
@@ -2464,7 +2564,17 @@
           return true;
         })
         .map((d, origIdx) => {
-          const m = getPeriodMetrics(d);
+          let itemToEval = d;
+          if (filterLinhaVal !== 'all') {
+            for (const g of (d.grupos || [])) {
+              const l = (g.linhas || []).find(x => x.linha === filterLinhaVal);
+              if (l) { itemToEval = { ...l, _parentGrp: g, nome: d.nome, lojas: d.lojas }; break; }
+            }
+          } else if (filterGrupoVal !== 'all') {
+            const g = (d.grupos || []).find(x => x.grupo === filterGrupoVal);
+            if (g) itemToEval = { ...g, nome: d.nome, lojas: d.lojas };
+          }
+          const m = getPeriodMetrics(itemToEval);
           const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
           const diff_share = m.share_digital - dirMediaShare;
           const media_loja = (d.lojas && d.lojas > 0) ? Math.round(m.venda_digital / d.lojas) : m.venda_digital;
@@ -2472,7 +2582,7 @@
             rank: origIdx + 1,
             nome: d.nome,
             lojas: d.lojas,
-            meta_mes: d.meta_mes,
+            meta_mes: itemToEval.meta_mes || d.meta_mes,
             ...m,
             share_diretoria: share_diretoria,
             diff_share: diff_share,
@@ -2545,7 +2655,17 @@
           return true;
         })
         .map((c, origIdx) => {
-          const m = getPeriodMetrics(c);
+          let itemToEval = c;
+          if (filterLinhaVal !== 'all') {
+            for (const g of (c.grupos || [])) {
+              const l = (g.linhas || []).find(x => x.linha === filterLinhaVal);
+              if (l) { itemToEval = { ...l, _parentGrp: g, nome: c.nome, distrital: c.distrital, lojas: c.lojas }; break; }
+            }
+          } else if (filterGrupoVal !== 'all') {
+            const g = (c.grupos || []).find(x => x.grupo === filterGrupoVal);
+            if (g) itemToEval = { ...g, nome: c.nome, distrital: c.distrital, lojas: c.lojas };
+          }
+          const m = getPeriodMetrics(itemToEval);
           const share_diretoria = dirTotDigital > 0 ? ((m.venda_digital / dirTotDigital) * 100) : 0.0;
           const diff_share = m.share_digital - dirMediaShare;
           const media_loja = (c.lojas && c.lojas > 0) ? Math.round(m.venda_digital / c.lojas) : m.venda_digital;
@@ -2554,7 +2674,7 @@
             nome: c.nome,
             distrital: c.distrital,
             lojas: c.lojas,
-            meta_mes: c.meta_mes,
+            meta_mes: itemToEval.meta_mes || c.meta_mes,
             ...m,
             share_diretoria: share_diretoria,
             diff_share: diff_share,
@@ -2878,20 +2998,22 @@
       const dist = document.getElementById('filterDistrital')?.value || 'all';
       const coord = document.getElementById('filterCoordenador')?.value || 'all';
 
-      let targetSourceLinhas = DASH_DATA;
+      let targetLinhas = [];
       let contextLinhasLabel = 'Diretoria C (Consolidado)';
       if (coord !== 'all') {
         const foundC = (DASH_DATA.coordenadores || []).find(c => c.nome === coord);
-        if (foundC && foundC.linhas && foundC.linhas.length > 0) {
-          targetSourceLinhas = foundC;
-          contextLinhasLabel = `Coordenador: ${foundC.nome}`;
+        if (foundC && foundC.grupos && foundC.grupos.length > 0) {
+          targetLinhas = foundC.grupos.flatMap(g => (g.linhas || []).map(l => ({ ...l, _parentGrp: g })));
+          contextLinhasLabel = `Coordenador: ${foundC.nome} (${foundC.distrital})`;
         }
       } else if (dist !== 'all') {
         const foundD = (DASH_DATA.distritais || []).find(d => d.nome === dist);
-        if (foundD && foundD.linhas && foundD.linhas.length > 0) {
-          targetSourceLinhas = foundD;
+        if (foundD && foundD.grupos && foundD.grupos.length > 0) {
+          targetLinhas = foundD.grupos.flatMap(g => (g.linhas || []).map(l => ({ ...l, _parentGrp: g })));
           contextLinhasLabel = `Distrital: ${foundD.nome}`;
         }
+      } else {
+        targetLinhas = DASH_DATA.linhas || [];
       }
 
       const linSub = document.getElementById('linhasHeaderSubtitle');
@@ -2904,7 +3026,7 @@
       const dirTotDigital = dirTot.venda_digital || 1.0;
       const dirMediaShare = dirTot.share_digital || 0.0;
 
-      let list = (targetSourceLinhas.linhas || [])
+      let list = targetLinhas
         .filter(l => {
           if (filterGrp !== 'all' && l.grupo !== filterGrp) return false;
           if (selLinha !== 'all' && l.linha !== selLinha) return false;
@@ -3010,11 +3132,25 @@
         if (chartCurvaInstance) chartCurvaInstance.destroy();
 
         const labels = (DASH_DATA.curva_diaria || []).map(d => d.data);
-        const metasDiarias = target.metas_dias || (DASH_DATA.curva_diaria || []).map(d => d.meta_dia);
-        
-        const vDias = (activeFigitalMode === 'sem') 
+        let metasDiarias = target.metas_dias;
+        let vDias = (activeFigitalMode === 'sem') 
           ? (target.vendas_dias_sem_figital || []) 
           : (target.vendas_dias_digital || []);
+
+        if ((!metasDiarias || metasDiarias.length === 0) && target._parentGrp) {
+          const p = target._parentGrp;
+          const ratioMeta = (p.meta_mtd > 0) ? ((target.meta_mtd || 0) / p.meta_mtd) : 1.0;
+          const pBaseSale = (activeFigitalMode === 'sem') ? (p.venda_sem_figital || 1.0) : (p.venda_digital || 1.0);
+          const tBaseSale = (activeFigitalMode === 'sem') ? (target.venda_sem_figital || 0.0) : (target.venda_digital || 0.0);
+          const ratioSale = pBaseSale > 0 ? (tBaseSale / pBaseSale) : 1.0;
+          metasDiarias = (p.metas_dias || []).map(m => Math.round(m * ratioMeta));
+          const pVDias = (activeFigitalMode === 'sem') ? (p.vendas_dias_sem_figital || []) : (p.vendas_dias_digital || []);
+          vDias = pVDias.map(v => Math.round(v * ratioSale));
+        }
+
+        if (!metasDiarias || metasDiarias.length === 0) {
+          metasDiarias = (DASH_DATA.curva_diaria || []).map(d => d.meta_dia);
+        }
 
         const vendasDiarias = metasDiarias.map((_, idx) => {
           const d = idx + 1;
@@ -3161,7 +3297,21 @@
         const titleEl = document.getElementById('chartShareTitle');
         const subEl = document.getElementById('chartShareSubtitle');
 
-        if (targetType === 'Distrital') {
+        if (targetType === 'Coordenador') {
+          if (titleEl) titleEl.textContent = `Participação das Filiais — ${targetName}`;
+          if (subEl) subEl.textContent = 'Share de Venda Digital das Lojas do Coordenador';
+          const filList = (DASH_DATA.filiais || []).filter(f => f.coordenador === targetName);
+          const mList = filList.map(f => ({ nome: f.nome, venda: getPeriodMetrics(f).venda_digital })).sort((a,b) => b.venda - a.venda);
+          const top7 = mList.slice(0, 7);
+          const rest = mList.slice(7);
+          const restSum = rest.reduce((acc, x) => acc + x.venda, 0);
+          labels = top7.map(x => x.nome);
+          values = top7.map(x => x.venda);
+          if (restSum > 0) {
+            labels.push('Outras Filiais');
+            values.push(restSum);
+          }
+        } else if (targetType === 'Distrital') {
           if (titleEl) titleEl.textContent = `Participação dos Coordenadores — ${targetName}`;
           if (subEl) subEl.textContent = 'Share de Venda Digital no Período Selecionado';
           const coords = (DASH_DATA.coordenadores || []).filter(c => c.distrital === targetName);
@@ -3181,6 +3331,19 @@
             labels.push('Outras Linhas');
             values.push(restSum);
           }
+        } else if (targetType === 'Linha') {
+          if (titleEl) titleEl.textContent = `Distribuição por Distrital — ${targetName}`;
+          if (subEl) subEl.textContent = 'Share de Venda Digital da Linha entre as Distritais';
+          const dList = DASH_DATA.distritais.map(d => {
+            let v = 0;
+            for (const g of (d.grupos || [])) {
+              const l = (g.linhas || []).find(x => x.linha === target.linha);
+              if (l) { v = getPeriodMetrics({ ...l, _parentGrp: g }).venda_digital; break; }
+            }
+            return { nome: d.nome, venda: v };
+          }).sort((a,b) => b.venda - a.venda);
+          labels = dList.map(x => x.nome);
+          values = dList.map(x => x.venda);
         } else {
           if (titleEl) titleEl.textContent = 'Participação das Distritais';
           if (subEl) subEl.textContent = 'Share de Venda Digital no Período Selecionado';
