@@ -2199,6 +2199,155 @@ def build_html():
       }}
     }}
 
+    function populateLinhasDropdown(grupoFilter = 'all', keepSelected = false) {{
+      const linhaSelect = document.getElementById('filterLinha');
+      if (!linhaSelect) return;
+
+      const previousVal = linhaSelect.value;
+      linhaSelect.innerHTML = '';
+
+      let linhas = DASH_DATA.linhas || [];
+      if (grupoFilter !== 'all') {{
+        linhas = linhas.filter(l => l.grupo === grupoFilter);
+      }}
+
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = 'all';
+      defaultOpt.textContent = grupoFilter === 'all' 
+        ? `Todas as Linhas (${{linhas.length}})` 
+        : `Todas as Linhas de ${{grupoFilter}} (${{linhas.length}})`;
+      linhaSelect.appendChild(defaultOpt);
+
+      linhas.forEach(l => {{
+        const opt = document.createElement('option');
+        opt.value = l.linha;
+        opt.textContent = grupoFilter === 'all' ? `${{l.linha}} (${{l.grupo}})` : l.linha;
+        linhaSelect.appendChild(opt);
+      }});
+
+      if (keepSelected && previousVal && linhas.some(l => l.linha === previousVal)) {{
+        linhaSelect.value = previousVal;
+      }} else {{
+        linhaSelect.value = 'all';
+      }}
+    }}
+
+    function onDistritalFilterChange() {{
+      lastFilterType = 'distrital';
+      const distVal = document.getElementById('filterDistrital')?.value || 'all';
+      populateCoordenadoresDropdown(distVal, false);
+      recalcDashboard();
+    }}
+
+    function onCoordenadorFilterChange() {{
+      lastFilterType = 'coordenador';
+      const coordVal = document.getElementById('filterCoordenador')?.value || 'all';
+      if (coordVal !== 'all') {{
+        const c = (DASH_DATA.coordenadores || []).find(x => x.nome === coordVal);
+        if (c) {{
+          const distSelect = document.getElementById('filterDistrital');
+          if (distSelect && distSelect.value !== c.distrital) {{
+            distSelect.value = c.distrital;
+            populateCoordenadoresDropdown(c.distrital, true);
+          }}
+        }}
+      }}
+      recalcDashboard();
+    }}
+
+    function onGrupoFilterChange() {{
+      lastFilterType = 'grupo';
+      const grpVal = document.getElementById('filterGrupo')?.value || 'all';
+      populateLinhasDropdown(grpVal, false);
+
+      const tabLinhaGrp = document.getElementById('filterLinhaGrupo');
+      if (tabLinhaGrp && tabLinhaGrp.value !== grpVal) {{
+        tabLinhaGrp.value = grpVal;
+      }}
+      recalcDashboard();
+    }}
+
+    function onLinhaFilterChange() {{
+      lastFilterType = 'linha';
+      const linhaVal = document.getElementById('filterLinha')?.value || 'all';
+      if (linhaVal !== 'all') {{
+        const l = (DASH_DATA.linhas || []).find(x => x.linha === linhaVal);
+        if (l) {{
+          const grpSelect = document.getElementById('filterGrupo');
+          if (grpSelect && grpSelect.value !== l.grupo) {{
+            grpSelect.value = l.grupo;
+            populateLinhasDropdown(l.grupo, true);
+          }}
+          const tabLinhaGrp = document.getElementById('filterLinhaGrupo');
+          if (tabLinhaGrp && tabLinhaGrp.value !== l.grupo) {{
+            tabLinhaGrp.value = l.grupo;
+          }}
+        }}
+      }}
+      recalcDashboard();
+    }}
+
+    function onSearchInputChange() {{
+      const searchVal = document.getElementById('filterSearch')?.value || '';
+      const tabLinhaSearch = document.getElementById('filterLinhaSearch');
+      if (tabLinhaSearch && tabLinhaSearch.value !== searchVal) {{
+        tabLinhaSearch.value = searchVal;
+      }}
+      recalcDashboard();
+    }}
+
+    function onLinhaGrupoTabChange() {{
+      const grpVal = document.getElementById('filterLinhaGrupo')?.value || 'all';
+      const mainGrp = document.getElementById('filterGrupo');
+      if (mainGrp) {{
+        mainGrp.value = grpVal;
+        lastFilterType = 'grupo';
+        populateLinhasDropdown(grpVal, false);
+      }}
+      recalcDashboard();
+    }}
+
+    function onLinhaSearchTabChange() {{
+      const searchVal = document.getElementById('filterLinhaSearch')?.value || '';
+      const mainSearch = document.getElementById('filterSearch');
+      if (mainSearch) {{
+        mainSearch.value = searchVal;
+      }}
+      recalcDashboard();
+    }}
+
+    function applyFilters() {{
+      const dist = document.getElementById('filterDistrital')?.value || 'all';
+      const coord = document.getElementById('filterCoordenador')?.value || 'all';
+      const grp = document.getElementById('filterGrupo')?.value || 'all';
+      const linha = document.getElementById('filterLinha')?.value || 'all';
+      const search = (document.getElementById('filterSearch')?.value || '').toLowerCase().trim();
+
+      renderAllTables(dist, coord, grp, linha, search);
+    }}
+
+    function resetFilters() {{
+      lastFilterType = 'none';
+      if (document.getElementById('filterDistrital')) document.getElementById('filterDistrital').value = 'all';
+      if (document.getElementById('filterCoordenador')) populateCoordenadoresDropdown('all', false);
+      if (document.getElementById('filterGrupo')) document.getElementById('filterGrupo').value = 'all';
+      if (document.getElementById('filterLinhaGrupo')) document.getElementById('filterLinhaGrupo').value = 'all';
+      if (document.getElementById('filterLinha')) populateLinhasDropdown('all', false);
+      if (document.getElementById('filterSearch')) document.getElementById('filterSearch').value = '';
+      if (document.getElementById('filterLinhaSearch')) document.getElementById('filterLinhaSearch').value = '';
+
+      recalcDashboard();
+    }}
+
+    function toggleShowAllFiliais() {{
+      showAllFiliais = !showAllFiliais;
+      const btn = document.getElementById('btnToggleFiliais');
+      if (btn) {{
+        btn.textContent = showAllFiliais ? 'Mostrar Top 100 Lojas' : 'Ver Todas as Lojas';
+      }}
+      applyFilters();
+    }}
+
     // =========================================================================
     // ACORDEÃO / DRILLDOWN DE LINHAS DENTRO DE GRUPOS
     // =========================================================================
