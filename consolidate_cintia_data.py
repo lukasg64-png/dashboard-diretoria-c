@@ -704,6 +704,251 @@ def consolidate():
 
     grupos_list.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
 
+    # 8. ENRIQUECIMENTO DE GRUPOS E LINHAS POR COORDENADOR E DISTRITAL
+    # Permite que os filtros de Distrital e Coordenador recalculem dinamicamente
+    # a tabela de Categorias/Grupos (Tab 5) e Linhas de Produtos (Tab 6).
+    cgd = vendas_data.get("coordenadores_grupos_dia", [])
+    cl = vendas_data.get("coordenadores_linhas", [])
+    c_metas = metas_data.get("coordenadores", {})
+
+    cgd_map = {}
+    for r in cgd:
+        c_mapped = COORD_MAPPING.get(norm_str(r.get("coordenador")), norm_str(r.get("coordenador")))
+        g_norm = norm_str(clean_group_name(r.get("grupo")))
+        dia = int(r.get("dia", 1))
+        key = (c_mapped, g_norm, dia)
+        if key not in cgd_map:
+            cgd_map[key] = {'sem_fig': 0.0, 'fig': 0.0, 'tot': 0.0}
+        cgd_map[key]['sem_fig'] += float(r.get("venda_sem_figital") or 0.0)
+        cgd_map[key]['fig'] += float(r.get("venda_figital") or 0.0)
+        cgd_map[key]['tot'] += float(r.get("venda_total") or 0.0)
+
+    cl_map = {}
+    for r in cl:
+        c_mapped = COORD_MAPPING.get(norm_str(r.get("coordenador")), norm_str(r.get("coordenador")))
+        g_norm = norm_str(clean_group_name(r.get("grupo")))
+        l_norm = norm_str(r.get("linha"))
+        key = (c_mapped, g_norm, l_norm)
+        if key not in cl_map:
+            cl_map[key] = {'sem_fig': 0.0, 'fig': 0.0, 'tot': 0.0}
+        cl_map[key]['sem_fig'] += float(r.get("venda_sem_figital") or 0.0)
+        cl_map[key]['fig'] += float(r.get("venda_figital") or 0.0)
+        cl_map[key]['tot'] += float(r.get("venda_total") or 0.0)
+
+    for c in coordenadores_list:
+        c_name = c["nome"]
+        c_norm = COORD_MAPPING.get(norm_str(c_name), norm_str(c_name))
+        c_meta = None
+        for mk, mv in c_metas.items():
+            if COORD_MAPPING.get(norm_str(mk), norm_str(mk)) == c_norm:
+                c_meta = mv
+                break
+
+        c_grupos = []
+        if c_meta:
+            for g_raw, g_data in c_meta.get("grupos", {}).items():
+                g_clean = clean_group_name(g_raw)
+                g_norm = norm_str(g_clean)
+
+                m_mes = round(g_data.get("meta_mes", 0.0), 2)
+                m_dias = [round(x, 2) for x in g_data.get("metas_dias", [0.0]*30)]
+                m_mtd = round(sum(m_dias[:max_dia]), 2)
+
+                dias_sem_fig = [round(cgd_map.get((c_norm, g_norm, d), {}).get('sem_fig', 0.0), 2) for d in range(1, max_dia + 1)]
+                dias_fig = [round(cgd_map.get((c_norm, g_norm, d), {}).get('fig', 0.0), 2) for d in range(1, max_dia + 1)]
+                dias_tot = [round(cgd_map.get((c_norm, g_norm, d), {}).get('tot', 0.0), 2) for d in range(1, max_dia + 1)]
+                dias_dig = [round(s + f, 2) for s, f in zip(dias_sem_fig, dias_fig)]
+
+                v_sem_fig = round(sum(dias_sem_fig), 2)
+                v_fig = round(sum(dias_fig), 2)
+                v_dig = round(sum(dias_dig), 2)
+                v_tot = round(sum(dias_tot), 2)
+                v_fis = round(max(0.0, v_tot - v_dig), 2)
+
+                ating = round((v_dig / m_mtd * 100) if m_mtd > 0 else 0.0, 2)
+                desvio = round(((v_dig / m_mtd - 1) * 100) if m_mtd > 0 else 0.0, 2)
+                desvio_sem_fig = round(((v_sem_fig / m_mtd - 1) * 100) if m_mtd > 0 else 0.0, 2)
+                gap = round(v_dig - m_mtd, 2)
+                proj = round((v_dig / max_dia * total_dias_mes) if max_dia > 0 else 0.0, 2)
+                ating_proj = round((proj / m_mes * 100) if m_mes > 0 else 0.0, 2)
+                share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
+
+                linhas_deste_grupo = []
+                for l_raw, l_data in g_data.get("linhas", {}).items():
+                    l_norm = norm_str(l_raw)
+                    lm_mes = round(l_data.get("meta_mes", 0.0), 2)
+                    lm_dias = [round(x, 2) for x in l_data.get("metas_dias", [0.0]*30)]
+                    lm_mtd = round(sum(lm_dias[:max_dia]), 2)
+
+                    ql = cl_map.get((c_norm, g_norm, l_norm), {})
+                    lv_sem = round(ql.get('sem_fig', 0.0), 2)
+                    lv_fig = round(ql.get('fig', 0.0), 2)
+                    lv_dig = round(lv_sem + lv_fig, 2)
+                    lv_tot = round(ql.get('tot', 0.0), 2)
+                    lv_fis = round(max(0.0, lv_tot - lv_dig), 2)
+
+                    if lm_mes == 0 and lv_tot == 0 and lv_dig == 0:
+                        continue
+
+                    linha_obj = {
+                        "linha": l_raw,
+                        "grupo": g_clean,
+                        "meta_mes": lm_mes,
+                        "meta_mtd": lm_mtd,
+                        "venda_sem_figital": lv_sem,
+                        "venda_figital": lv_fig,
+                        "venda_digital": lv_dig,
+                        "venda_total": lv_tot,
+                        "venda_fisica": lv_fis
+                    }
+                    linhas_deste_grupo.append(linha_obj)
+
+                linhas_deste_grupo.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+                grp_obj = {
+                    "grupo": g_clean,
+                    "meta_mes": m_mes,
+                    "metas_dias": m_dias,
+                    "vendas_dias_digital": dias_dig,
+                    "vendas_dias_figital": dias_fig,
+                    "vendas_dias_sem_figital": dias_sem_fig,
+                    "vendas_dias_total": dias_tot,
+                    "meta_mtd": m_mtd,
+                    "venda_digital": v_dig,
+                    "venda_figital": v_fig,
+                    "venda_sem_figital": v_sem_fig,
+                    "venda_total": v_tot,
+                    "venda_fisica": v_fis,
+                    "atingimento_mtd": ating,
+                    "desvio_mtd": desvio,
+                    "desvio_sem_figital": desvio_sem_fig,
+                    "gap": gap,
+                    "projecao": proj,
+                    "atingimento_proj": ating_proj,
+                    "share_digital": share_dig,
+                    "status": get_status(ating),
+                    "total_linhas": len(linhas_deste_grupo),
+                    "linhas": linhas_deste_grupo
+                }
+                c_grupos.append(grp_obj)
+
+        c_grupos.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+        c["grupos"] = c_grupos
+
+    # Agrega grupos e linhas para distritais a partir de seus coordenadores
+    for d in distritais_list:
+        d_coords = [c for c in coordenadores_list if c["distrital"] == d["nome"]]
+        d_grp_map = {}
+        for c in d_coords:
+            for g in c.get("grupos", []):
+                gn = g["grupo"]
+                if gn not in d_grp_map:
+                    d_grp_map[gn] = {
+                        "grupo": gn,
+                        "meta_mes": 0.0,
+                        "metas_dias": [0.0]*30,
+                        "vendas_dias_digital": [0.0]*max_dia,
+                        "vendas_dias_figital": [0.0]*max_dia,
+                        "vendas_dias_sem_figital": [0.0]*max_dia,
+                        "vendas_dias_total": [0.0]*max_dia,
+                        "linhas_dict": {}
+                    }
+                d_grp_map[gn]["meta_mes"] += g["meta_mes"]
+                for i in range(30): d_grp_map[gn]["metas_dias"][i] += g["metas_dias"][i]
+                for i in range(max_dia):
+                    d_grp_map[gn]["vendas_dias_digital"][i] += g["vendas_dias_digital"][i]
+                    d_grp_map[gn]["vendas_dias_figital"][i] += g["vendas_dias_figital"][i]
+                    d_grp_map[gn]["vendas_dias_sem_figital"][i] += g["vendas_dias_sem_figital"][i]
+                    d_grp_map[gn]["vendas_dias_total"][i] += g["vendas_dias_total"][i]
+
+                for l in g.get("linhas", []):
+                    ln = l["linha"]
+                    if ln not in d_grp_map[gn]["linhas_dict"]:
+                        d_grp_map[gn]["linhas_dict"][ln] = {
+                            "linha": ln,
+                            "grupo": gn,
+                            "meta_mes": 0.0,
+                            "meta_mtd": 0.0,
+                            "venda_sem_figital": 0.0,
+                            "venda_figital": 0.0,
+                            "venda_digital": 0.0,
+                            "venda_total": 0.0,
+                            "venda_fisica": 0.0
+                        }
+                    ld = d_grp_map[gn]["linhas_dict"][ln]
+                    ld["meta_mes"] += l["meta_mes"]
+                    ld["meta_mtd"] += l["meta_mtd"]
+                    ld["venda_sem_figital"] += l["venda_sem_figital"]
+                    ld["venda_figital"] += l["venda_figital"]
+                    ld["venda_digital"] += l["venda_digital"]
+                    ld["venda_total"] += l["venda_total"]
+                    ld["venda_fisica"] += l["venda_fisica"]
+
+        d_grupos = []
+        for gn, gd in d_grp_map.items():
+            m_mes = round(gd["meta_mes"], 2)
+            m_dias = [round(x, 2) for x in gd["metas_dias"]]
+            m_mtd = round(sum(m_dias[:max_dia]), 2)
+            dias_dig = [round(x, 2) for x in gd["vendas_dias_digital"]]
+            dias_fig = [round(x, 2) for x in gd["vendas_dias_figital"]]
+            dias_sem = [round(x, 2) for x in gd["vendas_dias_sem_figital"]]
+            dias_tot = [round(x, 2) for x in gd["vendas_dias_total"]]
+            v_dig = round(sum(dias_dig), 2)
+            v_fig = round(sum(dias_fig), 2)
+            v_sem = round(sum(dias_sem), 2)
+            v_tot = round(sum(dias_tot), 2)
+            v_fis = round(max(0.0, v_tot - v_dig), 2)
+
+            ating = round((v_dig / m_mtd * 100) if m_mtd > 0 else 0.0, 2)
+            desvio = round(((v_dig / m_mtd - 1) * 100) if m_mtd > 0 else 0.0, 2)
+            desvio_sem = round(((v_sem / m_mtd - 1) * 100) if m_mtd > 0 else 0.0, 2)
+            gap = round(v_dig - m_mtd, 2)
+            proj = round((v_dig / max_dia * total_dias_mes) if max_dia > 0 else 0.0, 2)
+            ating_proj = round((proj / m_mes * 100) if m_mes > 0 else 0.0, 2)
+            share_dig = round((v_dig / v_tot * 100) if v_tot > 0 else 0.0, 2)
+
+            linhas_deste_grupo = []
+            for ln, ld in gd["linhas_dict"].items():
+                linhas_deste_grupo.append({
+                    "linha": ln,
+                    "grupo": gn,
+                    "meta_mes": round(ld["meta_mes"], 2),
+                    "meta_mtd": round(ld["meta_mtd"], 2),
+                    "venda_sem_figital": round(ld["venda_sem_figital"], 2),
+                    "venda_figital": round(ld["venda_figital"], 2),
+                    "venda_digital": round(ld["venda_digital"], 2),
+                    "venda_total": round(ld["venda_total"], 2),
+                    "venda_fisica": round(ld["venda_fisica"], 2)
+                })
+            linhas_deste_grupo.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+
+            d_grupos.append({
+                "grupo": gn,
+                "meta_mes": m_mes,
+                "metas_dias": m_dias,
+                "vendas_dias_digital": dias_dig,
+                "vendas_dias_figital": dias_fig,
+                "vendas_dias_sem_figital": dias_sem,
+                "vendas_dias_total": dias_tot,
+                "meta_mtd": m_mtd,
+                "venda_digital": v_dig,
+                "venda_figital": v_fig,
+                "venda_sem_figital": v_sem,
+                "venda_total": v_tot,
+                "venda_fisica": v_fis,
+                "atingimento_mtd": ating,
+                "desvio_mtd": desvio,
+                "desvio_sem_figital": desvio_sem,
+                "gap": gap,
+                "projecao": proj,
+                "atingimento_proj": ating_proj,
+                "share_digital": share_dig,
+                "status": get_status(ating),
+                "total_linhas": len(linhas_deste_grupo),
+                "linhas": linhas_deste_grupo
+            })
+        d_grupos.sort(key=lambda x: x["venda_sem_figital"], reverse=True)
+        d["grupos"] = d_grupos
+
     # Payload Final
     dashboard_data = {
         "metadata": {

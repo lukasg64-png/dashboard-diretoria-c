@@ -93,10 +93,19 @@ async def extract_qlik():
                 print(f"Falha no login: {login_err}")
 
         print("2/3 Obtendo token CSRF e abrindo conexão WebSocket QIX...", flush=True)
-        csrf_token = await page.evaluate("""async () => {
-            const r = await fetch('/api/v1/csrf-token');
-            return r.headers.get('qlik-csrf-token');
-        }""")
+        csrf_token = None
+        for attempt in range(5):
+            try:
+                csrf_token = await page.evaluate("""async () => {
+                    const r = await fetch('/api/v1/csrf-token');
+                    return r.headers.get('qlik-csrf-token');
+                }""")
+            except Exception:
+                pass
+            if csrf_token:
+                break
+            print(f"   Tentativa {attempt+1}/5 para CSRF token... aguardando 2s", flush=True)
+            await page.wait_for_timeout(2000)
 
         if not csrf_token:
             raise RuntimeError("Não foi possível obter o token CSRF do Qlik Cloud.")
@@ -154,6 +163,7 @@ async def extract_qlik():
                     try {
                         const op = await send("OpenDoc", -1, [appId]);
                         const doc = op.result.qReturn.qHandle;
+                        await send("ClearAll", doc, [true]);
 
                         const setBase = "Diretoria={'Cintia Silva'}, [Ano-Mês Venda]={'2026-09'}";
                         const canaisSemFig = "[Canal Detalhado]={'APP', 'APP Tele Entrega', 'SITE', 'SITE Tele Entrega', 'iFood'}";
@@ -516,6 +526,74 @@ async def extract_qlik():
                             }
                         });
 
+                        // 10. Coordenadores x Grupos x Dia (para filtros em Categorias)
+                        const cCGD = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_cgd' },
+                            qHyperCubeDef: {
+                                qMode: 'S',
+                                qAlwaysFullyExpanded: true,
+                                qDimensions: [
+                                    { qDef: { qFieldDefs: ['Distrital'] } },
+                                    { qDef: { qFieldDefs: ['Coordenador'] } },
+                                    { qDef: { qFieldDefs: ['Desc_Grupo'] } },
+                                    { qDef: { qFieldDefs: ['Dia Venda'] } }
+                                ],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 10, qWidth: 7 }],
+                                qSuppressZero: true
+                            }
+                        }]);
+                        const lCGD = await send("GetLayout", cCGD.result.qReturn.qHandle, []);
+                        const totalRowsCGD = lCGD.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawCGDRows = await fetchAllDataPages(cCGD.result.qReturn.qHandle, totalRowsCGD, 7);
+                        const coordenadores_grupos_dia = rawCGDRows.map(r => ({
+                            distrital: String(r[0]),
+                            coordenador: String(r[1]),
+                            grupo: String(r[2]),
+                            dia: parseInt(r[3]),
+                            venda_sem_figital: typeof r[4] === 'number' ? r[4] : 0,
+                            venda_figital: typeof r[5] === 'number' ? r[5] : 0,
+                            venda_total: typeof r[6] === 'number' ? r[6] : 0
+                        }));
+
+                        // 11. Coordenadores x Linhas (para filtros em Linhas de Produtos)
+                        const cCL = await send("CreateSessionObject", doc, [{
+                            qInfo: { qType: 'q_cl' },
+                            qHyperCubeDef: {
+                                qMode: 'S',
+                                qAlwaysFullyExpanded: true,
+                                qDimensions: [
+                                    { qDef: { qFieldDefs: ['Distrital'] } },
+                                    { qDef: { qFieldDefs: ['Coordenador'] } },
+                                    { qDef: { qFieldDefs: ['Desc_Grupo'] } },
+                                    { qDef: { qFieldDefs: ['Desc_Linha'] } }
+                                ],
+                                qMeasures: [
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisSemFig}>} [Vl_Mercadoria])`, qLabel: 'venda_sem_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}, ${canaisFig}>} [Vl_Mercadoria])`, qLabel: 'venda_figital' } },
+                                    { qDef: { qDef: `Sum({<${setBase}>} [Vl_Mercadoria])`, qLabel: 'venda_total' } }
+                                ],
+                                qInitialDataFetch: [{ qTop: 0, qLeft: 0, qHeight: 10, qWidth: 7 }],
+                                qSuppressZero: true
+                            }
+                        }]);
+                        const lCL = await send("GetLayout", cCL.result.qReturn.qHandle, []);
+                        const totalRowsCL = lCL.result.qLayout.qHyperCube.qSize.qcy;
+                        const rawCLRows = await fetchAllDataPages(cCL.result.qReturn.qHandle, totalRowsCL, 7);
+                        const coordenadores_linhas = rawCLRows.map(r => ({
+                            distrital: String(r[0]),
+                            coordenador: String(r[1]),
+                            grupo: String(r[2]),
+                            linha: String(r[3]),
+                            venda_sem_figital: typeof r[4] === 'number' ? r[4] : 0,
+                            venda_figital: typeof r[5] === 'number' ? r[5] : 0,
+                            venda_total: typeof r[6] === 'number' ? r[6] : 0
+                        }));
+
                         ws.close();
                         resolve({
                             metadata: {
@@ -526,14 +604,18 @@ async def extract_qlik():
                                 total_coordenadores: coordenadores.length,
                                 total_filiais: filiais.length,
                                 total_grupos: grupos.length,
-                                total_linhas: linhas.length
+                                total_linhas: linhas.length,
+                                total_coord_grupos_dia: coordenadores_grupos_dia.length,
+                                total_coord_linhas: coordenadores_linhas.length
                             },
                             daily,
                             distritais,
                             coordenadores,
                             filiais,
                             grupos,
-                            linhas
+                            linhas,
+                            coordenadores_grupos_dia,
+                            coordenadores_linhas
                         });
                     } catch(err) {
                         ws.close();

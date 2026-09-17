@@ -1489,7 +1489,7 @@ def build_html():
         <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
           <div>
             <div class="card-title">Metas & Vendas por Categoria / Grupo de Produtos</div>
-            <div class="card-subtitle">Clique em qualquer grupo para abrir e expandir suas linhas de produtos associadas</div>
+            <div class="card-subtitle" id="categoriasHeaderSubtitle">Clique em qualquer grupo para abrir e expandir suas linhas de produtos associadas</div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-sm" onclick="toggleExpandAllGrupos()" id="btnExpandAllGrupos">📂 Expandir Todas as Linhas</button>
@@ -1593,6 +1593,35 @@ def build_html():
   <!-- Embedded Complete Dataset -->
   <script>
     const DASH_DATA = {raw_json_str};
+
+    // Vincula grupos e linhas de cada coordenador e distrital para filtros instantâneos
+    (DASH_DATA.coordenadores || []).forEach(c => {{
+      c.linhas = (c.grupos || []).flatMap(g => {{
+        return (g.linhas || []).map(l => {{
+          l._parentGrp = g;
+          return l;
+        }});
+      }});
+    }});
+    (DASH_DATA.distritais || []).forEach(d => {{
+      d.linhas = (d.grupos || []).flatMap(g => {{
+        return (g.linhas || []).map(l => {{
+          l._parentGrp = g;
+          return l;
+        }});
+      }});
+    }});
+    (DASH_DATA.grupos || []).forEach(g => {{
+      (g.linhas || []).forEach(l => {{
+        l._parentGrp = g;
+      }});
+    }});
+    (DASH_DATA.linhas || []).forEach(l => {{
+      if (!l._parentGrp) {{
+        const foundG = (DASH_DATA.grupos || []).find(g => g.grupo === l.grupo);
+        if (foundG) l._parentGrp = foundG;
+      }}
+    }});
 
     let maxDia = DASH_DATA.metadata.max_dia || 15;
     let selectedDiaIni = 1; // Padrão MTD: 01 a 15
@@ -1785,6 +1814,11 @@ def build_html():
     // CÁLCULO DINÂMICO DE MÉTRICAS PELO PERÍODO DE DIAS [selectedDiaIni .. selectedDiaEnd]
     // =========================================================================
     function getPeriodMetrics(item) {{
+      if (!item) return {{
+        meta_periodo: 0, venda_digital: 0, venda_total: 0, venda_fisica: 0,
+        gap: 0, desvio: 0, atingimento: 0, share_digital: 0, projecao: 0, atingimento_proj: 0, meta_mes: 0
+      }};
+
       const m_dias = item.metas_dias || [];
       const v_dias_dig = (activeFigitalMode === 'sem') 
         ? (item.vendas_dias_sem_figital || []) 
@@ -1792,15 +1826,37 @@ def build_html():
       const v_dias_tot = item.vendas_dias_total || [];
 
       let meta = 0.0;
-      for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
-        if (d - 1 < m_dias.length) meta += (m_dias[d - 1] || 0.0);
-      }}
-
       let venda_dig = 0.0;
       let venda_tot = 0.0;
-      for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
-        if (d - 1 < v_dias_dig.length) venda_dig += (v_dias_dig[d - 1] || 0.0);
-        if (d - 1 < v_dias_tot.length) venda_tot += (v_dias_tot[d - 1] || 0.0);
+
+      // Se o item tiver arrays diários explícitos (Grupos, Distritais, Coordenadores, Filiais, Rede)
+      if (v_dias_dig.length > 0 || m_dias.length > 0) {{
+        for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
+          if (d - 1 < m_dias.length) meta += (m_dias[d - 1] || 0.0);
+        }}
+        for (let d = selectedDiaIni; d <= selectedDiaEnd; d++) {{
+          if (d - 1 < v_dias_dig.length) venda_dig += (v_dias_dig[d - 1] || 0.0);
+          if (d - 1 < v_dias_tot.length) venda_tot += (v_dias_tot[d - 1] || 0.0);
+        }}
+      }} else if (item._parentGrp) {{
+        // Linha compacta (escala proporcionalmente à curva diária do grupo pai)
+        const parentGrp = item._parentGrp;
+        const pMetrics = getPeriodMetrics(parentGrp);
+        const pBaseSale = (activeFigitalMode === 'sem') 
+          ? (parentGrp.venda_sem_figital || 1.0) 
+          : (parentGrp.venda_digital || 1.0);
+        const ratioSale = pBaseSale > 0 ? (pMetrics.venda_digital / pBaseSale) : 1.0;
+        const ratioMeta = (parentGrp.meta_mtd > 0) ? (pMetrics.meta_periodo / parentGrp.meta_mtd) : 1.0;
+
+        const v_base = (activeFigitalMode === 'sem') ? item.venda_sem_figital : item.venda_digital;
+        venda_dig = (v_base || 0.0) * ratioSale;
+        venda_tot = (item.venda_total || 0.0) * ratioSale;
+        meta = (item.meta_mtd || 0.0) * ratioMeta;
+      }} else {{
+        // Fallback direto
+        venda_dig = (activeFigitalMode === 'sem') ? (item.venda_sem_figital || 0.0) : (item.venda_digital || 0.0);
+        venda_tot = item.venda_total || 0.0;
+        meta = item.meta_mtd || 0.0;
       }}
 
       meta = Math.round(meta);
@@ -2206,7 +2262,19 @@ def build_html():
       const previousVal = linhaSelect.value;
       linhaSelect.innerHTML = '';
 
-      let linhas = DASH_DATA.linhas || [];
+      const dist = document.getElementById('filterDistrital')?.value || 'all';
+      const coord = document.getElementById('filterCoordenador')?.value || 'all';
+
+      let targetSource = DASH_DATA;
+      if (coord !== 'all') {{
+        const foundC = (DASH_DATA.coordenadores || []).find(c => c.nome === coord);
+        if (foundC && foundC.linhas && foundC.linhas.length > 0) targetSource = foundC;
+      }} else if (dist !== 'all') {{
+        const foundD = (DASH_DATA.distritais || []).find(d => d.nome === dist);
+        if (foundD && foundD.linhas && foundD.linhas.length > 0) targetSource = foundD;
+      }}
+
+      let linhas = targetSource.linhas || [];
       if (grupoFilter !== 'all') {{
         linhas = linhas.filter(l => l.grupo === grupoFilter);
       }}
@@ -2236,6 +2304,8 @@ def build_html():
       lastFilterType = 'distrital';
       const distVal = document.getElementById('filterDistrital')?.value || 'all';
       populateCoordenadoresDropdown(distVal, false);
+      const grpVal = document.getElementById('filterGrupo')?.value || 'all';
+      populateLinhasDropdown(grpVal, false);
       recalcDashboard();
     }}
 
@@ -2252,6 +2322,8 @@ def build_html():
           }}
         }}
       }}
+      const grpVal = document.getElementById('filterGrupo')?.value || 'all';
+      populateLinhasDropdown(grpVal, false);
       recalcDashboard();
     }}
 
@@ -2592,7 +2664,29 @@ def build_html():
       // 4. Categorias / Grupos (com abertura / drilldown de linhas)
       const tbodyCat = document.getElementById('tbodyCategoriasFull');
       tbodyCat.innerHTML = '';
-      let catList = DASH_DATA.grupos
+
+      let targetSourceCat = DASH_DATA;
+      let contextCatLabel = 'Diretoria C (Consolidado)';
+      if (filterCoord !== 'all') {{
+        const foundC = (DASH_DATA.coordenadores || []).find(c => c.nome === filterCoord);
+        if (foundC && foundC.grupos && foundC.grupos.length > 0) {{
+          targetSourceCat = foundC;
+          contextCatLabel = `Coordenador: ${{foundC.nome}} (${{foundC.distrital}})`;
+        }}
+      }} else if (filterDist !== 'all') {{
+        const foundD = (DASH_DATA.distritais || []).find(d => d.nome === filterDist);
+        if (foundD && foundD.grupos && foundD.grupos.length > 0) {{
+          targetSourceCat = foundD;
+          contextCatLabel = `Distrital: ${{foundD.nome}}`;
+        }}
+      }}
+
+      const catSub = document.getElementById('categoriasHeaderSubtitle');
+      if (catSub) {{
+        catSub.textContent = `Acompanhamento detalhado por categoria • Filtrado por: ${{contextCatLabel}}`;
+      }}
+
+      let catList = (targetSourceCat.grupos || [])
         .filter(g => {{
           if (filterGrupoVal !== 'all' && g.grupo !== filterGrupoVal) return false;
           if (filterLinhaVal !== 'all') {{
@@ -2780,12 +2874,36 @@ def build_html():
       if (!tbody) return;
       tbody.innerHTML = '';
 
+      const dist = document.getElementById('filterDistrital')?.value || 'all';
+      const coord = document.getElementById('filterCoordenador')?.value || 'all';
+
+      let targetSourceLinhas = DASH_DATA;
+      let contextLinhasLabel = 'Diretoria C (Consolidado)';
+      if (coord !== 'all') {{
+        const foundC = (DASH_DATA.coordenadores || []).find(c => c.nome === coord);
+        if (foundC && foundC.linhas && foundC.linhas.length > 0) {{
+          targetSourceLinhas = foundC;
+          contextLinhasLabel = `Coordenador: ${{foundC.nome}}`;
+        }}
+      }} else if (dist !== 'all') {{
+        const foundD = (DASH_DATA.distritais || []).find(d => d.nome === dist);
+        if (foundD && foundD.linhas && foundD.linhas.length > 0) {{
+          targetSourceLinhas = foundD;
+          contextLinhasLabel = `Distrital: ${{foundD.nome}}`;
+        }}
+      }}
+
+      const linSub = document.getElementById('linhasHeaderSubtitle');
+      if (linSub) {{
+        linSub.textContent = `Detalhamento analítico de metas e faturamento digital • Filtrado por: ${{contextLinhasLabel}}`;
+      }}
+
       // Métricas consolidadas da Diretoria no período
       const dirTot = getPeriodMetrics(DASH_DATA.total || {{}});
       const dirTotDigital = dirTot.venda_digital || 1.0;
       const dirMediaShare = dirTot.share_digital || 0.0;
 
-      let list = (DASH_DATA.linhas || [])
+      let list = (targetSourceLinhas.linhas || [])
         .filter(l => {{
           if (filterGrp !== 'all' && l.grupo !== filterGrp) return false;
           if (selLinha !== 'all' && l.linha !== selLinha) return false;

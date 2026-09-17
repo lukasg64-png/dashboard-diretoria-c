@@ -124,7 +124,8 @@ def load_metas():
                     "meta_mes": 0.0,
                     "metas_dias": [0.0] * 30,
                     "coordenadores": set(),
-                    "filiais": set()
+                    "filiais": set(),
+                    "grupos": {}
                 }
             distritais_data[distrital]["meta_mes"] += meta_mes
             for d_idx in range(30):
@@ -134,6 +135,26 @@ def load_metas():
             if filial:
                 distritais_data[distrital]["filiais"].add(filial)
 
+            if grupo:
+                if grupo not in distritais_data[distrital]["grupos"]:
+                    distritais_data[distrital]["grupos"][grupo] = {
+                        "meta_mes": 0.0,
+                        "metas_dias": [0.0] * 30,
+                        "linhas": {}
+                    }
+                distritais_data[distrital]["grupos"][grupo]["meta_mes"] += meta_mes
+                for d_idx in range(30):
+                    distritais_data[distrital]["grupos"][grupo]["metas_dias"][d_idx] += metas_dias_row[d_idx]
+                if linha:
+                    if linha not in distritais_data[distrital]["grupos"][grupo]["linhas"]:
+                        distritais_data[distrital]["grupos"][grupo]["linhas"][linha] = {
+                            "meta_mes": 0.0,
+                            "metas_dias": [0.0] * 30
+                        }
+                    distritais_data[distrital]["grupos"][grupo]["linhas"][linha]["meta_mes"] += meta_mes
+                    for d_idx in range(30):
+                        distritais_data[distrital]["grupos"][grupo]["linhas"][linha]["metas_dias"][d_idx] += metas_dias_row[d_idx]
+
         # 3. Coordenador
         if coordenador:
             if coordenador not in coordenadores_data:
@@ -141,13 +162,34 @@ def load_metas():
                     "distrital": distrital,
                     "meta_mes": 0.0,
                     "metas_dias": [0.0] * 30,
-                    "filiais": set()
+                    "filiais": set(),
+                    "grupos": {}
                 }
             coordenadores_data[coordenador]["meta_mes"] += meta_mes
             for d_idx in range(30):
                 coordenadores_data[coordenador]["metas_dias"][d_idx] += metas_dias_row[d_idx]
             if filial:
                 coordenadores_data[coordenador]["filiais"].add(filial)
+
+            if grupo:
+                if grupo not in coordenadores_data[coordenador]["grupos"]:
+                    coordenadores_data[coordenador]["grupos"][grupo] = {
+                        "meta_mes": 0.0,
+                        "metas_dias": [0.0] * 30,
+                        "linhas": {}
+                    }
+                coordenadores_data[coordenador]["grupos"][grupo]["meta_mes"] += meta_mes
+                for d_idx in range(30):
+                    coordenadores_data[coordenador]["grupos"][grupo]["metas_dias"][d_idx] += metas_dias_row[d_idx]
+                if linha:
+                    if linha not in coordenadores_data[coordenador]["grupos"][grupo]["linhas"]:
+                        coordenadores_data[coordenador]["grupos"][grupo]["linhas"][linha] = {
+                            "meta_mes": 0.0,
+                            "metas_dias": [0.0] * 30
+                        }
+                    coordenadores_data[coordenador]["grupos"][grupo]["linhas"][linha]["meta_mes"] += meta_mes
+                    for d_idx in range(30):
+                        coordenadores_data[coordenador]["grupos"][grupo]["linhas"][linha]["metas_dias"][d_idx] += metas_dias_row[d_idx]
 
         # 4. Filial
         if filial:
@@ -190,11 +232,23 @@ def load_metas():
         info["filiais"] = sorted(list(info["filiais"]))
         info["meta_mes"] = round(info["meta_mes"], 2)
         info["metas_dias"] = [round(v, 2) for v in info["metas_dias"]]
+        for g_name, g_info in info.get("grupos", {}).items():
+            g_info["meta_mes"] = round(g_info["meta_mes"], 2)
+            g_info["metas_dias"] = [round(v, 2) for v in g_info["metas_dias"]]
+            for l_name, l_info in g_info.get("linhas", {}).items():
+                l_info["meta_mes"] = round(l_info["meta_mes"], 2)
+                l_info["metas_dias"] = [round(v, 2) for v in l_info["metas_dias"]]
 
     for c, info in coordenadores_data.items():
         info["filiais"] = sorted(list(info["filiais"]))
         info["meta_mes"] = round(info["meta_mes"], 2)
         info["metas_dias"] = [round(v, 2) for v in info["metas_dias"]]
+        for g_name, g_info in info.get("grupos", {}).items():
+            g_info["meta_mes"] = round(g_info["meta_mes"], 2)
+            g_info["metas_dias"] = [round(v, 2) for v in g_info["metas_dias"]]
+            for l_name, l_info in g_info.get("linhas", {}).items():
+                l_info["meta_mes"] = round(l_info["meta_mes"], 2)
+                l_info["metas_dias"] = [round(v, 2) for v in l_info["metas_dias"]]
 
     for f, info in filiais_data.items():
         info["meta_mes"] = round(info["meta_mes"], 2)
